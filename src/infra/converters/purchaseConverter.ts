@@ -23,9 +23,9 @@ export function convertModelResponseToPurchase(input: ModelResponse): IPurchaseC
   }
 
   return {
-    userId: input.userId,
-    description: input.description,
-    total: input.total,
+    userId: input.userId ?? "",
+    description: input.description ?? "Compra",
+    total: input.total ?? 0,
     date: parsedDate,
     store: input.store,
     tax: input.tax,

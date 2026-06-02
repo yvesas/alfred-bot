@@ -1,0 +1,106 @@
+# Roadmap — bot-telegram
+
+> Documento vivo. Reúne **o que já temos**, **o que desejamos**, **bugs conhecidos** e **melhorias**.
+> Atualizado em 02/06/2026. Acompanha a análise técnica em [ANALISE-PROJETO.md](./ANALISE-PROJETO.md).
+
+Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
+
+---
+
+## 1. Funcionalidades que temos ✅
+
+| Funcionalidade | Estado | Observações |
+|---|---|---|
+| Cadastro/onboarding do usuário | ✅ | Identifica pelo ID do Telegram; nome capturado automaticamente do perfil; e-mail opcional (`/pular`); estado persistido no MongoDB |
+| Captura opcional de telefone | ✅ | Botão "Compartilhar telefone" durante o cadastro |
+| Saudação de usuário recorrente | ✅ | Reconhece pelo ID e cumprimenta pelo nome |
+| Registro de compra por texto | ✅ | Linguagem natural interpretada por IA (Gemini/GPT) |
+| Registro de compra por foto de cupom | ✅ | OCR (Google Vision) + IA |
+| Consulta de gastos | ✅ | Por período (mês atual, mês passado, total) e por categoria/loja; via texto ou `/gastos` |
+| Listagem das últimas compras | ✅ | Comando `/compras` (5 últimas) |
+| Escolha do modelo de IA por usuário | ✅ | `/ia gpt` \| `/ia gemini` (Gemini é o padrão) |
+| Persistência em MongoDB | ✅ | Mongoose (User, Purchase) |
+| Testes automatizados | 🟡 | 30 testes; cobre services/converters/onboarding, mas **não** os handlers do bot |
+| CI (GitHub Actions) | ✅ | Roda testes + cobertura (Codecov) em push/PR para `main`/`develop` |
+
+---
+
+## 2. Funcionalidades que desejamos ⬜
+
+### Produto / usuário
+- ⬜ **Editar e excluir compras** (corrigir lançamentos errados)
+- ⬜ **Confirmar a compra antes de salvar** (mostrar o que foi entendido e pedir "confirmar")
+- ⬜ **Orçamento mensal + alertas** ("você já gastou 80% do orçamento de Alimentação")
+- ⬜ **Relatórios mais ricos**: gráfico/resumo mensal, comparativo entre meses
+- ⬜ **Exportação** de dados (CSV / PDF)
+- ⬜ **Histórico paginado** em `/compras` (hoje limita a 5)
+- ⬜ **Categorias personalizadas** pelo usuário
+- ⬜ **Lembretes** (registrar gasto recorrente, contas a pagar)
+- ⬜ **Leitura de QR Code / NFC-e** do cupom fiscal (dados estruturados, sem depender só de OCR)
+- 🟡 **Gestão de produtos/estoque** — `ProductService`/`ProductRepository` existem, mas **não estão ligados** ao bot
+
+### Plataforma / negócio (rumo à comercialização)
+- ⬜ **Planos e limites de uso** (free/pago)
+- ⬜ **Painel web** para visualizar gastos fora do Telegram
+- ⬜ **Política de privacidade / LGPD** — dados financeiros são sensíveis
+- ⬜ **Multi-idioma** (o prompt já aceita `lang`, falta expor)
+
+---
+
+## 3. Bugs conhecidos 🐛
+
+| # | Bug | Gravidade | Detalhe |
+|---|---|---|---|
+| B1 | **Credencial GCP real no disco** | 🔴 | `src/config/google-credentials.json` existe localmente; rotacionar a chave da service account por precaução (não está versionada, mas é risco) |
+| B2 | **`Database.connect` engole o erro** | 🔴 | Em falha de conexão apenas loga e o app continua subindo sem banco; deveria abortar |
+| ~~B3~~ | ~~**Sem _graceful shutdown_**~~ | ✅ | Resolvido: `index.ts` trata `SIGINT`/`SIGTERM` chamando `bot.stop()` |
+| B4 | **Consulta usa a data do cupom, não a do registro** | 🟡 | "Gastos do mês" filtra por `date` (data do recibo). Cupom antigo cai no mês do recibo, não no de lançamento — pode confundir |
+| B5 | **Preferência de modelo de IA é volátil** | 🟡 | `/ia` guarda a escolha em memória (`Map`); reinício do bot reseta para Gemini |
+| B6 | **OCR de cupom depende de formato rígido** | 🟡 | `OcrService.parseReceiptText` usa regex específico (e nem está em uso); cupons variam muito de layout |
+| B7 | **Sem retry/fallback quando a IA falha** | 🟡 | Erro da IA vira mensagem genérica; não tenta o outro modelo nem reprocessa |
+
+---
+
+## 4. Melhorias (técnicas) 🔧
+
+### Qualidade e robustez
+- ⬜ **Persistir a escolha de modelo de IA** no documento do usuário (resolve B5)
+- ⬜ **Tratar erro de conexão do DB** sem engolir (resolve B2) e adicionar reconexão
+- ⬜ **Graceful shutdown** (`process.once('SIGINT'/'SIGTERM', () => bot.stop())`) — resolve B3
+- ⬜ **Logger estruturado** (pino/winston) no lugar dos `console.log`/`console.error`
+- ⬜ **Validação centralizada de variáveis de ambiente** na inicialização (falhar cedo e claro)
+- ⬜ **Rate limiting / proteção contra abuso** por usuário
+
+### Arquitetura / código
+- ⬜ **Injetar `OcrService`, `GeminiProcessor` e `GptProcessor` via DI** (hoje usam `new` e são recriados a cada mensagem)
+- ⬜ **Decidir o destino do código de produtos e do parser de OCR**: ligar ao bot ou remover (código morto hoje)
+- ⬜ **Migrar somatórios de gastos para _aggregation_ do Mongo** (hoje somados em JS; escala melhor)
+- ⬜ **Confirmação/validação extra dos dados extraídos pela IA** antes de persistir
+
+### Testes
+- ⬜ **Cobrir os handlers do `TelegramBot`** (texto, foto, contato, comandos) com testes de integração
+- ⬜ **Testes do fluxo OCR → IA → persistência**
+- ⬜ Aumentar cobertura dos repositories
+
+### CI/CD
+- ✅ CI roda **lint + type-check + testes com cobertura** (antes só testes) com `--frozen-lockfile`
+- ✅ Pre-commit aponta lint (staged) + type-check; testes no pre-push
+- ✅ `Dockerfile` multi-stage + `.dockerignore` (deploy agnóstico ao host)
+- ⬜ **Definir host e CD** (deploy automático) — Railway/Fly.io/Render/Cloud Run/VPS
+- ⬜ Healthcheck / readiness para o orquestrador
+
+### DevEx / documentação
+- ✅ README do projeto (com seções de Deploy e CI)
+- ✅ `packageManager` + `.nvmrc` (versões de pnpm/Node fixadas)
+- ⬜ `CONTRIBUTING.md` e padronização de mensagens de commit
+- ⬜ Limpar warnings de `console` do lint (depende do logger estruturado)
+
+---
+
+## Sugestão de priorização
+
+1. **Segurança e estabilidade primeiro** (B1, B2, B3) — pré-requisito para qualquer uso real.
+2. **Persistir preferências + tratar erros de IA** (B5, B7) — confiabilidade percebida pelo usuário.
+3. **Editar/excluir compras + confirmação antes de salvar** — maior ganho de UX no curto prazo.
+4. **Relatórios/orçamento/exportação** — valor que sustenta a comercialização.
+5. **Painel web + planos + LGPD** — quando partir para o produto pago.

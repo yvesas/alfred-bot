@@ -10,7 +10,8 @@ export function getPrompt001(lang: string | null, message: string) {
   {
     "intent": "purchase" | "query" | "other" | "unknown",
     "message": string (opcional),
-    "userId": string,
+    "period": "current_month" | "last_month" | "all" (opcional, apenas para intent "query"),
+    "groupBy": "category" | "store" (opcional, apenas para intent "query"),
     "description": string,
     "total": number,
     "date": string,
@@ -33,6 +34,19 @@ export function getPrompt001(lang: string | null, message: string) {
       }
     ]
   }
+
+  NÃO inclua o campo "userId" — ele é definido pelo sistema, não por você.
+
+  ## **Consultas de Gastos (intent "query")**:
+  Quando o texto perguntar sobre gastos, retorne apenas { "intent": "query", "period": ..., "groupBy": ... }.
+  - Período: "esse mês"/"este mês"/"agora" → "current_month"; "mês passado"/"último mês" → "last_month";
+    "no total"/"geral"/"tudo"/"desde sempre" → "all". Se não especificado, usar "current_month".
+  - Agrupamento: se pedir "por categoria" → "category"; "por loja"/"por mercado" → "store"; caso contrário, omitir "groupBy".
+  - **Exemplos:**
+    - "Quanto gastei este mês?" → { "intent": "query", "period": "current_month" }
+    - "quanto gastei mês passado" → { "intent": "query", "period": "last_month" }
+    - "meus gastos por categoria" → { "intent": "query", "period": "current_month", "groupBy": "category" }
+    - "total geral por loja" → { "intent": "query", "period": "all", "groupBy": "store" }
 
 
   ## **Regras de Interpretação**:
@@ -79,7 +93,7 @@ export function getPrompt001(lang: string | null, message: string) {
         "description": "agua",
         "quantity": 1,
         "unitPrice": 7,
-        total: 7;
+        "total": 7,
         "category": "Alimentação"
       }
     ]    
@@ -99,7 +113,7 @@ export function getPrompt001(lang: string | null, message: string) {
         "description": "galão de agua",
         "quantity": 4,
         "unitPrice": 20,
-        total: 80;
+        "total": 80,
         "category": "Alimentação"
       }
     ]    

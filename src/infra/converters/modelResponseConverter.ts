@@ -17,9 +17,22 @@ export function validateAndConvertModelResponse(jsonString: string): ModelRespon
       throw new ValidationError(`Error parsing JSON: ${parseError}`);
     }
 
+    if (!parsedObject.intent) {
+      throw new ValidationError("Invalid JSON: missing intent.");
+    }
+
+    // Apenas compras carregam dados de recibo. Demais intenções (query/other/unknown)
+    // retornam cedo, sem exigir os campos de compra.
+    if (parsedObject.intent !== "purchase") {
+      return {
+        intent: parsedObject.intent,
+        message: parsedObject.message,
+        period: parsedObject.period,
+        groupBy: parsedObject.groupBy,
+      };
+    }
+
     if (
-      !parsedObject.intent ||
-      !parsedObject.userId ||
       !parsedObject.description ||
       typeof parsedObject.total !== "number" ||
       !parsedObject.date ||

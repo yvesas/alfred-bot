@@ -1,0 +1,109 @@
+import "reflect-metadata";
+import { UserService } from "../services/UserService";
+import { UserRepository } from "../repositories/UserRepository";
+import { IUser } from "../models/User";
+import sinon from "sinon";
+
+function fakeUser(partial: Partial<IUser>): IUser {
+  return { telegramId: "123", status: "awaiting_name", ...partial } as IUser;
+}
+
+describe("UserService (onboarding)", () => {
+  let userRepoMock: sinon.SinonStubbedInstance<UserRepository>;
+  let userService: UserService;
+
+  beforeEach(() => {
+    userRepoMock = sinon.createStubInstance(UserRepository);
+    userService = new UserService(userRepoMock);
+  });
+
+  it("creates a new user awaiting name and asks for the name", async () => {
+    userRepoMock.findByTelegramId.resolves(null);
+    userRepoMock.create.resolves(fakeUser({ status: "awaiting_name" }));
+
+    const { user, question } = await userService.ensureUser("123");
+
+    expect(user.status).toBe("awaiting_name");
+    expect(question.toLowerCase()).toContain("chama");
+    expect(userRepoMock.create.calledOnce).toBe(true);
+  });
+
+  it("auto-fills the name from the Telegram profile and skips to email", async () => {
+    userRepoMock.findByTelegramId.resolves(null);
+    userRepoMock.create.resolves(fakeUser({ name: "Yves Silva", status: "awaiting_email" }));
+
+    const { user } = await userService.ensureUser("123", { firstName: "Yves", lastName: "Silva" });
+
+    expect(user.status).toBe("awaiting_email");
+    expect(
+      userRepoMock.create.calledWith({
+        telegramId: "123",
+        name: "Yves Silva",
+        status: "awaiting_email",
+      }),
+    ).toBe(true);
+  });
+
+  it("saves a shared phone number", async () => {
+    userRepoMock.findByTelegramId.resolves(fakeUser({ status: "awaiting_email", name: "Yves" }));
+
+    const { reply } = await userService.saveContact("123", "+5511999999999");
+
+    expect(reply.toLowerCase()).toContain("telefone");
+    expect(userRepoMock.update.calledWith("123", { phone: "+5511999999999" })).toBe(true);
+  });
+
+  it("stores the name and moves to awaiting_email", async () => {
+    userRepoMock.findByTelegramId.resolves(fakeUser({ status: "awaiting_name" }));
+
+    const { completed, reply } = await userService.submitAnswer("123", "Yves");
+
+    expect(completed).toBe(false);
+    expect(reply).toContain("Yves");
+    expect(userRepoMock.update.calledWith("123", { name: "Yves", status: "awaiting_email" })).toBe(
+      true,
+    );
+  });
+
+  it("rejects a too-short name without advancing", async () => {
+    userRepoMock.findByTelegramId.resolves(fakeUser({ status: "awaiting_name" }));
+
+    const { completed } = await userService.submitAnswer("123", "Y");
+
+    expect(completed).toBe(false);
+    expect(userRepoMock.update.called).toBe(false);
+  });
+
+  it("completes registration with a valid email", async () => {
+    userRepoMock.findByTelegramId.resolves(fakeUser({ status: "awaiting_email", name: "Yves" }));
+
+    const { completed } = await userService.submitAnswer("123", "yves@example.com");
+
+    expect(completed).toBe(true);
+    expect(
+      userRepoMock.update.calledWith("123", {
+        email: "yves@example.com",
+        status: "complete",
+      }),
+    ).toBe(true);
+  });
+
+  it("re-asks when the email is invalid", async () => {
+    userRepoMock.findByTelegramId.resolves(fakeUser({ status: "awaiting_email", name: "Yves" }));
+
+    const { completed, reply } = await userService.submitAnswer("123", "not-an-email");
+
+    expect(completed).toBe(false);
+    expect(reply.toLowerCase()).toContain("válido");
+    expect(userRepoMock.update.called).toBe(false);
+  });
+
+  it("completes registration when the user skips the email", async () => {
+    userRepoMock.findByTelegramId.resolves(fakeUser({ status: "awaiting_email", name: "Yves" }));
+
+    const { completed } = await userService.submitAnswer("123", "/pular");
+
+    expect(completed).toBe(true);
+    expect(userRepoMock.update.calledWith("123", { status: "complete" })).toBe(true);
+  });
+});

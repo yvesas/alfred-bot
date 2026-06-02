@@ -206,6 +206,35 @@ describe("validateAndConvertModelResponse", () => {
     );
   });
 
+  it("should return a query intent without requiring purchase fields", () => {
+    const jsonString = JSON.stringify({
+      intent: "query",
+      period: "last_month",
+      groupBy: "category",
+    });
+
+    const result = validateAndConvertModelResponse(jsonString);
+
+    expect(result).toEqual({
+      intent: "query",
+      message: undefined,
+      period: "last_month",
+      groupBy: "category",
+    });
+  });
+
+  it("should return an unknown intent with its message without throwing", () => {
+    const jsonString = JSON.stringify({
+      intent: "unknown",
+      message: "Não foi possível identificar os dados.",
+    });
+
+    const result = validateAndConvertModelResponse(jsonString);
+
+    expect(result.intent).toBe("unknown");
+    expect(result.message).toBe("Não foi possível identificar os dados.");
+  });
+
   it("should handle invalid store types and throw a ValidationError", () => {
     const jsonString = JSON.stringify({
       intent: "purchase",

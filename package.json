@@ -1,12 +1,12 @@
 {
   "name": "bot-telegram",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.ts",
+  "description": "Bot de Telegram que registra compras e gastos pessoais a partir de texto ou cupons fiscais, usando IA (Gemini/GPT) e OCR (Google Vision), com persistência em MongoDB.",
+  "main": "dist/index.js",
   "scripts": {
-    "dev2": "nodemon --ext ts --exec ts-node src/index.ts",
     "dev": "nodemon --ext ts --exec ts-node -P tsconfig.json src/index.ts",
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -16,18 +16,30 @@
     "prettier": "prettier --write .",
     "prepare": "husky install"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "telegram",
+    "bot",
+    "telegraf",
+    "finance",
+    "expenses",
+    "ocr",
+    "ai",
+    "gemini",
+    "gpt",
+    "mongodb"
+  ],
+  "author": "Yves",
   "license": "ISC",
+  "packageManager": "pnpm@10.6.5",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
-    "@google-cloud/vertexai": "^1.9.3",
+    "@google-cloud/vertexai": "1.9.3",
     "@google-cloud/vision": "^4.3.2",
     "dotenv": "^16.4.7",
-    "fs": "0.0.1-security",
     "inversify": "^6.2.2",
-    "jimp": "^1.6.0",
     "mongoose": "^8.10.1",
-    "node-telegram-bot-api": "^0.66.0",
     "openai": "^4.86.1",
     "reflect-metadata": "^0.2.2",
     "telegraf": "^4.16.3"
@@ -50,11 +62,5 @@
     "ts-jest": "^29.2.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "eslint --fix",
-      "prettier --write"
-    ]
   }
 }

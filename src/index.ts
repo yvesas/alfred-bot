@@ -6,8 +6,16 @@ import { TelegramBot } from "./services/TelegramBot";
 async function main() {
   const db = container.get(Database);
   await db.connect();
-  container.get(TelegramBot);
+
+  const bot = container.get(TelegramBot);
   console.log("🚀 Bot is ready!");
+
+  // Encerramento limpo quando o host envia sinal de parada (ex.: deploy/stop de container).
+  process.once("SIGINT", () => bot.stop("SIGINT"));
+  process.once("SIGTERM", () => bot.stop("SIGTERM"));
 }
 
-main();
+main().catch((err) => {
+  console.error("❌ Falha ao iniciar o bot:", err);
+  process.exit(1);
+});

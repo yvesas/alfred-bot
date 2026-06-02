@@ -57,7 +57,7 @@ const PurchaseSchema = new Schema<IPurchase>(
     total: { type: Number, required: true },
     date: { type: Date, default: Date.now },
     tax: { type: TaxInfoSchema },
-    store: { type: [StoreSchema] },
+    store: { type: StoreSchema },
     items: { type: [PurchaseItemSchema] },
   },
   {

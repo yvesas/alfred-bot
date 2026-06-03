@@ -14,7 +14,7 @@
     "lint": "eslint . --ext .ts --config ./eslint.config.mjs",
     "lint:fix": "eslint . --ext .ts --fix --config ./eslint.config.mjs",
     "prettier": "prettier --write .",
-    "prepare": "husky install"
+    "prepare": "cd .. && husky bot/.husky"
   },
   "keywords": [
     "telegram",

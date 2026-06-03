@@ -1,0 +1,38 @@
+# Orquestra o bot e (opcionalmente) o serviço de OCR self-hosted (PaddleOCR).
+#
+#   Padrão (OCR via Gemini/Vision):   docker compose up -d
+#       -> sobe apenas o bot. Não precisa do serviço de OCR.
+#
+#   Self-host (PaddleOCR):            docker compose --profile paddle up -d
+#       -> sobe bot + ocr. Defina no bot/.env:
+#            OCR_PROVIDER=paddle
+#            PADDLE_OCR_URL=http://ocr:8000
+
+services:
+  bot:
+    build: ./bot
+    env_file: ./bot/.env
+    networks: [app-net]
+    restart: unless-stopped
+
+  ocr:
+    build: ./ocr-service
+    profiles: [paddle] # opcional: só sobe com --profile paddle
+    # paddlepaddle não tem wheel para linux/arm64. Em máquinas ARM (ex.: Mac Apple Silicon),
+    # descomente a linha abaixo para buildar via emulação. Em EC2 x86_64 não é necessário.
+    # platform: linux/amd64
+    networks: [app-net]
+    restart: unless-stopped
+    volumes:
+      - paddle-models:/root/.paddleocr # cache dos modelos (evita re-download)
+    deploy:
+      resources:
+        limits:
+          memory: 2g # PaddleOCR carrega os modelos na RAM
+
+networks:
+  app-net:
+    driver: bridge
+
+volumes:
+  paddle-models:

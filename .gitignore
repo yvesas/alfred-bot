@@ -1,6 +1,3 @@
-node_modules
-/temp
-/dist
-/coverage
-.env
-google-credentials.json
+# Arquivos de SO / editor (cada subprojeto tem o seu .gitignore próprio)
+.DS_Store
+*.log

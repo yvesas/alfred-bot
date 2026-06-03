@@ -1,18 +1,31 @@
 import "reflect-metadata";
 import { injectable } from "inversify";
 import { UserModel, IUser, IUserCreate } from "../models/User";
+import { Platform } from "../core/IncomingMessage";
 
 @injectable()
 export class UserRepository {
-  async findByTelegramId(telegramId: string): Promise<IUser | null> {
-    return await UserModel.findOne({ telegramId }).exec();
+  // Busca por identidade (platform+externalId). Para Telegram, também tenta o campo
+  // legado telegramId — assim usuários criados antes do identities[] continuam resolvendo.
+  async findByIdentity(platform: Platform, externalId: string): Promise<IUser | null> {
+    const byIdentity = { identities: { $elemMatch: { platform, externalId } } };
+    const query =
+      platform === "telegram" ? { $or: [byIdentity, { telegramId: externalId }] } : byIdentity;
+    return await UserModel.findOne(query).exec();
   }
 
   async create(user: IUserCreate): Promise<IUser> {
     return await UserModel.create(user);
   }
 
-  async update(telegramId: string, patch: Partial<IUserCreate>): Promise<IUser | null> {
-    return await UserModel.findOneAndUpdate({ telegramId }, patch, { new: true }).exec();
+  async updateByIdentity(
+    platform: Platform,
+    externalId: string,
+    patch: Partial<IUserCreate>,
+  ): Promise<IUser | null> {
+    const byIdentity = { identities: { $elemMatch: { platform, externalId } } };
+    const query =
+      platform === "telegram" ? { $or: [byIdentity, { telegramId: externalId }] } : byIdentity;
+    return await UserModel.findOneAndUpdate(query, patch, { new: true }).exec();
   }
 }

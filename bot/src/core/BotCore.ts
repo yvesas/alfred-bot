@@ -1,5 +1,5 @@
 import { inject, injectable } from "inversify";
-import { IncomingMessage } from "./IncomingMessage";
+import { IncomingMessage, Platform } from "./IncomingMessage";
 import { Replier } from "./Replier";
 import { UserService } from "../services/UserService";
 import { OcrService } from "../services/OcrService";
@@ -49,19 +49,23 @@ export class BotCore {
   // ---------- Onboarding / cadastro ----------
 
   private async handleText(msg: IncomingMessage, reply: Replier): Promise<void> {
-    const userId = msg.externalId;
-    if (!this.rateLimiter.allow(userId)) {
+    const { platform, externalId } = msg;
+    if (!this.rateLimiter.allow(externalId)) {
       await reply.text(
         "⏳ Muitas mensagens em pouco tempo. Aguarde um instante e tente novamente.",
       );
       return;
     }
 
-    const user = await this.userService.findByTelegramId(userId);
+    const user = await this.userService.findByIdentity(platform, externalId);
 
     if (!user) {
       // Primeiro contato: aproveita o perfil (nome) quando a plataforma fornece.
-      const { user: created, question } = await this.userService.ensureUser(userId, msg.profile);
+      const { user: created, question } = await this.userService.ensureUser(
+        platform,
+        externalId,
+        msg.profile,
+      );
       await reply.text(
         `👋 Olá${created.name ? `, ${created.name}` : ""}! Eu registro suas compras e gastos. ${question}`,
         { requestPhone: created.status !== "complete" },
@@ -72,20 +76,26 @@ export class BotCore {
     // Em cadastro: a mensagem é a resposta da etapa atual (nome ou e-mail).
     if (user.status !== "complete") {
       const { reply: answer, completed } = await this.userService.submitAnswer(
-        userId,
+        platform,
+        externalId,
         msg.text ?? "",
       );
       await reply.text(answer, { requestPhone: !completed });
       return;
     }
 
-    const processed = await this.messageProcessingService.processMessage(userId, msg.text ?? "");
-    await this.handleProcessed(reply, userId, processed);
+    const processed = await this.messageProcessingService.processMessage(
+      platform,
+      externalId,
+      msg.text ?? "",
+    );
+    await this.handleProcessed(reply, externalId, processed);
   }
 
   private async handleContact(msg: IncomingMessage, reply: Replier): Promise<void> {
     if (!msg.contact) return;
     const { reply: answer, completed } = await this.userService.saveContact(
+      msg.platform,
       msg.externalId,
       msg.contact.phone,
       msg.contact.name,
@@ -94,12 +104,16 @@ export class BotCore {
   }
 
   // Garante o cadastro completo antes de um comando. Conduz o cadastro e retorna false se incompleto.
-  private async requireRegistered(reply: Replier, userId: string): Promise<boolean> {
-    const user = await this.userService.findByTelegramId(userId);
+  private async requireRegistered(
+    reply: Replier,
+    platform: Platform,
+    externalId: string,
+  ): Promise<boolean> {
+    const user = await this.userService.findByIdentity(platform, externalId);
     if (user && user.status === "complete") {
       return true;
     }
-    const { question } = await this.userService.ensureUser(userId);
+    const { question } = await this.userService.ensureUser(platform, externalId);
     await reply.text(`Antes disso, vamos concluir seu cadastro. ${question}`, {
       requestPhone: true,
     });
@@ -109,21 +123,21 @@ export class BotCore {
   // ---------- Foto ----------
 
   private async handlePhoto(msg: IncomingMessage, reply: Replier): Promise<void> {
-    const userId = msg.externalId;
-    if (!this.rateLimiter.allow(userId)) {
+    const { platform, externalId } = msg;
+    if (!this.rateLimiter.allow(externalId)) {
       await reply.text(
         "⏳ Muitas mensagens em pouco tempo. Aguarde um instante e tente novamente.",
       );
       return;
     }
-    if (!(await this.requireRegistered(reply, userId))) {
+    if (!(await this.requireRegistered(reply, platform, externalId))) {
       return;
     }
 
     try {
       const base64Image = msg.getImageBase64 ? await msg.getImageBase64() : "";
-      const processed = await this.processReceiptImage(userId, base64Image);
-      await this.handleProcessed(reply, userId, processed);
+      const processed = await this.processReceiptImage(platform, externalId, base64Image);
+      await this.handleProcessed(reply, externalId, processed);
     } catch (error) {
       logger.error({ err: error }, "Erro ao baixar/processar a imagem");
       await reply.text("Houve um erro ao processar a imagem. Tente novamente.");
@@ -131,18 +145,26 @@ export class BotCore {
   }
 
   // OCR_MODE=multimodal: imagem → JSON numa única chamada. Senão: OCR → texto → extração.
-  private async processReceiptImage(userId: string, base64Image: string): Promise<ModelResponse> {
+  private async processReceiptImage(
+    platform: Platform,
+    externalId: string,
+    base64Image: string,
+  ): Promise<ModelResponse> {
     const multimodal = config.ocrMode === "multimodal";
 
     if (multimodal) {
-      const direct = await this.messageProcessingService.processImage(userId, base64Image);
+      const direct = await this.messageProcessingService.processImage(
+        platform,
+        externalId,
+        base64Image,
+      );
       if (direct) {
         return direct;
       }
     }
 
     const ocrText = await this.ocrService.extractTextFromImage(base64Image);
-    return this.messageProcessingService.processMessage(userId, ocrText);
+    return this.messageProcessingService.processMessage(platform, externalId, ocrText);
   }
 
   // ---------- Roteamento da resposta da IA ----------
@@ -189,7 +211,7 @@ export class BotCore {
   // ---------- Comandos ----------
 
   private async handleCommand(msg: IncomingMessage, reply: Replier): Promise<void> {
-    const userId = msg.externalId;
+    const { platform, externalId } = msg;
     const name = msg.command?.name;
     const args = msg.command?.args ?? [];
 
@@ -198,21 +220,25 @@ export class BotCore {
         return this.handleStart(msg, reply);
 
       case "gastos":
-        if (!(await this.requireRegistered(reply, userId))) return;
-        return this.handleSpendingQuery(reply, userId, "current_month");
+        if (!(await this.requireRegistered(reply, platform, externalId))) return;
+        return this.handleSpendingQuery(reply, externalId, "current_month");
 
       case "compras":
-        if (!(await this.requireRegistered(reply, userId))) return;
-        return this.handleGetPurchases(reply, userId);
+        if (!(await this.requireRegistered(reply, platform, externalId))) return;
+        return this.handleGetPurchases(reply, externalId);
 
       case "ia":
-        if (!(await this.requireRegistered(reply, userId))) return;
-        return this.handleSetIAModel(reply, userId, args[0]);
+        if (!(await this.requireRegistered(reply, platform, externalId))) return;
+        return this.handleSetIAModel(reply, platform, externalId, args[0]);
     }
   }
 
   private async handleStart(msg: IncomingMessage, reply: Replier): Promise<void> {
-    const { user, question } = await this.userService.ensureUser(msg.externalId, msg.profile);
+    const { user, question } = await this.userService.ensureUser(
+      msg.platform,
+      msg.externalId,
+      msg.profile,
+    );
 
     if (user.status === "complete") {
       await reply.text(
@@ -227,12 +253,21 @@ export class BotCore {
     );
   }
 
-  private async handleSetIAModel(reply: Replier, userId: string, model?: string): Promise<void> {
+  private async handleSetIAModel(
+    reply: Replier,
+    platform: Platform,
+    externalId: string,
+    model?: string,
+  ): Promise<void> {
     if (!model) {
       await reply.text("Use: /ia gpt ou /ia gemini");
       return;
     }
-    const response = await this.messageProcessingService.setUserModel(userId, model.toLowerCase());
+    const response = await this.messageProcessingService.setUserModel(
+      platform,
+      externalId,
+      model.toLowerCase(),
+    );
     await reply.text(response);
   }
 

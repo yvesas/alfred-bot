@@ -138,7 +138,13 @@ mudar comportamento nem adicionar plataforma.
 
 ---
 
-## Fase 2 — Identidade multi-plataforma (com vínculo)
+## Fase 2 — Identidade multi-plataforma ✅ CONCLUÍDA (abordagem aditiva)
+
+> Implementada de forma **aditiva, sem migração**: `User.identities[]` + `telegramId` legado mantido;
+> `UserRepository.findByIdentity/updateByIdentity` (com fallback para `telegramId` no Telegram);
+> `UserService`/`MessageProcessingService`/`BotCore` agora operam por `(platform, externalId)`.
+> As **compras seguem por id externo** (sem reescrever dados reais) — a migração para id canônico do
+> User foi **adiada para a Fase 4** (vínculo de contas), quando passa a ser necessária.
 
 **Objetivo:** generalizar a identidade do usuário para suportar **várias plataformas por pessoa**.
 

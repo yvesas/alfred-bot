@@ -42,7 +42,8 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 ### Plataforma / negócio (rumo à comercialização)
 - 🟡 **Multi-plataforma (Telegram + WhatsApp)** — Plano em [PLANO-MULTIPLATAFORMA.md](./PLANO-MULTIPLATAFORMA.md)
   - ✅ Fase 1 — `BotCore` + camada de adapter (`IncomingMessage`/`Replier`/`IMessagingAdapter`); `TelegramAdapter` (Telegram intacto); orquestrador por `PLATFORMS`
-  - ⬜ Fases 2-5 — identidade multi-plataforma, WhatsApp (Baileys), vínculo de contas, API oficial
+  - ✅ Fase 2 — identidade multi-plataforma (`User.identities[]` + `findByIdentity`); lookups por `(platform, externalId)`; aditivo, sem migração (compras seguem por id externo; migração canônica adiada para a Fase 4)
+  - ⬜ Fases 3-5 — WhatsApp (Baileys), vínculo de contas, API oficial
 - ⬜ **Planos e limites de uso** (free/pago)
 - ⬜ **Painel web** para visualizar gastos fora do Telegram
 - ⬜ **Política de privacidade / LGPD** — dados financeiros são sensíveis

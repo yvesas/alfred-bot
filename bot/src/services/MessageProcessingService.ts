@@ -3,6 +3,7 @@ import { GptProcessor } from "./GptProcessor";
 import { GeminiProcessor } from "./GeminiProcessor";
 import { IPurchaseItem, IStoreInfo, ITaxInfo } from "../models/Purchase";
 import { AiModel } from "../models/User";
+import { Platform } from "../core/IncomingMessage";
 import { UserRepository } from "../repositories/UserRepository";
 import { logger } from "../infra/logger";
 import { aiErrorsTotal } from "../infra/metrics";
@@ -42,33 +43,37 @@ export class MessageProcessingService {
   ) {}
 
   // Persiste a escolha do modelo de IA no usuário (sobrevive a reinício do bot).
-  async setUserModel(userId: string, model: string): Promise<string> {
+  async setUserModel(platform: Platform, externalId: string, model: string): Promise<string> {
     if (model !== "gpt" && model !== "gemini") {
       return `Modelo inválido! Escolha entre "gpt" ou "gemini".`;
     }
 
-    await this.userRepo.update(userId, { aiModel: model as AiModel });
+    await this.userRepo.updateByIdentity(platform, externalId, { aiModel: model as AiModel });
     return `🤖 Modelo atualizado para ${model.toUpperCase()}!`;
   }
 
   // Seleciona o processador conforme a preferência salva do usuário (default: gemini).
-  private async getProcessor(userId: string): Promise<IMessageProcessor> {
-    const user = await this.userRepo.findByTelegramId(userId);
+  private async getProcessor(platform: Platform, externalId: string): Promise<IMessageProcessor> {
+    const user = await this.userRepo.findByIdentity(platform, externalId);
     const model: AiModel = user?.aiModel ?? "gemini";
     return model === "gpt" ? this.gptProcessor : this.geminiProcessor;
   }
 
-  async processMessage(userId: string, text: string): Promise<ModelResponse> {
+  async processMessage(
+    platform: Platform,
+    externalId: string,
+    text: string,
+  ): Promise<ModelResponse> {
     try {
-      const processor = await this.getProcessor(userId);
+      const processor = await this.getProcessor(platform, externalId);
       const response = await processor.processMessage(text);
 
       if (!response) {
         return { intent: "unknown", message: "🤖 Não entendi. Pode reformular?" };
       }
 
-      // O userId é sempre o ID real do Telegram — a IA não o conhece.
-      response.userId = userId;
+      // O userId dos dados é o id externo da plataforma — a IA não o conhece.
+      response.userId = externalId;
       return response;
     } catch (error) {
       aiErrorsTotal.inc();
@@ -79,8 +84,12 @@ export class MessageProcessingService {
 
   // Processa a imagem direto no modelo (Fase 3). Retorna null se o modelo ativo
   // não suportar imagem — nesse caso o chamador usa o caminho OCR → texto.
-  async processImage(userId: string, base64Image: string): Promise<ModelResponse | null> {
-    const processor = await this.getProcessor(userId);
+  async processImage(
+    platform: Platform,
+    externalId: string,
+    base64Image: string,
+  ): Promise<ModelResponse | null> {
+    const processor = await this.getProcessor(platform, externalId);
     if (!processor.processImage) {
       return null;
     }
@@ -90,7 +99,7 @@ export class MessageProcessingService {
       if (!response) {
         return { intent: "unknown", message: "🤖 Não entendi. Pode reformular?" };
       }
-      response.userId = userId;
+      response.userId = externalId;
       return response;
     } catch (error) {
       aiErrorsTotal.inc();

@@ -115,7 +115,11 @@ process.once("SIGTERM", shutdown);
 - **Flexível depois:** como cada adapter é independente, dá para, no futuro, rodá-los em **processos
   separados** (escala/isolamento) sem mudar o `BotCore` — basta um `PLATFORMS` por instância.
 
-## Fase 1 — Refactor: BotCore + camada de adapter (Telegram intacto)
+## Fase 1 — Refactor: BotCore + camada de adapter (Telegram intacto) ✅ CONCLUÍDA
+
+> Implementada: `core/{IncomingMessage,Replier,IMessagingAdapter,BotCore}`,
+> `platforms/telegram/TelegramAdapter`, orquestrador por `PLATFORMS` no `index.ts`,
+> `TelegramBot.ts` removido. Comportamento do Telegram inalterado; `BotCore` coberto por testes.
 
 **Objetivo:** extrair a lógica para `BotCore` e transformar `TelegramBot` em `TelegramAdapter`, sem
 mudar comportamento nem adicionar plataforma.

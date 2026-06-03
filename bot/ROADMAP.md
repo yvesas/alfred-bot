@@ -40,7 +40,9 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - 🟡 **Gestão de produtos/estoque** — `ProductService`/`ProductRepository` existem, mas **não estão ligados** ao bot
 
 ### Plataforma / negócio (rumo à comercialização)
-- ⬜ **Multi-plataforma (Telegram + WhatsApp)** — camada de adapter + `BotCore`, WhatsApp via Baileys e vínculo de contas. Plano em [PLANO-MULTIPLATAFORMA.md](./PLANO-MULTIPLATAFORMA.md)
+- 🟡 **Multi-plataforma (Telegram + WhatsApp)** — Plano em [PLANO-MULTIPLATAFORMA.md](./PLANO-MULTIPLATAFORMA.md)
+  - ✅ Fase 1 — `BotCore` + camada de adapter (`IncomingMessage`/`Replier`/`IMessagingAdapter`); `TelegramAdapter` (Telegram intacto); orquestrador por `PLATFORMS`
+  - ⬜ Fases 2-5 — identidade multi-plataforma, WhatsApp (Baileys), vínculo de contas, API oficial
 - ⬜ **Planos e limites de uso** (free/pago)
 - ⬜ **Painel web** para visualizar gastos fora do Telegram
 - ⬜ **Política de privacidade / LGPD** — dados financeiros são sensíveis
@@ -96,7 +98,8 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - ✅ Pre-commit aponta lint (staged) + type-check; testes no pre-push
 - ✅ `Dockerfile` multi-stage + `.dockerignore` (deploy agnóstico ao host)
 - ⬜ **Definir host e CD** (deploy automático) — Railway/Fly.io/Render/Cloud Run/VPS
-- ⬜ Healthcheck / readiness para o orquestrador
+- ✅ **Healthcheck / readiness** para o orquestrador (`/health`, `/ready` + HEALTHCHECK no Docker)
+- 🟡 **Observabilidade** — `/metrics` (Prometheus) exposto + profile `monitoring` (Prometheus+Grafana) no compose; falta criar dashboards no Grafana
 
 ### DevEx / documentação
 - ✅ README do projeto (com seções de Deploy e CI)

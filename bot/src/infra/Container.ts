@@ -11,11 +11,12 @@ import { IOcrProvider, OCR_PROVIDER_TOKEN } from "../services/ocr/IOcrProvider";
 import { VisionOcrProvider } from "../services/ocr/VisionOcrProvider";
 import { GeminiOcrProvider } from "../services/ocr/GeminiOcrProvider";
 import { PaddleOcrProvider } from "../services/ocr/PaddleOcrProvider";
-import { TelegramBot } from "../services/TelegramBot";
 import { MessageProcessingService } from "../services/MessageProcessingService";
 import { GeminiProcessor } from "../services/GeminiProcessor";
 import { GptProcessor } from "../services/GptProcessor";
 import { RateLimiter } from "../services/RateLimiter";
+import { BotCore } from "../core/BotCore";
+import { TelegramAdapter } from "../platforms/telegram/TelegramAdapter";
 import { logger } from "./logger";
 import { config } from "./config";
 
@@ -51,7 +52,8 @@ container.bind<GeminiProcessor>(GeminiProcessor).toSelf();
 container.bind<GptProcessor>(GptProcessor).toSelf();
 container.bind<RateLimiter>(RateLimiter).toSelf().inSingletonScope();
 container.bind<MessageProcessingService>(MessageProcessingService).toSelf();
+container.bind<BotCore>(BotCore).toSelf().inSingletonScope();
 
-container.bind(TelegramBot).toSelf().inSingletonScope();
+container.bind(TelegramAdapter).toSelf().inSingletonScope();
 
 export { container };

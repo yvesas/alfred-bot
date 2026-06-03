@@ -95,6 +95,23 @@ Além dos comandos, basta **enviar uma mensagem de texto** descrevendo a compra,
 
 ---
 
+## 📱 Plataformas (Telegram + WhatsApp)
+
+O bot roda em **Telegram** e/ou **WhatsApp** na mesma instância, selecionados por `PLATFORMS`:
+
+```dotenv
+PLATFORMS=telegram            # padrão
+PLATFORMS=telegram,whatsapp   # os dois juntos
+```
+
+- **WhatsApp** usa a lib **Baileys** (não-oficial, gratuita): no primeiro start, um **QR code** aparece
+  no terminal — escaneie com o WhatsApp do número que será o bot. A sessão fica em
+  `WHATSAPP_SESSION_DIR` (default `./.wa-session`, **gitignorado**; em Docker é um volume).
+- ⚠️ Baileys é **não-oficial** (contra os ToS do WhatsApp) — use um número dedicado; risco de ban.
+  Para produção/comercialização, a API oficial (Cloud API) entra numa fase futura.
+
+---
+
 ## 🩺 Health & métricas
 
 O bot sobe um pequeno servidor HTTP na porta `HEALTH_PORT` (default `3000`):

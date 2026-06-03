@@ -35,6 +35,8 @@ export class UserService {
         identities: [{ platform, externalId }],
         // Mantém o campo legado preenchido para usuários do Telegram.
         ...(platform === "telegram" ? { telegramId: externalId } : {}),
+        // No WhatsApp o externalId já é o número de telefone.
+        ...(platform === "whatsapp" ? { phone: externalId } : {}),
         ...(name ? { name, status: "awaiting_email" } : { status: "awaiting_name" }),
       };
       user = await this.userRepo.create(initial);

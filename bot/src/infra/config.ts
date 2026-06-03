@@ -21,6 +21,7 @@ export const config = {
 
   // Com default
   platforms: (process.env.PLATFORMS ?? "telegram").toLowerCase(),
+  whatsappSessionDir: process.env.WHATSAPP_SESSION_DIR ?? "./.wa-session",
   ocrProvider: (process.env.OCR_PROVIDER ?? "gemini").toLowerCase(),
   ocrMode: (process.env.OCR_MODE ?? "ocr").toLowerCase(),
   healthPort: Number(process.env.HEALTH_PORT ?? 3000),

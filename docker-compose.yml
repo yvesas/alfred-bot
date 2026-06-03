@@ -17,6 +17,9 @@ services:
     env_file: ./bot/.env
     networks: [app-net]
     restart: unless-stopped
+    volumes:
+      # Sessão do WhatsApp (Baileys) — persiste o login por QR entre reinícios.
+      - wa-session:/app/.wa-session
     # /health (liveness), /ready (readiness) e /metrics (Prometheus) na porta HEALTH_PORT (3000).
     healthcheck:
       test:
@@ -67,3 +70,4 @@ networks:
 volumes:
   paddle-models:
   grafana-data:
+  wa-session:

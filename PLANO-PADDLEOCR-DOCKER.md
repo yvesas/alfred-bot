@@ -1,9 +1,16 @@
 # Plano — Microserviço PaddleOCR + FastAPI em Docker (Fase 4)
 
-> Documento de planejamento e **estudo**. Nada implementado ainda.
+> Documento de planejamento e **estudo**.
 > Implementa a Fase 4 de [PLANO-OCR-FASES.md](./PLANO-OCR-FASES.md): um OCR self-hosted que o bot
 > consome **internamente** pela rede Docker, sem depender de provedor pago.
-> Última atualização: 02/06/2026.
+> Última atualização: 03/06/2026.
+
+> **Implementação (atualização):** o serviço foi criado como **projeto irmão** em
+> `/alfred/ocr-service` (FastAPI + PaddleOCR), com orquestração em `/alfred/docker-compose.yml`
+> (serviço `ocr` **opcional** via `--profile paddle`). No bot, o cliente é
+> `src/services/ocr/PaddleOcrProvider.ts`, ativado por `OCR_PROVIDER=paddle`. Os exemplos abaixo que
+> mostram `ocr-service/` dentro do bot são do desenho original — o layout final usa projetos
+> separados na raiz `/alfred`.
 
 ---
 

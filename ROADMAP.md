@@ -72,7 +72,12 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - ⬜ **Rate limiting / proteção contra abuso** por usuário
 
 ### OCR (menor custo + provider trocável)
-- ⬜ **Migração de OCR em 4 fases** — interface `IOcrProvider`, Gemini multimodal como padrão, chamada multimodal única, e PaddleOCR self-host. Detalhes em [PLANO-OCR-FASES.md](./PLANO-OCR-FASES.md) e [PLANO-PADDLEOCR-DOCKER.md](./PLANO-PADDLEOCR-DOCKER.md)
+- 🟡 **Migração de OCR em 4 fases** — detalhes em [PLANO-OCR-FASES.md](./PLANO-OCR-FASES.md) e [PLANO-PADDLEOCR-DOCKER.md](./PLANO-PADDLEOCR-DOCKER.md)
+  - ✅ Fase 1 — interface `IOcrProvider` (Vision como provider)
+  - ✅ Fase 2 — `GeminiOcrProvider` multimodal como padrão
+  - ✅ Fase 3 — chamada multimodal única (`OCR_MODE=multimodal`)
+  - ✅ Fase 4 — `PaddleOcrProvider` + projeto `/alfred/ocr-service` (FastAPI/PaddleOCR) + compose
+    (build da imagem pendente: exige x86_64; em ARM usar `--platform linux/amd64`)
 
 ### Arquitetura / código
 - ⬜ **Injetar `OcrService`, `GeminiProcessor` e `GptProcessor` via DI** (hoje usam `new` e são recriados a cada mensagem)

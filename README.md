@@ -61,7 +61,8 @@ GCP_PROJECT_ID=                    # ID do projeto no Google Cloud
 
 OPENAI_API_KEY=                    # opcional, apenas para o modelo GPT
 
-OCR_PROVIDER=gemini                # provedor de OCR: "gemini" (padrão) ou "vision"
+OCR_PROVIDER=gemini                # OCR: "gemini" (padrão), "vision" ou "paddle" (self-host)
+PADDLE_OCR_URL=http://ocr:8000     # usado apenas quando OCR_PROVIDER=paddle
 OCR_MODE=ocr                       # "ocr" (padrão) ou "multimodal" (imagem → JSON em 1 chamada)
 ```
 

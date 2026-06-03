@@ -169,7 +169,12 @@ interface IUserBase {
 
 ---
 
-## Fase 3 — WhatsAppAdapter (Baileys)
+## Fase 3 — WhatsAppAdapter (Baileys) ✅ CONCLUÍDA
+
+> Implementado: `platforms/whatsapp/WhatsAppAdapter` (Baileys 6.x, login por QR, reconexão,
+> sessão em `WHATSAPP_SESSION_DIR` — gitignorada e em volume no compose). Normaliza texto/foto/comandos
+> para `IncomingMessage`; telefone preenchido automaticamente (o `externalId` do WhatsApp é o número).
+> Habilitado por `PLATFORMS=telegram,whatsapp`. `tsconfig` com `skipLibCheck` (deps do Baileys).
 
 **Objetivo:** segundo adapter usando a lib gratuita **Baileys** (sem chaves, login por QR).
 

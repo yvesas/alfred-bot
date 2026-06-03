@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { container } from "./infra/Container";
 import { Database } from "./infra/Database";
 import { TelegramAdapter } from "./platforms/telegram/TelegramAdapter";
+import { WhatsAppAdapter } from "./platforms/whatsapp/WhatsAppAdapter";
 import { IMessagingAdapter } from "./core/IMessagingAdapter";
 import { assertRequiredConfig, config } from "./infra/config";
 import { startHealthServer, setAppReady } from "./infra/health";
@@ -13,7 +14,7 @@ function resolveAdapters(): IMessagingAdapter[] {
   const adapters: IMessagingAdapter[] = [];
 
   if (enabled.includes("telegram")) adapters.push(container.get(TelegramAdapter));
-  // if (enabled.includes("whatsapp")) adapters.push(container.get(WhatsAppAdapter)); // Fase 3
+  if (enabled.includes("whatsapp")) adapters.push(container.get(WhatsAppAdapter));
 
   return adapters;
 }

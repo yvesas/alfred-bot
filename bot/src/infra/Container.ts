@@ -17,6 +17,7 @@ import { GptProcessor } from "../services/GptProcessor";
 import { RateLimiter } from "../services/RateLimiter";
 import { BotCore } from "../core/BotCore";
 import { TelegramAdapter } from "../platforms/telegram/TelegramAdapter";
+import { WhatsAppAdapter } from "../platforms/whatsapp/WhatsAppAdapter";
 import { logger } from "./logger";
 import { config } from "./config";
 
@@ -55,5 +56,6 @@ container.bind<MessageProcessingService>(MessageProcessingService).toSelf();
 container.bind<BotCore>(BotCore).toSelf().inSingletonScope();
 
 container.bind(TelegramAdapter).toSelf().inSingletonScope();
+container.bind(WhatsAppAdapter).toSelf().inSingletonScope();
 
 export { container };

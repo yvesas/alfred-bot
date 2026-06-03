@@ -4,3 +4,6 @@ node_modules
 /coverage
 .env
 google-credentials.json
+
+# Sessão do WhatsApp (Baileys) — contém CREDENCIAIS, nunca versionar
+.wa-session/

@@ -46,10 +46,10 @@ pnpm install
 ```
 
 ### 2. Configurar variáveis de ambiente
-Copie o template `.env_` para `.env` e preencha:
+Copie o template `.env.sample` para `.env` e preencha:
 
 ```bash
-cp .env_ .env
+cp .env.sample .env
 ```
 
 ```dotenv
@@ -60,6 +60,8 @@ GOOGLE_APPLICATION_CREDENTIALS=    # caminho para o JSON da service account do G
 GCP_PROJECT_ID=                    # ID do projeto no Google Cloud
 
 OPENAI_API_KEY=                    # opcional, apenas para o modelo GPT
+
+OCR_PROVIDER=vision                # provedor de OCR (Fase 1: apenas "vision")
 ```
 
 > ⚠️ **Segurança:** nunca versione o `.env` nem o JSON de credenciais do Google. Ambos já estão no `.gitignore`. Use `src/config/google-credentials_model.json` apenas como modelo.

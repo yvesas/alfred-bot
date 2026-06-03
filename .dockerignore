@@ -6,8 +6,6 @@ coverage
 .husky
 *.log
 .env
-.env_
+.env.sample
 src/config/google-credentials.json
-README.md
-ROADMAP.md
-ANALISE-PROJETO.md
+*.md

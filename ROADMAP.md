@@ -56,7 +56,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 | ~~B3~~ | ~~**Sem _graceful shutdown_**~~ | ✅ | Resolvido: `index.ts` trata `SIGINT`/`SIGTERM` chamando `bot.stop()` |
 | B4 | **Consulta usa a data do cupom, não a do registro** | 🟡 | "Gastos do mês" filtra por `date` (data do recibo). Cupom antigo cai no mês do recibo, não no de lançamento — pode confundir |
 | B5 | **Preferência de modelo de IA é volátil** | 🟡 | `/ia` guarda a escolha em memória (`Map`); reinício do bot reseta para Gemini |
-| B6 | **OCR de cupom depende de formato rígido** | 🟡 | `OcrService.parseReceiptText` usa regex específico (e nem está em uso); cupons variam muito de layout |
+| B6 | **OCR de cupom depende de formato rígido** | 🟡 | `OcrService.parseReceiptText` usa regex específico (e nem está em uso); cupons variam muito de layout. Endereçado pelo plano de OCR abaixo |
 | B7 | **Sem retry/fallback quando a IA falha** | 🟡 | Erro da IA vira mensagem genérica; não tenta o outro modelo nem reprocessa |
 
 ---
@@ -70,6 +70,9 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - ⬜ **Logger estruturado** (pino/winston) no lugar dos `console.log`/`console.error`
 - ⬜ **Validação centralizada de variáveis de ambiente** na inicialização (falhar cedo e claro)
 - ⬜ **Rate limiting / proteção contra abuso** por usuário
+
+### OCR (menor custo + provider trocável)
+- ⬜ **Migração de OCR em 4 fases** — interface `IOcrProvider`, Gemini multimodal como padrão, chamada multimodal única, e PaddleOCR self-host. Detalhes em [PLANO-OCR-FASES.md](./PLANO-OCR-FASES.md) e [PLANO-PADDLEOCR-DOCKER.md](./PLANO-PADDLEOCR-DOCKER.md)
 
 ### Arquitetura / código
 - ⬜ **Injetar `OcrService`, `GeminiProcessor` e `GptProcessor` via DI** (hoje usam `new` e são recriados a cada mensagem)

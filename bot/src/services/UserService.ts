@@ -1,12 +1,13 @@
 import { inject, injectable } from "inversify";
 import { UserRepository } from "../repositories/UserRepository";
 import { IUser, IUserCreate, UserStatus } from "../models/User";
+import { Platform } from "../core/IncomingMessage";
 import { isValidEmail } from "../utils/validation";
 
 export const SKIP_COMMAND = "/pular";
 
-// Dados que o Telegram já entrega automaticamente sobre quem iniciou o bot.
-export interface TelegramProfile {
+// Dados de perfil que algumas plataformas já entregam (Telegram: nome).
+export interface PlatformProfile {
   firstName?: string;
   lastName?: string;
 }
@@ -15,23 +16,27 @@ export interface TelegramProfile {
 export class UserService {
   constructor(@inject(UserRepository) private userRepo: UserRepository) {}
 
-  async findByTelegramId(telegramId: string): Promise<IUser | null> {
-    return await this.userRepo.findByTelegramId(telegramId);
+  async findByIdentity(platform: Platform, externalId: string): Promise<IUser | null> {
+    return await this.userRepo.findByIdentity(platform, externalId);
   }
 
-  // Garante que existe um registro para o usuário. Se o Telegram informar o nome do perfil,
-  // ele é aproveitado automaticamente e o cadastro já pula para a etapa do e-mail.
+  // Garante que existe um registro para a identidade. Se a plataforma informar o nome,
+  // ele é aproveitado e o cadastro já pula para a etapa do e-mail.
   async ensureUser(
-    telegramId: string,
-    profile?: TelegramProfile,
+    platform: Platform,
+    externalId: string,
+    profile?: PlatformProfile,
   ): Promise<{ user: IUser; question: string }> {
-    let user = await this.userRepo.findByTelegramId(telegramId);
+    let user = await this.userRepo.findByIdentity(platform, externalId);
 
     if (!user) {
       const name = this.fullName(profile);
-      const initial: IUserCreate = name
-        ? { telegramId, name, status: "awaiting_email" }
-        : { telegramId, status: "awaiting_name" };
+      const initial: IUserCreate = {
+        identities: [{ platform, externalId }],
+        // Mantém o campo legado preenchido para usuários do Telegram.
+        ...(platform === "telegram" ? { telegramId: externalId } : {}),
+        ...(name ? { name, status: "awaiting_email" } : { status: "awaiting_name" }),
+      };
       user = await this.userRepo.create(initial);
     }
 
@@ -52,13 +57,14 @@ export class UserService {
 
   // Avança a máquina de estados do cadastro com a resposta enviada pelo usuário.
   async submitAnswer(
-    telegramId: string,
+    platform: Platform,
+    externalId: string,
     text: string,
   ): Promise<{ reply: string; completed: boolean }> {
-    const user = await this.userRepo.findByTelegramId(telegramId);
+    const user = await this.userRepo.findByIdentity(platform, externalId);
     if (!user) {
       // Sem registro ainda: cria e faz a primeira pergunta sem consumir o texto como resposta.
-      const { question } = await this.ensureUser(telegramId);
+      const { question } = await this.ensureUser(platform, externalId);
       return { reply: question, completed: false };
     }
 
@@ -69,7 +75,10 @@ export class UserService {
         if (answer.length < 2) {
           return { reply: "Por favor, me diga seu nome. 🙂", completed: false };
         }
-        await this.userRepo.update(telegramId, { name: answer, status: "awaiting_email" });
+        await this.userRepo.updateByIdentity(platform, externalId, {
+          name: answer,
+          status: "awaiting_email",
+        });
         return {
           reply: `Prazer, ${answer}! ${this.questionFor("awaiting_email")}`,
           completed: false,
@@ -78,7 +87,7 @@ export class UserService {
 
       case "awaiting_email": {
         if (answer.toLowerCase() === SKIP_COMMAND) {
-          await this.userRepo.update(telegramId, { status: "complete" });
+          await this.userRepo.updateByIdentity(platform, externalId, { status: "complete" });
           return { reply: this.completionMessage(), completed: true };
         }
         if (!isValidEmail(answer)) {
@@ -87,7 +96,7 @@ export class UserService {
             completed: false,
           };
         }
-        await this.userRepo.update(telegramId, {
+        await this.userRepo.updateByIdentity(platform, externalId, {
           email: answer.toLowerCase(),
           status: "complete",
         });
@@ -99,16 +108,17 @@ export class UserService {
     }
   }
 
-  // Guarda o telefone compartilhado pelo usuário (botão "compartilhar contato" do Telegram).
+  // Guarda o telefone compartilhado pelo usuário (botão "compartilhar contato").
   // Aproveita o nome do contato caso ainda não tenhamos um.
   async saveContact(
-    telegramId: string,
+    platform: Platform,
+    externalId: string,
     phone: string,
     contactName?: string,
   ): Promise<{ reply: string; completed: boolean }> {
     const user =
-      (await this.userRepo.findByTelegramId(telegramId)) ??
-      (await this.ensureUser(telegramId)).user;
+      (await this.userRepo.findByIdentity(platform, externalId)) ??
+      (await this.ensureUser(platform, externalId)).user;
 
     const patch: Partial<IUserCreate> = { phone };
     if (!user.name && contactName) {
@@ -120,7 +130,7 @@ export class UserService {
       patch.status = "awaiting_email";
     }
 
-    await this.userRepo.update(telegramId, patch);
+    await this.userRepo.updateByIdentity(platform, externalId, patch);
 
     if (user.status === "complete") {
       return { reply: "📱 Telefone atualizado com sucesso!", completed: true };
@@ -132,7 +142,7 @@ export class UserService {
     };
   }
 
-  private fullName(profile?: TelegramProfile): string | undefined {
+  private fullName(profile?: PlatformProfile): string | undefined {
     if (!profile?.firstName) {
       return undefined;
     }

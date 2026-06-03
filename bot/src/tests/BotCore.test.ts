@@ -55,11 +55,11 @@ describe("BotCore", () => {
     await core.handle(baseMsg({ kind: "text", text: "oi" }), reply);
 
     expect(replies[0]).toContain("Muitas mensagens");
-    expect(userService.findByTelegramId.called).toBe(false);
+    expect(userService.findByIdentity.called).toBe(false);
   });
 
   it("registers a purchase from a text message of a registered user", async () => {
-    userService.findByTelegramId.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete" } as any);
     mps.processMessage.resolves({
       intent: "purchase",
       userId: "1",
@@ -77,7 +77,7 @@ describe("BotCore", () => {
   });
 
   it("answers a spending query", async () => {
-    userService.findByTelegramId.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete" } as any);
     mps.processMessage.resolves({ intent: "query", period: "current_month" });
     purchaseService.getSpendingReport.resolves({
       period: "current_month",

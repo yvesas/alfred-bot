@@ -3,6 +3,8 @@ import "reflect-metadata";
 import { injectable } from "inversify";
 import { VertexAI } from "@google-cloud/vertexai";
 import { IOcrProvider } from "./IOcrProvider";
+import { logger } from "../../infra/logger";
+import { config } from "../../infra/config";
 
 // Provedor de OCR usando o Gemini (multimodal) via Vertex AI.
 // Lê a imagem diretamente e transcreve o texto — dispensa o Google Vision.
@@ -12,7 +14,7 @@ export class GeminiOcrProvider implements IOcrProvider {
   private model: any;
 
   constructor() {
-    const projectId = process.env.GCP_PROJECT_ID || "";
+    const projectId = config.gcpProjectId;
     const vertexAI = new VertexAI({ project: projectId, location: "us-central1" });
     this.model = vertexAI.getGenerativeModel({ model: "gemini-2.0-flash-lite-001" });
   }
@@ -35,7 +37,7 @@ export class GeminiOcrProvider implements IOcrProvider {
 
       return result.response.candidates[0].content.parts[0].text || "Nenhum texto detectado.";
     } catch (error) {
-      console.error("Erro ao processar a imagem (Gemini OCR):", error);
+      logger.error({ err: error }, "Erro ao processar a imagem (Gemini OCR)");
       return "Erro ao processar a imagem.";
     }
   }

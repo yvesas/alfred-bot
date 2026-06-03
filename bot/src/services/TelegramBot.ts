@@ -4,24 +4,28 @@ import { container } from "../infra/Container";
 import { PurchaseService } from "./PurchaseService";
 import { OcrService } from "./OcrService";
 import { UserService } from "./UserService";
+import { RateLimiter } from "./RateLimiter";
 import {
   MessageProcessingService,
   ModelResponse,
   SpendingGroupBy,
   SpendingPeriod,
 } from "./MessageProcessingService";
-import { convertModelResponseToPurchase } from "../infra/converters/purchaseConverter";
+import {
+  convertModelResponseToPurchase,
+  validatePurchaseData,
+} from "../infra/converters/purchaseConverter";
+import { logger } from "../infra/logger";
+import { config } from "../infra/config";
 
-const token = process.env.TELEGRAM_TOKEN;
-if (!token) {
-  throw new Error("Bot access token not found. Check TELEGRAM TOKEN environment variable.");
-}
+const token = config.telegramToken;
 
 export class TelegramBot {
   private bot: Telegraf;
   private purchaseService: PurchaseService;
   private ocrService: OcrService;
   private userService: UserService;
+  private rateLimiter: RateLimiter;
   private messageProcessingService: MessageProcessingService;
 
   constructor() {
@@ -29,6 +33,7 @@ export class TelegramBot {
     this.purchaseService = container.get(PurchaseService);
     this.ocrService = container.get(OcrService);
     this.userService = container.get(UserService);
+    this.rateLimiter = container.get(RateLimiter);
     this.messageProcessingService = container.get(MessageProcessingService);
 
     this.setUpBot();
@@ -43,12 +48,12 @@ export class TelegramBot {
     this.bot.on("text", (ctx: Context) => this.handleText(ctx));
     this.bot.on("photo", (ctx: Context) => this.handlePhoto(ctx));
     this.bot.on("contact", (ctx: Context) => this.handleContact(ctx));
-    this.bot.launch().then(() => console.info("🚀 Bot was launched!"));
+    this.bot.launch().then(() => logger.info("🚀 Bot was launched!"));
   }
 
   // Encerra o bot de forma limpa (chamado em SIGINT/SIGTERM, ex.: parada de container).
   stop(signal: string) {
-    console.info(`🛑 Encerrando o bot (${signal})...`);
+    logger.info(`🛑 Encerrando o bot (${signal})...`);
     this.bot.stop(signal);
   }
 
@@ -120,11 +125,24 @@ export class TelegramBot {
     return false;
   }
 
+  // Rate limiting por usuário. Retorna false (e avisa) se o limite foi excedido.
+  private async checkRate(ctx: Context, userId: string): Promise<boolean> {
+    if (!this.rateLimiter.allow(userId)) {
+      await ctx.reply("⏳ Muitas mensagens em pouco tempo. Aguarde um instante e tente novamente.");
+      return false;
+    }
+    return true;
+  }
+
   // ---------- Mensagens ----------
 
   private async handleText(ctx: Context) {
     const message = ctx.message as Message.TextMessage;
     const userId = String(ctx.message?.from.id);
+
+    if (!(await this.checkRate(ctx, userId))) {
+      return;
+    }
 
     const user = await this.userService.findByTelegramId(userId);
 
@@ -162,6 +180,9 @@ export class TelegramBot {
     }
 
     const userId = String(ctx.from?.id);
+    if (!(await this.checkRate(ctx, userId))) {
+      return;
+    }
     if (!(await this.requireRegistered(ctx, userId))) {
       return;
     }
@@ -178,7 +199,7 @@ export class TelegramBot {
       const processed = await this.processReceiptImage(userId, base64Image);
       await this.handleProcessedMessage(ctx, userId, processed);
     } catch (error) {
-      console.error("Erro ao baixar/processar a imagem:", error);
+      logger.error({ err: error }, "Erro ao baixar/processar a imagem");
       await ctx.reply("Houve um erro ao processar a imagem. Tente novamente.");
     }
   }
@@ -186,7 +207,7 @@ export class TelegramBot {
   // OCR_MODE=multimodal: imagem → JSON numa única chamada ao modelo (Fase 3).
   // Caso contrário (ou se o modelo não suportar imagem): OCR → texto → extração.
   private async processReceiptImage(userId: string, base64Image: string): Promise<ModelResponse> {
-    const multimodal = (process.env.OCR_MODE ?? "ocr").toLowerCase() === "multimodal";
+    const multimodal = config.ocrMode === "multimodal";
 
     if (multimodal) {
       const direct = await this.messageProcessingService.processImage(userId, base64Image);
@@ -215,13 +236,20 @@ export class TelegramBot {
     }
 
     const purchaseData = convertModelResponseToPurchase(processed);
+
+    const validation = validatePurchaseData(purchaseData);
+    if (!validation.ok) {
+      await ctx.reply(`❌ ${validation.reason}`);
+      return;
+    }
+
     try {
       await this.purchaseService.addPurchase(purchaseData);
       await ctx.reply(
         `🛒 Compra registrada: ${purchaseData.description} - Total de R$ ${purchaseData.total.toFixed(2)}`,
       );
     } catch (error) {
-      console.error("Erro ao registrar compra:", error);
+      logger.error({ err: error }, "Erro ao registrar compra");
       await ctx.reply(
         "❌ Não consegui registrar essa compra. Verifique os valores e tente novamente.",
       );
@@ -299,7 +327,7 @@ export class TelegramBot {
       return ctx.reply("Use: /ia gpt ou /ia gemini");
     }
 
-    const response = this.messageProcessingService.setUserModel(userId, model);
+    const response = await this.messageProcessingService.setUserModel(userId, model);
     ctx.reply(response);
   }
 

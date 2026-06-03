@@ -1,9 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import "reflect-metadata";
+import { injectable } from "inversify";
 import { VertexAI } from "@google-cloud/vertexai";
 import { IMessageProcessor, ModelResponse } from "./MessageProcessingService";
 import { getPrompt001 } from "../IA/prompts";
 import { validateAndConvertModelResponse } from "../infra/converters/modelResponseConverter";
+import { config } from "../infra/config";
 
+@injectable()
 export class GeminiProcessor implements IMessageProcessor {
   private vertexAI: VertexAI;
   private projectId: string;
@@ -12,7 +16,7 @@ export class GeminiProcessor implements IMessageProcessor {
   private model: any;
 
   constructor() {
-    this.projectId = process.env.GCP_PROJECT_ID || "";
+    this.projectId = config.gcpProjectId;
     this.location = "us-central1";
     this.modelName = "gemini-2.0-flash-lite-001";
 

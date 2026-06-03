@@ -1,6 +1,7 @@
 import { Schema, model, Document } from "mongoose";
 
 export type UserStatus = "awaiting_name" | "awaiting_email" | "complete";
+export type AiModel = "gemini" | "gpt";
 
 export interface IUserBase {
   telegramId: string;
@@ -8,6 +9,7 @@ export interface IUserBase {
   email?: string;
   phone?: string;
   status: UserStatus;
+  aiModel?: AiModel;
 }
 
 export type IUserCreate = Omit<IUserBase, "_id">;
@@ -26,6 +28,7 @@ const UserSchema = new Schema<IUser>(
       default: "awaiting_name",
       required: true,
     },
+    aiModel: { type: String, enum: ["gemini", "gpt"] },
   },
   {
     timestamps: true,

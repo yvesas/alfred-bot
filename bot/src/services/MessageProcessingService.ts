@@ -1,7 +1,10 @@
-import { injectable } from "inversify";
+import { inject, injectable } from "inversify";
 import { GptProcessor } from "./GptProcessor";
 import { GeminiProcessor } from "./GeminiProcessor";
 import { IPurchaseItem, IStoreInfo, ITaxInfo } from "../models/Purchase";
+import { AiModel } from "../models/User";
+import { UserRepository } from "../repositories/UserRepository";
+import { logger } from "../infra/logger";
 
 export type Intent = "purchase" | "query" | "other" | "unknown";
 export type SpendingPeriod = "current_month" | "last_month" | "all";
@@ -31,29 +34,32 @@ export interface IMessageProcessor {
 
 @injectable()
 export class MessageProcessingService {
-  private userModelMap: Map<string, string>;
+  constructor(
+    @inject(GeminiProcessor) private geminiProcessor: GeminiProcessor,
+    @inject(GptProcessor) private gptProcessor: GptProcessor,
+    @inject(UserRepository) private userRepo: UserRepository,
+  ) {}
 
-  constructor() {
-    this.userModelMap = new Map();
-  }
-
-  setUserModel(userId: string, model: string) {
+  // Persiste a escolha do modelo de IA no usuário (sobrevive a reinício do bot).
+  async setUserModel(userId: string, model: string): Promise<string> {
     if (model !== "gpt" && model !== "gemini") {
       return `Modelo inválido! Escolha entre "gpt" ou "gemini".`;
     }
 
-    this.userModelMap.set(userId, model);
+    await this.userRepo.update(userId, { aiModel: model as AiModel });
     return `🤖 Modelo atualizado para ${model.toUpperCase()}!`;
   }
 
-  private getProcessor(userId: string): IMessageProcessor {
-    const model = this.userModelMap.get(userId) || "gemini";
-    return model === "gemini" ? new GeminiProcessor() : new GptProcessor();
+  // Seleciona o processador conforme a preferência salva do usuário (default: gemini).
+  private async getProcessor(userId: string): Promise<IMessageProcessor> {
+    const user = await this.userRepo.findByTelegramId(userId);
+    const model: AiModel = user?.aiModel ?? "gemini";
+    return model === "gpt" ? this.gptProcessor : this.geminiProcessor;
   }
 
   async processMessage(userId: string, text: string): Promise<ModelResponse> {
     try {
-      const processor = this.getProcessor(userId);
+      const processor = await this.getProcessor(userId);
       const response = await processor.processMessage(text);
 
       if (!response) {
@@ -64,7 +70,7 @@ export class MessageProcessingService {
       response.userId = userId;
       return response;
     } catch (error) {
-      console.error("Erro ao processar a mensagem:", error);
+      logger.error({ err: error }, "Erro ao processar a mensagem");
       return { intent: "unknown", message: "🤖 Erro ao processar a mensagem." };
     }
   }
@@ -72,7 +78,7 @@ export class MessageProcessingService {
   // Processa a imagem direto no modelo (Fase 3). Retorna null se o modelo ativo
   // não suportar imagem — nesse caso o chamador usa o caminho OCR → texto.
   async processImage(userId: string, base64Image: string): Promise<ModelResponse | null> {
-    const processor = this.getProcessor(userId);
+    const processor = await this.getProcessor(userId);
     if (!processor.processImage) {
       return null;
     }
@@ -85,7 +91,7 @@ export class MessageProcessingService {
       response.userId = userId;
       return response;
     } catch (error) {
-      console.error("Erro ao processar a imagem:", error);
+      logger.error({ err: error }, "Erro ao processar a imagem");
       return { intent: "unknown", message: "🤖 Erro ao processar a imagem." };
     }
   }

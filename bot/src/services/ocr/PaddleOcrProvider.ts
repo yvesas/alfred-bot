@@ -1,6 +1,8 @@
 import "reflect-metadata";
 import { injectable } from "inversify";
 import { IOcrProvider } from "./IOcrProvider";
+import { logger } from "../../infra/logger";
+import { config } from "../../infra/config";
 
 // Provedor de OCR self-hosted: chama o microserviço FastAPI/PaddleOCR via HTTP.
 // O serviço roda como aplicação à parte (ver projeto ../ocr-service e o docker-compose
@@ -10,7 +12,7 @@ export class PaddleOcrProvider implements IOcrProvider {
   private url: string;
 
   constructor() {
-    this.url = process.env.PADDLE_OCR_URL ?? "http://ocr:8000";
+    this.url = config.paddleOcrUrl;
   }
 
   async extractTextFromImage(base64Image: string): Promise<string> {
@@ -28,7 +30,7 @@ export class PaddleOcrProvider implements IOcrProvider {
       const data = (await res.json()) as { text: string };
       return data.text || "Nenhum texto detectado.";
     } catch (error) {
-      console.error("Erro ao processar a imagem (PaddleOCR):", error);
+      logger.error({ err: error }, "Erro ao processar a imagem (PaddleOCR)");
       return "Erro ao processar a imagem.";
     }
   }

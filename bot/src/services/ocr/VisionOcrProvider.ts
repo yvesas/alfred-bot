@@ -1,10 +1,9 @@
 import "reflect-metadata";
 import { injectable } from "inversify";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
-import dotenv from "dotenv";
 import { IOcrProvider } from "./IOcrProvider";
-
-dotenv.config();
+import { logger } from "../../infra/logger";
+import { config } from "../../infra/config";
 
 // Provedor de OCR usando o Google Cloud Vision (textDetection).
 @injectable()
@@ -12,7 +11,7 @@ export class VisionOcrProvider implements IOcrProvider {
   private client: ImageAnnotatorClient;
 
   constructor() {
-    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    if (!config.googleCredentials) {
       throw new Error(
         "GOOGLE_APPLICATION_CREDENTIALS not set. Please configure your environment variable.",
       );
@@ -35,7 +34,7 @@ export class VisionOcrProvider implements IOcrProvider {
         return "Nenhum texto encontrado na imagem.";
       }
     } catch (error) {
-      console.error("Erro ao processar a imagem:", error);
+      logger.error({ err: error }, "Erro ao processar a imagem (Vision OCR)");
       return "Erro ao processar a imagem.";
     }
   }

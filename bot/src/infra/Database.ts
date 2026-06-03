@@ -1,21 +1,19 @@
+import "reflect-metadata";
+import { injectable } from "inversify";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
+import { config } from "./config";
+import { logger } from "./logger";
 
-dotenv.config();
-
+@injectable()
 export class Database {
   public async connect(): Promise<void> {
-    try {
-      await mongoose.connect(process.env.DATABASE_URL as string);
-      // {
-      //   useNewUrlParser: true,
-      //   useUnifiedTopology: true,
-      //   useFindAndModify: false,
-      //   useCreateIndex: true,
-      // }
-      console.log("✅ Connected to MongoDB Atlas");
-    } catch (err) {
-      console.error("❌ Error connecting to MongoDB:", err);
-    }
+    // Eventos de ciclo de vida da conexão (reconexão é automática no mongoose).
+    mongoose.connection.on("error", (err) => logger.error({ err }, "Erro na conexão do MongoDB"));
+    mongoose.connection.on("disconnected", () => logger.warn("MongoDB desconectado"));
+    mongoose.connection.on("reconnected", () => logger.info("MongoDB reconectado"));
+
+    // Sem try/catch: a falha na conexão inicial deve propagar para o index.ts abortar (exit 1).
+    await mongoose.connect(config.databaseUrl);
+    logger.info("✅ Conectado ao MongoDB");
   }
 }

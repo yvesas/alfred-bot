@@ -27,41 +27,74 @@ export class PurchaseRepository {
     return purchases.reduce((total, p) => total + p.total, 0);
   }
 
-  // Resumo de gastos no intervalo informado. Sem start/end considera todo o histórico.
+  // Resumo de gastos no intervalo informado (via aggregation). Sem start/end = todo o histórico.
   async getSpendingSummary(userId: string, start?: Date, end?: Date): Promise<SpendingSummary> {
-    const query: Record<string, unknown> = { userId };
+    const match: Record<string, unknown> = { userId };
     if (start || end) {
-      query.date = {
+      match.date = {
         ...(start ? { $gte: start } : {}),
         ...(end ? { $lt: end } : {}),
       };
     }
 
-    const purchases = await PurchaseModel.find(query).exec();
+    // Normaliza string vazia/nula para um rótulo default.
+    const labelOrDefault = (field: string, fallback: string) => ({
+      $let: {
+        vars: { v: { $trim: { input: { $ifNull: [field, ""] } } } },
+        in: { $cond: [{ $gt: [{ $strLenCP: "$$v" }, 0] }, "$$v", fallback] },
+      },
+    });
 
-    const summary: SpendingSummary = {
-      total: 0,
-      count: purchases.length,
-      byCategory: {},
-      byStore: {},
+    const [result] = await PurchaseModel.aggregate<{
+      totals: { total: number; count: number }[];
+      byStore: { _id: string; amount: number }[];
+      byCategory: { _id: string; amount: number }[];
+    }>([
+      { $match: match },
+      {
+        $facet: {
+          totals: [{ $group: { _id: null, total: { $sum: "$total" }, count: { $sum: 1 } } }],
+          byStore: [
+            {
+              $group: {
+                _id: labelOrDefault("$store.name", "Sem loja"),
+                amount: { $sum: "$total" },
+              },
+            },
+          ],
+          byCategory: [
+            {
+              $project: {
+                entries: {
+                  $cond: [
+                    { $gt: [{ $size: { $ifNull: ["$items", []] } }, 0] },
+                    "$items",
+                    [{ category: "Outros", total: "$total" }],
+                  ],
+                },
+              },
+            },
+            { $unwind: "$entries" },
+            {
+              $group: {
+                _id: labelOrDefault("$entries.category", "Outros"),
+                amount: { $sum: { $ifNull: ["$entries.total", 0] } },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const totals = result?.totals[0] ?? { total: 0, count: 0 };
+    const toRecord = (arr: { _id: string; amount: number }[] = []) =>
+      Object.fromEntries(arr.map((e) => [e._id, e.amount]));
+
+    return {
+      total: totals.total,
+      count: totals.count,
+      byStore: toRecord(result?.byStore),
+      byCategory: toRecord(result?.byCategory),
     };
-
-    for (const purchase of purchases) {
-      summary.total += purchase.total;
-
-      const storeName = purchase.store?.name?.trim() || "Sem loja";
-      summary.byStore[storeName] = (summary.byStore[storeName] || 0) + purchase.total;
-
-      if (purchase.items && purchase.items.length > 0) {
-        for (const item of purchase.items) {
-          const category = item.category?.trim() || "Outros";
-          summary.byCategory[category] = (summary.byCategory[category] || 0) + item.total;
-        }
-      } else {
-        summary.byCategory["Outros"] = (summary.byCategory["Outros"] || 0) + purchase.total;
-      }
-    }
-
-    return summary;
   }
 }

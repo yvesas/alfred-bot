@@ -1,8 +1,13 @@
+import "reflect-metadata";
+import { injectable } from "inversify";
 import { OpenAI } from "openai";
 import { IMessageProcessor, ModelResponse } from "./MessageProcessingService";
 import { getPrompt001 } from "../IA/prompts";
 import { validateAndConvertModelResponse } from "../infra/converters/modelResponseConverter";
+import { logger } from "../infra/logger";
+import { config } from "../infra/config";
 
+@injectable()
 export class GptProcessor implements IMessageProcessor {
   private ai: OpenAI;
   private model: string;
@@ -10,7 +15,7 @@ export class GptProcessor implements IMessageProcessor {
   constructor() {
     this.model = "gpt-4-turbo";
     this.ai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: config.openaiApiKey,
     });
   }
 
@@ -27,7 +32,7 @@ export class GptProcessor implements IMessageProcessor {
     try {
       return validateAndConvertModelResponse(completion.choices[0].message.content || "");
     } catch (error) {
-      console.error("Erro ao processar resposta da IA:", error);
+      logger.error({ err: error }, "Erro ao processar resposta da IA");
       return { intent: "other", message: "🤖 Não consegui interpretar a mensagem." };
     }
   }

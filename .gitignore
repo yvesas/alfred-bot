@@ -1,6 +1,10 @@
-node_modules
-/temp
-/dist
-/coverage
-.env
-google-credentials.json
+# Arquivos de SO / editor (cada subprojeto tem o seu .gitignore próprio)
+.DS_Store
+*.log
+
+# Cupons/recibos reais contêm dados pessoais — NUNCA versionar.
+# Para fixtures de teste, use uma pasta samples/private/ (ignorada).
+nota-*.jpg
+nota-*.jpeg
+nota-*.png
+**/samples/private/

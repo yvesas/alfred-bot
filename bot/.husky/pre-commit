@@ -1,0 +1,5 @@
+# Monorepo: o projeto Node está em bot/. Os hooks rodam a partir da raiz do repo.
+cd bot || exit 1
+# Lint + format apenas nos arquivos staged, depois checagem de tipos do projeto.
+pnpm lint-staged
+pnpm typecheck

@@ -1,3 +1,0 @@
-# Lint + format apenas nos arquivos staged, depois checagem de tipos do projeto.
-pnpm lint-staged
-pnpm typecheck

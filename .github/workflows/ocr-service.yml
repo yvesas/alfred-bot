@@ -1,0 +1,46 @@
+name: CI - ocr-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ocr-service/**"
+      - ".github/workflows/ocr-service.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "ocr-service/**"
+      - ".github/workflows/ocr-service.yml"
+
+concurrency:
+  group: ci-ocr-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ocr-service
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Syntax check
+        run: python -m compileall app

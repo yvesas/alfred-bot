@@ -1,14 +1,20 @@
-name: CI
+name: CI - bot
 
 on:
   push:
     branches: [main]
+    paths:
+      - "bot/**"
+      - ".github/workflows/bot.yml"
   pull_request:
     branches: [main]
+    paths:
+      - "bot/**"
+      - ".github/workflows/bot.yml"
 
 # Cancela execuções antigas do mesmo ref quando um novo push chega.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-bot-${{ github.ref }}
   cancel-in-progress: true
 
 # Princípio do menor privilégio para o GITHUB_TOKEN.

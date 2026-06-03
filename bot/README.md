@@ -95,6 +95,27 @@ Além dos comandos, basta **enviar uma mensagem de texto** descrevendo a compra,
 
 ---
 
+## 🩺 Health & métricas
+
+O bot sobe um pequeno servidor HTTP na porta `HEALTH_PORT` (default `3000`):
+
+| Rota | Uso |
+|---|---|
+| `GET /health` | **Liveness** — processo no ar (sempre 200) |
+| `GET /ready` | **Readiness** — 200 se a app subiu e o MongoDB está conectado, senão 503 |
+| `GET /metrics` | Métricas no formato **Prometheus** (métricas padrão do Node + contadores da app) |
+
+O `Dockerfile` já inclui um `HEALTHCHECK` (via `/ready`). Para subir a stack de observabilidade
+(Prometheus + Grafana) junto, use o profile `monitoring` no compose da raiz:
+
+```bash
+# no diretório /alfred (raiz do monorepo)
+docker compose --profile monitoring up -d
+# Grafana em http://localhost:3001 ; Prometheus scrapeia bot:3000/metrics
+```
+
+---
+
 ## 📜 Scripts
 
 | Script | O que faz |

@@ -2,6 +2,7 @@ import { inject, injectable } from "inversify";
 import { PurchaseRepository, SpendingSummary } from "../repositories/PurchaseRepository";
 import { IPurchase, IPurchaseCreate } from "../models/Purchase";
 import { SpendingPeriod } from "./MessageProcessingService";
+import { purchasesRegisteredTotal } from "../infra/metrics";
 
 export interface SpendingReport extends SpendingSummary {
   period: SpendingPeriod;
@@ -15,7 +16,9 @@ export class PurchaseService {
     if (purchase.total <= 0) {
       throw new Error("Invalid purchase data");
     }
-    return await this.purchaseRepo.create(purchase);
+    const created = await this.purchaseRepo.create(purchase);
+    purchasesRegisteredTotal.inc();
+    return created;
   }
 
   async getUserPurchases(userId: string): Promise<IPurchase[]> {

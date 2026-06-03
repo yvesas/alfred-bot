@@ -20,8 +20,10 @@ export const config = {
   paddleOcrUrl: process.env.PADDLE_OCR_URL ?? "http://ocr:8000",
 
   // Com default
+  platforms: (process.env.PLATFORMS ?? "telegram").toLowerCase(),
   ocrProvider: (process.env.OCR_PROVIDER ?? "gemini").toLowerCase(),
   ocrMode: (process.env.OCR_MODE ?? "ocr").toLowerCase(),
+  healthPort: Number(process.env.HEALTH_PORT ?? 3000),
   logLevel: process.env.LOG_LEVEL ?? (isProd ? "info" : "debug"),
   rateLimit: {
     max: Number(process.env.RATE_LIMIT_MAX ?? 20),

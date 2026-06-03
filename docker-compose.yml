@@ -7,6 +7,9 @@
 #       -> sobe bot + ocr. Defina no bot/.env:
 #            OCR_PROVIDER=paddle
 #            PADDLE_OCR_URL=http://ocr:8000
+#
+#   Observabilidade (Prometheus+Grafana): docker compose --profile monitoring up -d
+#       -> Prometheus scrapeia http://bot:3000/metrics ; Grafana em http://localhost:3001
 
 services:
   bot:
@@ -14,6 +17,14 @@ services:
     env_file: ./bot/.env
     networks: [app-net]
     restart: unless-stopped
+    # /health (liveness), /ready (readiness) e /metrics (Prometheus) na porta HEALTH_PORT (3000).
+    healthcheck:
+      test:
+        ["CMD", "node", "-e", "require('http').get('http://localhost:3000/ready',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
 
   ocr:
     build: ./ocr-service
@@ -30,9 +41,29 @@ services:
         limits:
           memory: 2g # PaddleOCR carrega os modelos na RAM
 
+  # Stack de observabilidade — opcional (--profile monitoring).
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: [monitoring]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks: [app-net]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: [monitoring]
+    ports:
+      - "3001:3000" # UI do Grafana em http://localhost:3001
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks: [app-net]
+    restart: unless-stopped
+
 networks:
   app-net:
     driver: bridge
 
 volumes:
   paddle-models:
+  grafana-data:

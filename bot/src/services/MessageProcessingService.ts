@@ -5,6 +5,7 @@ import { IPurchaseItem, IStoreInfo, ITaxInfo } from "../models/Purchase";
 import { AiModel } from "../models/User";
 import { UserRepository } from "../repositories/UserRepository";
 import { logger } from "../infra/logger";
+import { aiErrorsTotal } from "../infra/metrics";
 
 export type Intent = "purchase" | "query" | "other" | "unknown";
 export type SpendingPeriod = "current_month" | "last_month" | "all";
@@ -70,6 +71,7 @@ export class MessageProcessingService {
       response.userId = userId;
       return response;
     } catch (error) {
+      aiErrorsTotal.inc();
       logger.error({ err: error }, "Erro ao processar a mensagem");
       return { intent: "unknown", message: "🤖 Erro ao processar a mensagem." };
     }
@@ -91,6 +93,7 @@ export class MessageProcessingService {
       response.userId = userId;
       return response;
     } catch (error) {
+      aiErrorsTotal.inc();
       logger.error({ err: error }, "Erro ao processar a imagem");
       return { intent: "unknown", message: "🤖 Erro ao processar a imagem." };
     }

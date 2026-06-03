@@ -30,6 +30,13 @@ RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 # Artefato compilado.
 COPY --from=builder /app/dist ./dist
 
+# Porta do servidor de health/metrics (liveness, readiness e /metrics p/ Prometheus).
+EXPOSE 3000
+
+# Healthcheck do orquestrador via readiness (usa node, sempre presente na imagem).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:'+(process.env.HEALTH_PORT||3000)+'/ready', r => process.exit(r.statusCode===200?0:1)).on('error', () => process.exit(1))"
+
 # As credenciais e variáveis de ambiente são fornecidas pelo host em runtime
 # (ex.: secrets/volumes). NÃO são embutidas na imagem.
 CMD ["node", "dist/index.js"]

@@ -1,0 +1,10 @@
+# Configuração de scrape do Prometheus para o alfred-bot.
+# Usado pelo serviço "prometheus" do docker-compose (profile monitoring).
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "alfred-bot"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["bot:3000"]

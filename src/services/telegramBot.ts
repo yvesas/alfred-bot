@@ -175,13 +175,28 @@ export class TelegramBot {
       const arrayBuffer = await response.arrayBuffer();
       const base64Image = Buffer.from(arrayBuffer).toString("base64");
 
-      const ocrText = await this.ocrService.extractTextFromImage(base64Image);
-      const processed = await this.messageProcessingService.processMessage(userId, ocrText);
+      const processed = await this.processReceiptImage(userId, base64Image);
       await this.handleProcessedMessage(ctx, userId, processed);
     } catch (error) {
       console.error("Erro ao baixar/processar a imagem:", error);
       await ctx.reply("Houve um erro ao processar a imagem. Tente novamente.");
     }
+  }
+
+  // OCR_MODE=multimodal: imagem → JSON numa única chamada ao modelo (Fase 3).
+  // Caso contrário (ou se o modelo não suportar imagem): OCR → texto → extração.
+  private async processReceiptImage(userId: string, base64Image: string): Promise<ModelResponse> {
+    const multimodal = (process.env.OCR_MODE ?? "ocr").toLowerCase() === "multimodal";
+
+    if (multimodal) {
+      const direct = await this.messageProcessingService.processImage(userId, base64Image);
+      if (direct) {
+        return direct;
+      }
+    }
+
+    const ocrText = await this.ocrService.extractTextFromImage(base64Image);
+    return this.messageProcessingService.processMessage(userId, ocrText);
   }
 
   // Roteia a resposta da IA: consulta de gastos, registro de compra ou erro.

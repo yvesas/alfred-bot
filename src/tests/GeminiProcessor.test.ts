@@ -76,4 +76,27 @@ describe("GeminiProcessor", () => {
 
     await expect(geminiProcessor.processMessage(message)).rejects.toThrow("Gemini error");
   });
+
+  it("processImage should read the image and return the parsed response", async () => {
+    const expectedModelResponse: ModelResponse = {
+      intent: "purchase",
+      userId: "123",
+      description: "cupom",
+      total: 7,
+      date: new Date("2024-05-26T10:00:00.000Z"),
+      items: [],
+    };
+
+    modelStub.generateContent.resolves({
+      response: {
+        candidates: [{ content: { parts: [{ text: '{"intent":"purchase"}' }] } }],
+      },
+    });
+    validateAndConvertModelResponseStub.returns(expectedModelResponse);
+
+    const result = await geminiProcessor.processImage("base64-da-imagem");
+
+    expect(result).toEqual(expectedModelResponse);
+    expect(modelStub.generateContent.calledOnce).toBe(true);
+  });
 });

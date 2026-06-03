@@ -25,6 +25,8 @@ export interface ModelResponse {
 
 export interface IMessageProcessor {
   processMessage(message: string): Promise<ModelResponse | null>;
+  // Opcional: modelos multimodais leem a imagem direto (OCR + extração em uma chamada).
+  processImage?(base64Image: string): Promise<ModelResponse | null>;
 }
 
 @injectable()
@@ -64,6 +66,27 @@ export class MessageProcessingService {
     } catch (error) {
       console.error("Erro ao processar a mensagem:", error);
       return { intent: "unknown", message: "🤖 Erro ao processar a mensagem." };
+    }
+  }
+
+  // Processa a imagem direto no modelo (Fase 3). Retorna null se o modelo ativo
+  // não suportar imagem — nesse caso o chamador usa o caminho OCR → texto.
+  async processImage(userId: string, base64Image: string): Promise<ModelResponse | null> {
+    const processor = this.getProcessor(userId);
+    if (!processor.processImage) {
+      return null;
+    }
+
+    try {
+      const response = await processor.processImage(base64Image);
+      if (!response) {
+        return { intent: "unknown", message: "🤖 Não entendi. Pode reformular?" };
+      }
+      response.userId = userId;
+      return response;
+    } catch (error) {
+      console.error("Erro ao processar a imagem:", error);
+      return { intent: "unknown", message: "🤖 Erro ao processar a imagem." };
     }
   }
 }

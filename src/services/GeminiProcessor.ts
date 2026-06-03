@@ -34,4 +34,23 @@ export class GeminiProcessor implements IMessageProcessor {
       throw error;
     }
   }
+
+  // Fase 3: lê a imagem do cupom e extrai o JSON numa única chamada multimodal
+  // (sem o passo intermediário de OCR → texto).
+  async processImage(base64Image: string): Promise<ModelResponse | null> {
+    const prompt = getPrompt001(null, "(o conteúdo da compra está na imagem do cupom acima)");
+
+    const result = await this.model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [{ inlineData: { mimeType: "image/jpeg", data: base64Image } }, { text: prompt }],
+        },
+      ],
+    });
+
+    const response = await result.response;
+    const text = response.candidates[0].content.parts[0].text;
+    return validateAndConvertModelResponse(text);
+  }
 }

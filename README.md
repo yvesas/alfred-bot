@@ -61,7 +61,7 @@ GCP_PROJECT_ID=                    # ID do projeto no Google Cloud
 
 OPENAI_API_KEY=                    # opcional, apenas para o modelo GPT
 
-OCR_PROVIDER=vision                # provedor de OCR (Fase 1: apenas "vision")
+OCR_PROVIDER=gemini                # provedor de OCR: "gemini" (padrão) ou "vision"
 ```
 
 > ⚠️ **Segurança:** nunca versione o `.env` nem o JSON de credenciais do Google. Ambos já estão no `.gitignore`. Use `src/config/google-credentials_model.json` apenas como modelo.

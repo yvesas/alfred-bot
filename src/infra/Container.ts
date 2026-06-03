@@ -9,20 +9,23 @@ import { UserService } from "../services/UserService";
 import { OcrService } from "../services/OcrService";
 import { IOcrProvider, OCR_PROVIDER_TOKEN } from "../services/ocr/IOcrProvider";
 import { VisionOcrProvider } from "../services/ocr/VisionOcrProvider";
+import { GeminiOcrProvider } from "../services/ocr/GeminiOcrProvider";
 import { TelegramBot } from "../services/TelegramBot";
 import { MessageProcessingService } from "../services/MessageProcessingService";
 
 // Seleciona o provedor de OCR por variável de ambiente.
-// Fase 1: apenas o Vision está implementado. Gemini (Fase 2) e Paddle (Fase 4) entram depois;
-// até lá, qualquer valor diferente cai no Vision com um aviso.
+// Padrão: Gemini multimodal (menor custo, sem credencial extra). Vision selecionável por env.
+// Paddle (Fase 4) entra depois; até lá, valores desconhecidos caem no Gemini com um aviso.
 function resolveOcrProvider(): new () => IOcrProvider {
-  const choice = (process.env.OCR_PROVIDER ?? "vision").toLowerCase();
+  const choice = (process.env.OCR_PROVIDER ?? "gemini").toLowerCase();
   switch (choice) {
     case "vision":
       return VisionOcrProvider;
+    case "gemini":
+      return GeminiOcrProvider;
     default:
-      console.warn(`OCR_PROVIDER="${choice}" ainda não implementado; usando Vision.`);
-      return VisionOcrProvider;
+      console.warn(`OCR_PROVIDER="${choice}" ainda não implementado; usando Gemini.`);
+      return GeminiOcrProvider;
   }
 }
 

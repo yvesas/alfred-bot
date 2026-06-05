@@ -34,6 +34,8 @@ export interface IUserBase {
   verifiedEmail?: string; // verificado via WorkOS (login/Magic Auth)
   verifiedPhone?: string; // verificado pela plataforma (WhatsApp; Telegram via "compartilhar contato")
   plan?: Plan; // plano de uso (default "free")
+  consentVersion?: string; // versão da Política de Privacidade aceita (LGPD)
+  consentAt?: Date; // quando o consentimento foi registrado
 }
 
 export type IUserCreate = Omit<IUserBase, "_id">;
@@ -77,6 +79,8 @@ const UserSchema = new Schema<IUser>(
     verifiedEmail: { type: String },
     verifiedPhone: { type: String },
     plan: { type: String, enum: ["free", "pro"], default: "free" },
+    consentVersion: { type: String },
+    consentAt: { type: Date },
   },
   {
     timestamps: true,

@@ -15,4 +15,5 @@ export const KNOWN_COMMANDS = [
   "email",
   "codigo",
   "exportar",
+  "excluir_conta",
 ];

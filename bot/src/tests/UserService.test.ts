@@ -97,10 +97,11 @@ describe("UserService (onboarding)", () => {
 
     expect(completed).toBe(true);
     expect(
-      userRepoMock.updateByIdentity.calledWith(TG, "123", {
-        email: "yves@example.com",
-        status: "complete",
-      }),
+      userRepoMock.updateByIdentity.calledWith(
+        TG,
+        "123",
+        sinon.match({ email: "yves@example.com", status: "complete" }),
+      ),
     ).toBe(true);
   });
 
@@ -120,7 +121,9 @@ describe("UserService (onboarding)", () => {
     const { completed } = await userService.submitAnswer(TG, "123", "/pular");
 
     expect(completed).toBe(true);
-    expect(userRepoMock.updateByIdentity.calledWith(TG, "123", { status: "complete" })).toBe(true);
+    expect(
+      userRepoMock.updateByIdentity.calledWith(TG, "123", sinon.match({ status: "complete" })),
+    ).toBe(true);
   });
 
   it("adds a category (idempotente) e persiste", async () => {

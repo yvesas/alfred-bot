@@ -51,6 +51,9 @@ export const config = {
   reminderIntervalMs: Number(process.env.REMINDER_INTERVAL_MS) || 60_000,
   // Plano free: máximo de compras registradas por mês (acima disso, sugere o pro).
   freeMonthlyPurchaseLimit: Number(process.env.FREE_MONTHLY_PURCHASE_LIMIT) || 50,
+  // LGPD: versão atual da Política de Privacidade (consentimento) e e-mail de contato/DPO.
+  privacyPolicyVersion: "2026-06-05",
+  privacyContactEmail: process.env.PRIVACY_CONTACT_EMAIL || "privacidade@exemplo.com",
   logLevel: process.env.LOG_LEVEL || (isProd ? "info" : "debug"),
   rateLimit: {
     max: Number(process.env.RATE_LIMIT_MAX) || 20,

@@ -68,6 +68,8 @@ type UIKey =
   | "account_delete_warning"
   | "export_csv"
   | "export_pdf"
+  | "privacy_policy"
+  | "login_consent"
   | "common_loading";
 
 const STRINGS: Record<Locale, Record<UIKey, string>> = {
@@ -122,6 +124,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     account_delete_warning: "Apaga compras, lembretes e o cadastro.",
     export_csv: "Exportar CSV",
     export_pdf: "Exportar PDF",
+    privacy_policy: "Política de Privacidade",
+    login_consent: "Ao entrar, você concorda com a",
     common_loading: "Carregando…",
   },
   en: {
@@ -175,6 +179,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     account_delete_warning: "Erases purchases, reminders and the profile.",
     export_csv: "Export CSV",
     export_pdf: "Export PDF",
+    privacy_policy: "Privacy Policy",
+    login_consent: "By signing in, you agree to our",
     common_loading: "Loading…",
   },
   es: {
@@ -228,6 +234,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     account_delete_warning: "Borra compras, recordatorios y el perfil.",
     export_csv: "Exportar CSV",
     export_pdf: "Exportar PDF",
+    privacy_policy: "Política de Privacidad",
+    login_consent: "Al entrar, aceptas nuestra",
     common_loading: "Cargando…",
   },
 };

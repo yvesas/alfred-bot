@@ -95,6 +95,10 @@ export type MessageKey =
   | "period_all"
   | "breakdown_category"
   | "breakdown_store"
+  // LGPD
+  | "consent_notice"
+  | "account_delete_warn"
+  | "account_deleted"
   // onboarding (UserService)
   | "onboarding_ask_name"
   | "onboarding_ask_email"
@@ -197,6 +201,11 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     period_all: "no total",
     breakdown_category: "Por categoria",
     breakdown_store: "Por loja",
+    consent_notice:
+      "📄 Ao usar o Alfred, você concorda com a nossa Política de Privacidade ({url}). Você pode exportar (/exportar) ou excluir seus dados (/excluir_conta) quando quiser.",
+    account_delete_warn:
+      "⚠️ Isso apaga TODOS os seus dados (compras, lembretes, cadastro) e não dá para desfazer. Para confirmar, envie: /excluir_conta CONFIRMAR",
+    account_deleted: "🗑️ Sua conta e todos os dados foram excluídos. Até logo. 👋",
     onboarding_ask_name: "Para começar, como você se chama? 🙂",
     onboarding_ask_email:
       "Me informe seu e-mail 📧 (ou envie /pular). Se quiser, toque no botão abaixo para compartilhar seu telefone.",
@@ -302,6 +311,11 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     period_all: "in total",
     breakdown_category: "By category",
     breakdown_store: "By store",
+    consent_notice:
+      "📄 By using Alfred, you agree to our Privacy Policy ({url}). You can export (/exportar) or delete your data (/excluir_conta) anytime.",
+    account_delete_warn:
+      "⚠️ This erases ALL your data (purchases, reminders, profile) and can't be undone. To confirm, send: /excluir_conta CONFIRMAR",
+    account_deleted: "🗑️ Your account and all data were deleted. Goodbye. 👋",
     onboarding_ask_name: "To start, what's your name? 🙂",
     onboarding_ask_email:
       "Please share your email 📧 (or send /pular). If you like, tap the button below to share your phone.",
@@ -404,6 +418,11 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     period_all: "en total",
     breakdown_category: "Por categoría",
     breakdown_store: "Por tienda",
+    consent_notice:
+      "📄 Al usar Alfred, aceptas nuestra Política de Privacidad ({url}). Puedes exportar (/exportar) o eliminar tus datos (/excluir_conta) cuando quieras.",
+    account_delete_warn:
+      "⚠️ Esto borra TODOS tus datos (compras, recordatorios, perfil) y no se puede deshacer. Para confirmar, envía: /excluir_conta CONFIRMAR",
+    account_deleted: "🗑️ Tu cuenta y todos los datos fueron eliminados. Hasta luego. 👋",
     onboarding_ask_name: "Para empezar, ¿cómo te llamas? 🙂",
     onboarding_ask_email:
       "Indícame tu correo 📧 (o envía /pular). Si quieres, toca el botón de abajo para compartir tu teléfono.",

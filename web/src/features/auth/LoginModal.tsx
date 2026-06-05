@@ -125,6 +125,14 @@ export function LoginModal({ onClose }: Props) {
         )}
 
         {error && <p className="mt-3 text-xs text-red-500">{error}</p>}
+
+        <p className="mt-4 text-center text-[11px] text-zinc-400 dark:text-zinc-500">
+          {t("login_consent")}{" "}
+          <a href="/privacidade" target="_blank" rel="noreferrer" className="underline">
+            {t("privacy_policy")}
+          </a>
+          .
+        </p>
       </div>
     </div>
   );

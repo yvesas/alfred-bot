@@ -15,6 +15,7 @@ import { LinkTokenService } from "../services/LinkTokenService";
 import { AuthService } from "../services/AuthService";
 import { PlanService } from "../services/PlanService";
 import { ExportService } from "../services/ExportService";
+import { AccountService } from "../services/AccountService";
 import { RateLimiter } from "../services/RateLimiter";
 import { MessageProcessingService } from "../services/MessageProcessingService";
 import { accessKeyCheckDigit } from "../utils/fiscalKey";
@@ -35,6 +36,7 @@ describe("BotCore", () => {
   let authService: sinon.SinonStubbedInstance<AuthService>;
   let planService: sinon.SinonStubbedInstance<PlanService>;
   let exportService: sinon.SinonStubbedInstance<ExportService>;
+  let accountService: sinon.SinonStubbedInstance<AccountService>;
   let rateLimiter: sinon.SinonStubbedInstance<RateLimiter>;
   let mps: sinon.SinonStubbedInstance<MessageProcessingService>;
   let core: BotCore;
@@ -53,6 +55,7 @@ describe("BotCore", () => {
     authService = sinon.createStubInstance(AuthService);
     planService = sinon.createStubInstance(PlanService);
     exportService = sinon.createStubInstance(ExportService);
+    accountService = sinon.createStubInstance(AccountService);
     rateLimiter = sinon.createStubInstance(RateLimiter);
     mps = sinon.createStubInstance(MessageProcessingService);
     core = new BotCore(
@@ -67,6 +70,7 @@ describe("BotCore", () => {
       authService,
       planService,
       exportService,
+      accountService,
       rateLimiter,
       mps,
     );
@@ -412,6 +416,31 @@ describe("BotCore", () => {
 
     expect(authService.sendEmailCode.called).toBe(false);
     expect(replies.some((r) => r.toLowerCase().includes("indisponível"))).toBe(true);
+  });
+
+  it("pede confirmação antes de excluir a conta", async () => {
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "excluir_conta", args: [] } }),
+      reply,
+    );
+
+    expect(accountService.deleteAccount.called).toBe(false);
+    expect(replies.some((r) => r.includes("CONFIRMAR"))).toBe(true);
+  });
+
+  it("exclui a conta com /excluir_conta CONFIRMAR", async () => {
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+    accountService.deleteAccount.resolves({ purchases: 3, reminders: 1 });
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "excluir_conta", args: ["CONFIRMAR"] } }),
+      reply,
+    );
+
+    expect(accountService.deleteAccount.calledOnce).toBe(true);
+    expect(replies.some((r) => r.toLowerCase().includes("excluíd"))).toBe(true);
   });
 
   it("exporta as compras em CSV via /exportar", async () => {

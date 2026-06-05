@@ -61,21 +61,23 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - ✅ **Painel web** (React Router) — landing (`/`) + chat (`/chat`) + **painel** (`/painel`, gastos/relatórios) + **conta** (`/conta`, perfil, contas vinculadas, **excluir conta**)
 - ✅ **Site de apresentação** — landing no app web com descrição do produto e planos, levando ao login
 - ⬜ **Cobrança (Stripe)** — checkout/assinatura para o plano Pro
-- ⬜ **Política de privacidade / LGPD** — dados financeiros são sensíveis
+- 🟡 **Política de privacidade / LGPD** — **Fase 1 feita:** página `/privacidade` (dados, base legal, processadores/transferência internacional, retenção, direitos), **consentimento** registrado no onboarding/login (`User.consentVersion/consentAt`, base = execução do serviço + consentimento), **`/excluir_conta`** no chat (+ exclusão no web), e logs auditados (sem PII/financeiro). **Falta (Fase 2/3):** retenção/auto-purga, edição de perfil, OCR self-hosted como opção de privacidade, DPO/ROPA
 
 ---
 
 ## 3. Bugs conhecidos 🐛
 
+Resumo: dos 7 bugs, **5 resolvidos** (B2, B3, B5, B6 e — operacional — pendente B1). Abertos: **B1** (operacional), **B4** e **B7**.
+
 | # | Bug | Gravidade | Detalhe |
 |---|---|---|---|
-| B1 | **Credencial GCP real no disco** | 🔴 | `src/config/google-credentials.json` existe localmente; rotacionar a chave da service account por precaução (não está versionada, mas é risco) |
+| B1 | **Credencial GCP real no disco** | 🔴 | `src/config/google-credentials.json` existe localmente; **ainda usada** pelo caminho padrão (Gemini/Vertex). **Ação (sua):** rotacionar a chave da service account. Não está versionada (gitignore/dockerignore + volume read-only no compose), mas é risco |
 | ~~B2~~ | ~~**`Database.connect` engole o erro**~~ | ✅ | Resolvido: `connect()` relança o erro, `index.ts` aborta (exit 1) e há listeners de reconexão |
 | ~~B3~~ | ~~**Sem _graceful shutdown_**~~ | ✅ | Resolvido: `index.ts` trata `SIGINT`/`SIGTERM` chamando `bot.stop()` |
-| B4 | **Consulta usa a data do cupom, não a do registro** | 🟡 | "Gastos do mês" filtra por `date` (data do recibo). Cupom antigo cai no mês do recibo, não no de lançamento — pode confundir |
+| B4 | **Consulta usa a data do cupom, não a do registro** | 🟡 | "Gastos do mês" filtra por `date` (data do recibo). Cupom antigo cai no mês do recibo, não no de lançamento. **Aberto** — possível correção: usar `createdAt` (ou um campo `registeredAt`) para o "mês de lançamento" |
 | ~~B5~~ | ~~**Preferência de modelo de IA é volátil**~~ | ✅ | Resolvido: persistida em `User.aiModel` |
-| B6 | **OCR de cupom depende de formato rígido** | 🟡 | `OcrService.parseReceiptText` usa regex específico (e nem está em uso); cupons variam muito de layout. Endereçado pelo plano de OCR abaixo |
-| B7 | **Sem retry/fallback quando a IA falha** | 🟡 | Erro da IA vira mensagem genérica; não tenta o outro modelo nem reprocessa |
+| ~~B6~~ | ~~**OCR de cupom depende de formato rígido**~~ | ✅ | Resolvido: o parser regex (`parseReceiptText`) foi **removido**; a extração é multimodal (Gemini, `OCR_MODE=multimodal`) + **chave/QR da NFC-e** (não depende mais de layout fixo) |
+| B7 | **Sem retry/fallback quando a IA falha** | 🟡 | Erro da IA vira mensagem genérica (`ai_error`); **não** tenta o outro modelo nem reprocessa. **Aberto** — fix natural: no `catch`, tentar o modelo alternativo (gemini↔gpt) antes de desistir |
 
 ---
 

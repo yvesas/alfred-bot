@@ -12,6 +12,7 @@ import { LinkTokenService } from "../services/LinkTokenService";
 import { AuthService } from "../services/AuthService";
 import { PlanService } from "../services/PlanService";
 import { ExportService } from "../services/ExportService";
+import { AccountService } from "../services/AccountService";
 import { RateLimiter } from "../services/RateLimiter";
 import { isValidEmail } from "../utils/validation";
 import {
@@ -78,6 +79,7 @@ export class BotCore {
     @inject(AuthService) private authService: AuthService,
     @inject(PlanService) private planService: PlanService,
     @inject(ExportService) private exportService: ExportService,
+    @inject(AccountService) private accountService: AccountService,
     @inject(RateLimiter) private rateLimiter: RateLimiter,
     @inject(MessageProcessingService) private messageProcessingService: MessageProcessingService,
   ) {}
@@ -435,6 +437,8 @@ export class BotCore {
         return this.handleGetPurchases(reply, lang, userId, this.parsePage(args[0]));
       case "exportar":
         return this.handleExport(reply, lang, userId);
+      case "excluir_conta":
+        return this.handleDeleteAccount(reply, lang, user, args[0]);
       case "excluir":
         return this.handleDeletePurchase(reply, lang, userId, args[0]);
       case "editar":
@@ -879,6 +883,22 @@ export class BotCore {
     footer += `\n${t(lang, "purchases_fix_hint")}`;
 
     await reply.text(`${t(lang, "purchases_header")}\n\n${body}${footer}`);
+  }
+
+  // ---------- Exclusão de conta (LGPD) ----------
+
+  private async handleDeleteAccount(
+    reply: Replier,
+    lang: Language,
+    user: IUser,
+    confirmArg?: string,
+  ): Promise<void> {
+    if ((confirmArg ?? "").toLowerCase() !== "confirmar") {
+      await reply.text(t(lang, "account_delete_warn"));
+      return;
+    }
+    await this.accountService.deleteAccount(user);
+    await reply.text(t(lang, "account_deleted"));
   }
 
   // ---------- Exportação (CSV) ----------

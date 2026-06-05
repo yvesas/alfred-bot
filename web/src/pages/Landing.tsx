@@ -71,6 +71,12 @@ export function Landing() {
             <PlanCard title={t("plan_pro_title")} features={t("plan_pro_features")} highlight />
           </div>
         </section>
+
+        <footer className="mt-20 border-t border-zinc-200 pt-6 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+          <Link to="/privacidade" className="hover:underline">
+            {t("privacy_policy")}
+          </Link>
+        </footer>
       </main>
     </div>
   );

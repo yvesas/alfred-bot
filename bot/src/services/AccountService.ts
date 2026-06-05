@@ -4,6 +4,7 @@ import { PurchaseRepository } from "../repositories/PurchaseRepository";
 import { ReminderRepository } from "../repositories/ReminderRepository";
 import { MergeService, mergeCategories, mergeBudgets } from "./MergeService";
 import { IUser, IUserCreate } from "../models/User";
+import { config } from "../infra/config";
 import { logger } from "../infra/logger";
 
 // O usuário logado pelo WorkOS vive na plataforma "web", com externalId = id do WorkOS.
@@ -32,6 +33,9 @@ export class AccountService {
       status: "complete", // perfil do WorkOS → cadastro já completo
       ...(profile.name ? { name: profile.name } : {}),
       ...(email ? { email, verifiedEmail: email } : {}),
+      // LGPD: login com perfil → registra o consentimento na versão atual da política.
+      consentVersion: config.privacyPolicyVersion,
+      consentAt: new Date(),
     };
 
     const user = existing

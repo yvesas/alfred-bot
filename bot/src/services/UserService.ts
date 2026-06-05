@@ -4,6 +4,7 @@ import { IUser, IUserCreate, UserStatus, Language, IBudget } from "../models/Use
 import { Platform } from "../core/IncomingMessage";
 import { isValidEmail } from "../utils/validation";
 import { t } from "../i18n";
+import { config } from "../infra/config";
 
 export const SKIP_COMMAND = "/pular";
 
@@ -150,8 +151,11 @@ export class UserService {
 
       case "awaiting_email": {
         if (answer.toLowerCase() === SKIP_COMMAND) {
-          await this.userRepo.updateByIdentity(platform, externalId, { status: "complete" });
-          return { reply: t(userLang, "onboarding_complete"), completed: true };
+          await this.userRepo.updateByIdentity(platform, externalId, {
+            status: "complete",
+            ...this.consentPatch(),
+          });
+          return { reply: this.completionReply(userLang), completed: true };
         }
         if (!isValidEmail(answer)) {
           return { reply: t(userLang, "onboarding_email_invalid"), completed: false };
@@ -159,8 +163,9 @@ export class UserService {
         await this.userRepo.updateByIdentity(platform, externalId, {
           email: answer.toLowerCase(),
           status: "complete",
+          ...this.consentPatch(),
         });
-        return { reply: t(userLang, "onboarding_complete"), completed: true };
+        return { reply: this.completionReply(userLang), completed: true };
       }
 
       default:
@@ -210,5 +215,15 @@ export class UserService {
       return undefined;
     }
     return [profile.firstName, profile.lastName].filter(Boolean).join(" ").trim();
+  }
+
+  // LGPD: registra a versão da política aceita ao concluir o cadastro (consentimento).
+  private consentPatch(): Partial<IUserCreate> {
+    return { consentVersion: config.privacyPolicyVersion, consentAt: new Date() };
+  }
+
+  private completionReply(lang: Language): string {
+    const url = config.webAppUrl ? `${config.webAppUrl}/privacidade` : "Política de Privacidade";
+    return `${t(lang, "onboarding_complete")}\n\n${t(lang, "consent_notice", { url })}`;
   }
 }

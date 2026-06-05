@@ -28,4 +28,9 @@ export class UserRepository {
       platform === "telegram" ? { $or: [byIdentity, { telegramId: externalId }] } : byIdentity;
     return await UserModel.findOneAndUpdate(query, patch, { new: true }).exec();
   }
+
+  // Remove o documento de uma identidade (usado ao absorver a conta anônima no login).
+  async deleteByIdentity(platform: Platform, externalId: string): Promise<void> {
+    await UserModel.deleteOne({ identities: { $elemMatch: { platform, externalId } } }).exec();
+  }
 }

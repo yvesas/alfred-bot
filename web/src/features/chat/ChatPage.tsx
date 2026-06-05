@@ -6,7 +6,8 @@ import { getTheme, toggleTheme, type Theme } from "../../lib/theme";
 import { useI18n, LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
 
 export function ChatPage() {
-  const { messages, typing, status, sendText, sendPhoto, setLanguage } = useChat();
+  const { messages, typing, status, session, sendText, sendPhoto, setLanguage, login, logout } =
+    useChat();
   const connected = status === "open";
   const [theme, setTheme] = useState<Theme>(getTheme());
   const { locale, setLocale, t } = useI18n();
@@ -59,6 +60,26 @@ export function ChatPage() {
             >
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
+
+            {session ? (
+              <button
+                type="button"
+                onClick={logout}
+                title={session.email ?? session.name ?? ""}
+                className="rounded-lg px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                {session.name ? `${session.name.split(" ")[0]} · ` : ""}
+                {t("logout")}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={login}
+                className="rounded-lg bg-brand px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+              >
+                {t("login")}
+              </button>
+            )}
           </div>
         </div>
       </header>

@@ -3,11 +3,13 @@ import sinon from "sinon";
 import { WebAdapter, WebOutbound } from "../platforms/web/WebAdapter";
 import { BotCore } from "../core/BotCore";
 import { OutboundRegistry } from "../core/OutboundRegistry";
+import { AuthService } from "../services/AuthService";
 import { IncomingMessage } from "../core/IncomingMessage";
 
 describe("WebAdapter.processRaw", () => {
   let core: sinon.SinonStubbedInstance<BotCore>;
   let outbound: sinon.SinonStubbedInstance<OutboundRegistry>;
+  let auth: sinon.SinonStubbedInstance<AuthService>;
   let adapter: WebAdapter;
   let out: WebOutbound[];
   const send = (m: WebOutbound) => void out.push(m);
@@ -15,7 +17,9 @@ describe("WebAdapter.processRaw", () => {
   beforeEach(() => {
     core = sinon.createStubInstance(BotCore);
     outbound = sinon.createStubInstance(OutboundRegistry);
-    adapter = new WebAdapter(core, outbound);
+    auth = sinon.createStubInstance(AuthService);
+    auth.verifyJwt.returns(null); // anônimo por padrão
+    adapter = new WebAdapter(core, outbound, auth);
     out = [];
   });
 

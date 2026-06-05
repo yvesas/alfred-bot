@@ -22,7 +22,9 @@ type UIKey =
   | "send_photo"
   | "input_placeholder"
   | "send"
-  | "language_label";
+  | "language_label"
+  | "login"
+  | "logout";
 
 const STRINGS: Record<Locale, Record<UIKey, string>> = {
   pt: {
@@ -34,6 +36,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     input_placeholder: "Mensagem…",
     send: "Enviar",
     language_label: "Idioma",
+    login: "Entrar",
+    logout: "Sair",
   },
   en: {
     status_connected: "connected",
@@ -44,6 +48,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     input_placeholder: "Message…",
     send: "Send",
     language_label: "Language",
+    login: "Sign in",
+    logout: "Sign out",
   },
   es: {
     status_connected: "conectado",
@@ -54,6 +60,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     input_placeholder: "Mensaje…",
     send: "Enviar",
     language_label: "Idioma",
+    login: "Entrar",
+    logout: "Salir",
   },
 };
 

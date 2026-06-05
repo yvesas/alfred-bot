@@ -6,7 +6,8 @@ import { WhatsAppAdapter } from "./platforms/whatsapp/WhatsAppAdapter";
 import { WebAdapter } from "./platforms/web/WebAdapter";
 import { IMessagingAdapter } from "./core/IMessagingAdapter";
 import { ReminderScheduler } from "./services/ReminderScheduler";
-import { assertRequiredConfig, config } from "./infra/config";
+import { AuthServer } from "./infra/authServer";
+import { assertRequiredConfig, config, isAuthEnabled } from "./infra/config";
 import { startHealthServer, setAppReady } from "./infra/health";
 import { logger } from "./infra/logger";
 
@@ -48,6 +49,16 @@ async function main() {
     scheduler.start();
   }
 
+  // Login web (WorkOS): só sobe quando totalmente configurado.
+  const authServer = container.get(AuthServer);
+  if (isAuthEnabled()) {
+    authServer.start();
+  } else if (config.workosApiKey || config.workosClientId) {
+    logger.warn(
+      "Login web desabilitado: defina WORKOS_REDIRECT_URI, WEB_APP_URL e JWT_SECRET para habilitar.",
+    );
+  }
+
   setAppReady(true);
   logger.info("🚀 Bot is ready!");
 
@@ -56,6 +67,7 @@ async function main() {
     logger.info(`🛑 Encerrando (${signal})...`);
     setAppReady(false);
     scheduler.stop();
+    authServer.stop();
     await Promise.allSettled(adapters.map((a) => a.stop()));
     healthServer.close();
   };

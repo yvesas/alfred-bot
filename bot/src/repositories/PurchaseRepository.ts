@@ -28,6 +28,15 @@ export class PurchaseRepository {
     return await PurchaseModel.countDocuments({ userId }).exec();
   }
 
+  // Migra as compras de um userId para outro (merge de conta anônima → logada). Retorna o total.
+  async reassignUser(oldUserId: string, newUserId: string): Promise<number> {
+    const result = await PurchaseModel.updateMany(
+      { userId: oldUserId },
+      { $set: { userId: newUserId } },
+    ).exec();
+    return result.modifiedCount ?? 0;
+  }
+
   // Escopados ao userId: o usuário só altera/exclui as próprias compras.
   async deleteById(userId: string, id: string): Promise<IPurchase | null> {
     return await PurchaseModel.findOneAndDelete({ _id: id, userId }).exec();

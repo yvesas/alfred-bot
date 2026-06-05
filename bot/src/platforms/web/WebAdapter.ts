@@ -7,6 +7,7 @@ import { IncomingMessage } from "../../core/IncomingMessage";
 import { Replier } from "../../core/Replier";
 import { BotCore } from "../../core/BotCore";
 import { OutboundRegistry, OutboundSender } from "../../core/OutboundRegistry";
+import { AuthService } from "../../services/AuthService";
 import { KNOWN_COMMANDS } from "../../core/commands";
 import { config } from "../../infra/config";
 import { logger } from "../../infra/logger";
@@ -34,6 +35,7 @@ export class WebAdapter implements IMessagingAdapter, OutboundSender {
   constructor(
     @inject(BotCore) private core: BotCore,
     @inject(OutboundRegistry) private outbound: OutboundRegistry,
+    @inject(AuthService) private auth: AuthService,
   ) {}
 
   // Push: entrega a todos os sockets abertos do clientId. false se ninguém estiver online
@@ -154,11 +156,16 @@ export class WebAdapter implements IMessagingAdapter, OutboundSender {
     const clientId = typeof payload?.clientId === "string" ? payload.clientId.trim() : "";
     if (!clientId) return null;
 
+    // Com um JWT válido, a identidade canônica passa a ser o id do WorkOS (sub);
+    // sem token (ou inválido), segue anônimo pelo clientId.
+    const session = typeof payload?.token === "string" ? this.auth.verifyJwt(payload.token) : null;
+    const externalId = session?.sub ?? clientId;
+
     if (payload.type === "user_photo" && typeof payload.imageBase64 === "string") {
       const image = payload.imageBase64;
       return {
         platform: "web",
-        externalId: clientId,
+        externalId,
         kind: "photo",
         getImageBase64: async () => image,
       };
@@ -172,13 +179,13 @@ export class WebAdapter implements IMessagingAdapter, OutboundSender {
         if (KNOWN_COMMANDS.includes(name)) {
           return {
             platform: "web",
-            externalId: clientId,
+            externalId,
             kind: "command",
             command: { name, args },
           };
         }
       }
-      return { platform: "web", externalId: clientId, kind: "text", text };
+      return { platform: "web", externalId, kind: "text", text };
     }
 
     return null;

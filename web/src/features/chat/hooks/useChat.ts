@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getClientId } from "../../../lib/clientId";
 import { notifyIfHidden, requestNotificationPermission } from "../../../lib/notify";
+import {
+  captureTokenFromUrl,
+  decodeSession,
+  getToken,
+  login as startLogin,
+  logout as doLogout,
+} from "../../../lib/auth";
 import type { ChatMessage, Inbound, Role } from "../types";
 import { useChatSocket } from "./useChatSocket";
 
@@ -10,12 +17,19 @@ const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:3100";
 // A UI consome só este hook — não conhece WebSocket.
 export function useChat() {
   const clientId = useMemo(getClientId, []);
+  // Captura o token do retorno do login (ou recupera o salvo). Estável por carregamento de página.
+  const token = useMemo(() => captureTokenFromUrl() ?? getToken(), []);
+  const session = useMemo(() => decodeSession(token), [token]);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typing, setTyping] = useState(false);
 
   const append = useCallback((role: Role, text: string) => {
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role, text }]);
   }, []);
+
+  // Anexa o token (quando logado) a toda mensagem enviada ao servidor.
+  const auth = useMemo(() => (token ? { token } : {}), [token]);
 
   const handleInbound = useCallback(
     (msg: Inbound) => {
@@ -45,9 +59,9 @@ export function useChat() {
   useEffect(() => {
     if (status === "open" && !greeted.current) {
       greeted.current = true;
-      send({ type: "user_message", clientId, text: "/start" });
+      send({ type: "user_message", clientId, text: "/start", ...auth });
     }
-  }, [status, send, clientId]);
+  }, [status, send, clientId, auth]);
 
   const sendText = useCallback(
     (text: string) => {
@@ -56,26 +70,28 @@ export function useChat() {
       // Pede permissão de notificação no 1º gesto do usuário (requisito dos navegadores).
       requestNotificationPermission();
       append("user", trimmed);
-      send({ type: "user_message", clientId, text: trimmed });
+      send({ type: "user_message", clientId, text: trimmed, ...auth });
     },
-    [append, send, clientId],
+    [append, send, clientId, auth],
   );
 
   const sendPhoto = useCallback(
     (imageBase64: string) => {
       append("user", "📷 Cupom enviado");
-      send({ type: "user_photo", clientId, imageBase64 });
+      send({ type: "user_photo", clientId, imageBase64, ...auth });
     },
-    [append, send, clientId],
+    [append, send, clientId, auth],
   );
 
   // Troca o idioma do bot (reusa o comando /idioma) sem exibir o comando no chat.
   const setLanguage = useCallback(
     (lang: string) => {
-      send({ type: "user_message", clientId, text: `/idioma ${lang}` });
+      send({ type: "user_message", clientId, text: `/idioma ${lang}`, ...auth });
     },
-    [send, clientId],
+    [send, clientId, auth],
   );
 
-  return { messages, typing, status, sendText, sendPhoto, setLanguage };
+  const login = useCallback(() => startLogin(clientId), [clientId]);
+
+  return { messages, typing, status, session, sendText, sendPhoto, setLanguage, login, logout: doLogout };
 }

@@ -53,7 +53,8 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
   - ⬜ Fases 4-5 — vínculo de contas (= chat web Fase 6), API oficial (Cloud API)
 - 🟡 **Chat web (React + Tailwind)** — frontend de chat reusando o `BotCore` via `WebAdapter` (WebSocket). Plano em [../PLANO-WEB-CHAT.md](../PLANO-WEB-CHAT.md)
   - ✅ Fases 1-4 — backend `WebAdapter` (WS), frontend (chat UI, dark/light), Docker/CI, polimento. Sem login (id anônimo)
-  - ⬜ Fases 5-6 — login web (e-mail magic-link/OAuth) + vínculo de contas multi-plataforma
+  - ✅ Fase 5 — **login web via WorkOS (AuthKit)**: `AuthService`+`AuthServer` (login/callback) → JWT no WS; perfil do WorkOS pula o onboarding; sessão anônima **absorvida** no login. Gated por config (sem chaves, segue anônimo)
+  - ⬜ Fase 6 — vínculo de contas multi-plataforma (Telegram/WhatsApp ↔ web) + migração canônica
 - ✅ **Evolução de produto (cross-plataforma via `BotCore`)** — A1 confirmar, A2 editar/excluir, A3 categorias, A4 multi-idioma. Plano em [../PLANO-EVOLUCAO.md](../PLANO-EVOLUCAO.md)
 - ✅ **Push / mensagens não-solicitadas** — `OutboundRegistry` + `sendTo` nos adapters (Telegram/WhatsApp/Web), base para lembretes e futuros avisos
 - ⬜ **Planos e limites de uso** (free/pago)

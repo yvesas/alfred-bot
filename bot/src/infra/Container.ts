@@ -19,6 +19,9 @@ import { GptProcessor } from "../services/GptProcessor";
 import { RateLimiter } from "../services/RateLimiter";
 import { ReminderService } from "../services/ReminderService";
 import { ReminderScheduler } from "../services/ReminderScheduler";
+import { AuthService } from "../services/AuthService";
+import { AccountService } from "../services/AccountService";
+import { AuthServer } from "./authServer";
 import { OutboundRegistry } from "../core/OutboundRegistry";
 import { BotCore } from "../core/BotCore";
 import { TelegramAdapter } from "../platforms/telegram/TelegramAdapter";
@@ -61,6 +64,9 @@ container.bind<GeminiProcessor>(GeminiProcessor).toSelf();
 container.bind<GptProcessor>(GptProcessor).toSelf();
 container.bind<RateLimiter>(RateLimiter).toSelf().inSingletonScope();
 container.bind<ReminderService>(ReminderService).toSelf();
+container.bind<AuthService>(AuthService).toSelf().inSingletonScope();
+container.bind<AccountService>(AccountService).toSelf();
+container.bind<AuthServer>(AuthServer).toSelf().inSingletonScope();
 container.bind<MessageProcessingService>(MessageProcessingService).toSelf();
 // Singleton: a MESMA instância é compartilhada entre adapters (que registram o sendTo)
 // e o ReminderScheduler (que resolve o sender pela plataforma).

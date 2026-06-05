@@ -19,6 +19,16 @@ export const config = {
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   paddleOcrUrl: process.env.PADDLE_OCR_URL ?? "http://ocr:8000",
 
+  // Login web (B1 — WorkOS AuthKit). Opcional: sem chaves, o login fica desligado.
+  workosApiKey: process.env.WORKOS_API_KEY ?? "",
+  workosClientId: process.env.WORKOS_CLIENT_ID ?? "",
+  workosRedirectUri: process.env.WORKOS_REDIRECT_URI ?? "",
+  // URL do app web (para onde o callback redireciona com o token). Ex.: http://localhost:8081
+  webAppUrl: process.env.WEB_APP_URL ?? "",
+  // Segredo para assinar o JWT de sessão emitido pelo bot.
+  jwtSecret: process.env.JWT_SECRET ?? "",
+  authPort: Number(process.env.AUTH_PORT) || 3001,
+
   // Com default
   platforms: (process.env.PLATFORMS ?? "telegram").toLowerCase(),
   whatsappSessionDir: process.env.WHATSAPP_SESSION_DIR ?? "./.wa-session",
@@ -40,6 +50,17 @@ export const config = {
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
   },
 };
+
+// Login web habilitado só quando todas as variáveis necessárias estão presentes.
+// (apenas API key + client id não bastam: precisamos da redirect URI e do segredo do JWT)
+export function isAuthEnabled(): boolean {
+  return !!(
+    config.workosApiKey &&
+    config.workosClientId &&
+    config.workosRedirectUri &&
+    config.jwtSecret
+  );
+}
 
 // Valida as variáveis essenciais no startup. Chamada em index.ts antes de subir o bot.
 export function assertRequiredConfig(): void {

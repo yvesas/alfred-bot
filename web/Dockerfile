@@ -11,6 +11,9 @@ COPY . .
 # A URL do WebSocket é embutida no build (Vite). Default: bot publicado em :3100 no host.
 ARG VITE_WS_URL=ws://localhost:3100
 ENV VITE_WS_URL=$VITE_WS_URL
+# URL do AuthServer (login WorkOS), também embutida no build. Default: bot publicado em :3001.
+ARG VITE_AUTH_URL=http://localhost:3001
+ENV VITE_AUTH_URL=$VITE_AUTH_URL
 RUN pnpm build
 
 # ---------- runtime ----------

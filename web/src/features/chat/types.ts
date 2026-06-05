@@ -7,9 +7,10 @@ export interface ChatMessage {
 }
 
 // Protocolo WebSocket — espelha o WebAdapter do bot.
+// `token` (JWT) é opcional: presente quando logado, define a identidade canônica no servidor.
 export type Outbound =
-  | { type: "user_message"; clientId: string; text: string }
-  | { type: "user_photo"; clientId: string; imageBase64: string };
+  | { type: "user_message"; clientId: string; text: string; token?: string }
+  | { type: "user_photo"; clientId: string; imageBase64: string; token?: string };
 
 export type Inbound =
   | { type: "bot_message"; text: string }

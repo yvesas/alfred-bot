@@ -35,4 +35,17 @@ export class ReminderRepository {
       { new: true },
     ).exec();
   }
+
+  // Migra os lembretes de uma identidade para outra (merge de conta anônima → logada).
+  async reassignExternalId(
+    platform: Platform,
+    oldExternalId: string,
+    newExternalId: string,
+  ): Promise<number> {
+    const result = await ReminderModel.updateMany(
+      { platform, externalId: oldExternalId },
+      { $set: { externalId: newExternalId } },
+    ).exec();
+    return result.modifiedCount ?? 0;
+  }
 }

@@ -83,13 +83,37 @@ Isso exige uma pequena evolução do `Replier` (`withQuickReplies?`) — opciona
 
 > Detalhe do desenho em [bot/PLANO-WEB-CHAT.md](./bot/PLANO-WEB-CHAT.md) (seção Identidade & login).
 
-### B1. Login web (Fase 5) — via **WorkOS** (decidido)
-- **Provedor:** **WorkOS (AuthKit)** — cobre OAuth/SSO e magic-link num só lugar (o usuário criará a
-  conta). Pré-requisito: `WORKOS_API_KEY` + `WORKOS_CLIENT_ID` e a redirect URI configurada.
-- **Backend:** rota HTTP de auth no bot (callback do WorkOS) → emite **JWT** →
-  o cliente envia o JWT no handshake do WS; o `WebAdapter` valida e usa o `accountId` estável como
-  `externalId`. Anônimo (T0) é **absorvido** no login (merge).
-- **Pré-requisito:** credenciais (OAuth client ou chave do provedor de e-mail).
+### B1. Login web (Fase 5) — via **WorkOS** — ✅ IMPLEMENTADO (gated por config)
+> Sem `WORKOS_*` + `JWT_SECRET` completos, o login fica **desligado** e o chat web segue anônimo
+> (nada quebra). `isAuthEnabled()` controla o boot do `AuthServer`.
+
+**Implementação**
+- **`AuthService`** (`services/AuthService.ts`): WorkOS AuthKit (`getAuthorizationUrl`,
+  `authenticateWithCode`) + emissão/validação de **JWT** de sessão (`jsonwebtoken`).
+- **`AuthServer`** (`infra/authServer.ts`, porta `AUTH_PORT=3001`):
+  - `GET /auth/login?clientId=<anon>` → redireciona ao AuthKit (o `state` carrega o clientId anônimo).
+  - `GET /auth/callback?code=&state=` → troca o code, **garante a conta** (`AccountService`),
+    **absorve o anônimo**, emite o JWT e redireciona para `WEB_APP_URL?token=<jwt>`.
+- **`AccountService`**: `ensureWorkosUser` (perfil do WorkOS → nome/e-mail + `status=complete`,
+  **pulando o onboarding**); `absorbAnonymous` (reatribui compras/lembretes do clientId anônimo,
+  funde categorias/orçamentos e remove o doc anônimo). Repos ganharam `reassignUser`,
+  `reassignExternalId`, `deleteByIdentity`.
+- **`WebAdapter`**: aceita `token` no payload; com JWT válido, a identidade canônica passa a ser o
+  `sub` (id do WorkOS) em vez do clientId anônimo. Push (lembretes) passa a chegar na conta logada.
+- **Frontend**: `lib/auth.ts` (login redirect, captura de `?token=`, decode da sessão), botão
+  **Entrar/Sair** no header, token anexado a toda mensagem do WS.
+- **Testes**: `AuthService` (JWT roundtrip/inválido/sem segredo), `AccountService` (ensure + merge),
+  `auth state` (encode/decode), `decodeSession` (web). Bot 87 testes; web 12.
+
+**Configurar no WorkOS (passo a passo da redirect URI)**
+1. Dashboard WorkOS → **Authentication** → habilite **AuthKit** (e os métodos: Google, e-mail, etc.).
+2. **Redirects** → em **Redirect URIs** adicione a URL EXATA do callback do bot:
+   - Dev: `http://localhost:3001/auth/callback`
+   - Prod: `https://SEU_DOMINIO_DO_BOT/auth/callback`
+3. Copie **Client ID** e **API Key** (já no `.env`) e preencha no `.env` do bot:
+   `WORKOS_REDIRECT_URI` (igual ao passo 2), `WEB_APP_URL` (origem do front, ex.: `http://localhost:8081`)
+   e `JWT_SECRET` (string longa aleatória).
+4. No front, `VITE_AUTH_URL` aponta para o AuthServer (`http://localhost:3001` em dev).
 
 ### B2. Vínculo de contas (Fase 6 = multi-plataforma Fase 4)
 - Do web, vincular Telegram/WhatsApp por **código** (`/vincular`) ou **match por e-mail/telefone**.

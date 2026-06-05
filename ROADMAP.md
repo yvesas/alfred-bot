@@ -67,17 +67,17 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 
 ## 3. Bugs conhecidos 🐛
 
-Resumo: dos 7 bugs, **5 resolvidos** (B2, B3, B5, B6 e — operacional — pendente B1). Abertos: **B1** (operacional), **B4** e **B7**.
+Resumo: dos 7 bugs, **6 resolvidos** (B2–B7). Aberto: só **B1** (operacional — rotacionar a chave GCP, depende de você).
 
 | # | Bug | Gravidade | Detalhe |
 |---|---|---|---|
 | B1 | **Credencial GCP real no disco** | 🔴 | `src/config/google-credentials.json` existe localmente; **ainda usada** pelo caminho padrão (Gemini/Vertex). **Ação (sua):** rotacionar a chave da service account. Não está versionada (gitignore/dockerignore + volume read-only no compose), mas é risco |
 | ~~B2~~ | ~~**`Database.connect` engole o erro**~~ | ✅ | Resolvido: `connect()` relança o erro, `index.ts` aborta (exit 1) e há listeners de reconexão |
 | ~~B3~~ | ~~**Sem _graceful shutdown_**~~ | ✅ | Resolvido: `index.ts` trata `SIGINT`/`SIGTERM` chamando `bot.stop()` |
-| B4 | **Consulta usa a data do cupom, não a do registro** | 🟡 | "Gastos do mês" filtra por `date` (data do recibo). Cupom antigo cai no mês do recibo, não no de lançamento. **Aberto** — possível correção: usar `createdAt` (ou um campo `registeredAt`) para o "mês de lançamento" |
+| ~~B4~~ | ~~**Consulta usa a data do cupom, não a do registro**~~ | ✅ | Resolvido: gastos/relatórios (`getSpendingSummary`, `getMonthlyTotals`, `getTotalSpent`) agregam pela **data de lançamento** (`createdAt`); a `date` do cupom segue como metadado/exibição |
 | ~~B5~~ | ~~**Preferência de modelo de IA é volátil**~~ | ✅ | Resolvido: persistida em `User.aiModel` |
 | ~~B6~~ | ~~**OCR de cupom depende de formato rígido**~~ | ✅ | Resolvido: o parser regex (`parseReceiptText`) foi **removido**; a extração é multimodal (Gemini, `OCR_MODE=multimodal`) + **chave/QR da NFC-e** (não depende mais de layout fixo) |
-| B7 | **Sem retry/fallback quando a IA falha** | 🟡 | Erro da IA vira mensagem genérica (`ai_error`); **não** tenta o outro modelo nem reprocessa. **Aberto** — fix natural: no `catch`, tentar o modelo alternativo (gemini↔gpt) antes de desistir |
+| ~~B7~~ | ~~**Sem retry/fallback quando a IA falha**~~ | ✅ | Resolvido: no `catch`, o `MessageProcessingService` tenta o **modelo alternativo** (gemini↔gpt) antes de devolver erro |
 
 ---
 

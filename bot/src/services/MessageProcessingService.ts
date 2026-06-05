@@ -113,8 +113,21 @@ export class MessageProcessingService {
       response.userId = userId;
       return response;
     } catch (error) {
+      // B7: o modelo primário falhou → tenta o alternativo (gemini↔gpt) antes de desistir.
       aiErrorsTotal.inc();
-      logger.error({ err: error }, "Erro ao processar a mensagem");
+      logger.warn({ err: error }, "Modelo primário falhou; tentando o alternativo");
+      const fallback =
+        processor === this.geminiProcessor ? this.gptProcessor : this.geminiProcessor;
+      try {
+        const response = await fallback.processMessage(text, categories, language);
+        if (response) {
+          response.userId = userId;
+          return response;
+        }
+      } catch (fallbackError) {
+        aiErrorsTotal.inc();
+        logger.error({ err: fallbackError }, "Modelo alternativo também falhou");
+      }
       return { intent: "unknown", message: t(lang, "ai_error") };
     }
   }

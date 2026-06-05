@@ -67,6 +67,18 @@ describe("MessageProcessingService", () => {
     expect(res.message).toContain("Erro");
   });
 
+  it("cai no modelo alternativo quando o primário falha (B7)", async () => {
+    userRepo.findByIdentity.resolves({ _id: "u1" } as any); // padrão = gemini
+    gemini.processMessage.rejects(new Error("gemini caiu"));
+    gpt.processMessage.resolves({ intent: "purchase", total: 9 } as any);
+
+    const res = await mps.processMessage(TG, "1", "x");
+
+    expect(gpt.processMessage.calledOnce).toBe(true);
+    expect(res.intent).toBe("purchase");
+    expect(res.userId).toBe("u1");
+  });
+
   it("processImage usa o modelo multimodal e seta o userId", async () => {
     userRepo.findByIdentity.resolves({ _id: "u1" } as any);
     gemini.processImage.resolves({ intent: "purchase" } as any);

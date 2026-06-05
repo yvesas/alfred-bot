@@ -34,6 +34,7 @@ export class PurchaseRepository {
   }
 
   // Totais por mês (ano/mês) desde os últimos `months` meses — para o painel/relatórios.
+  // B4: agrupa pela data de LANÇAMENTO (`createdAt`), não pela data do cupom.
   async getMonthlyTotals(
     userId: string,
     months: number,
@@ -45,10 +46,10 @@ export class PurchaseRepository {
       total: number;
       count: number;
     }>([
-      { $match: { userId, date: { $gte: start } } },
+      { $match: { userId, createdAt: { $gte: start } } },
       {
         $group: {
-          _id: { y: { $year: "$date" }, m: { $month: "$date" } },
+          _id: { y: { $year: "$createdAt" }, m: { $month: "$createdAt" } },
           total: { $sum: "$total" },
           count: { $sum: 1 },
         },
@@ -90,15 +91,17 @@ export class PurchaseRepository {
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 1);
 
-    const purchases = await PurchaseModel.find({ userId, date: { $gte: start, $lt: end } });
+    // B4: filtra pela data de lançamento (createdAt), não pela data do cupom.
+    const purchases = await PurchaseModel.find({ userId, createdAt: { $gte: start, $lt: end } });
     return purchases.reduce((total, p) => total + p.total, 0);
   }
 
   // Resumo de gastos no intervalo informado (via aggregation). Sem start/end = todo o histórico.
+  // B4: o intervalo filtra a data de LANÇAMENTO (`createdAt`), não a data do cupom.
   async getSpendingSummary(userId: string, start?: Date, end?: Date): Promise<SpendingSummary> {
     const match: Record<string, unknown> = { userId };
     if (start || end) {
-      match.date = {
+      match.createdAt = {
         ...(start ? { $gte: start } : {}),
         ...(end ? { $lt: end } : {}),
       };

@@ -18,6 +18,14 @@ function purchase(over: Partial<IPurchaseCreate>): IPurchaseCreate {
 describe("PurchaseRepository (mongo em memória)", () => {
   const repo = new PurchaseRepository();
 
+  // Cria uma compra e fixa o createdAt (B4: relatórios agregam pela data de lançamento).
+  // Usa o driver nativo porque o Mongoose marca createdAt como imutável (timestamps).
+  async function createAt(over: Partial<IPurchaseCreate>, createdAt: Date) {
+    const p = await repo.create(purchase(over));
+    await PurchaseModel.collection.updateOne({ _id: p._id }, { $set: { createdAt } });
+    return p;
+  }
+
   beforeAll(async () => {
     await connectMemoryMongo();
   }, 120000);
@@ -48,15 +56,14 @@ describe("PurchaseRepository (mongo em memória)", () => {
   it("agrega gastos por categoria e loja no período", async () => {
     const item = (category: string, total: number) =>
       ({ description: category, quantity: 1, unitPrice: total, total, category }) as any;
-    await repo.create(
-      purchase({
-        total: 30,
-        store: { name: "Mercado X" } as any,
-        items: [item("Alimentação", 30)],
-      }),
+    const when = new Date(2026, 5, 15); // lançado em junho/2026
+    await createAt(
+      { total: 30, store: { name: "Mercado X" } as any, items: [item("Alimentação", 30)] },
+      when,
     );
-    await repo.create(
-      purchase({ total: 20, store: { name: "Mercado X" } as any, items: [item("Limpeza", 20)] }),
+    await createAt(
+      { total: 20, store: { name: "Mercado X" } as any, items: [item("Limpeza", 20)] },
+      when,
     );
 
     const start = new Date(2026, 5, 1);
@@ -69,10 +76,10 @@ describe("PurchaseRepository (mongo em memória)", () => {
     expect(summary.byStore["Mercado X"]).toBe(50);
   });
 
-  it("totais por mês (série)", async () => {
-    await repo.create(purchase({ total: 10, date: new Date(2026, 4, 10) })); // maio
-    await repo.create(purchase({ total: 40, date: new Date(2026, 5, 10) })); // junho
-    await repo.create(purchase({ total: 2, date: new Date(2026, 5, 12) })); // junho
+  it("totais por mês pela data de lançamento (B4)", async () => {
+    await createAt({ total: 10 }, new Date(2026, 4, 10)); // lançado em maio
+    await createAt({ total: 40 }, new Date(2026, 5, 10)); // lançado em junho
+    await createAt({ total: 2 }, new Date(2026, 5, 12)); // lançado em junho
 
     const series = await repo.getMonthlyTotals("u1", 6, new Date(2026, 5, 30));
     const june = series.find((s) => s.month === 6);

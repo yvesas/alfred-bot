@@ -28,6 +28,12 @@ export function login(clientId: string): void {
   window.location.href = `${AUTH_URL}/auth/login?clientId=${encodeURIComponent(clientId)}`;
 }
 
+// URL do deep-link de vínculo: o backend gera o token e redireciona ao t.me/wa.me (Fase 6).
+export function linkUrl(platform: "telegram" | "whatsapp"): string {
+  const token = getToken() ?? "";
+  return `${AUTH_URL}/auth/link/${platform}?token=${encodeURIComponent(token)}`;
+}
+
 export function logout(): void {
   clearToken();
   if (typeof window !== "undefined") window.location.reload();

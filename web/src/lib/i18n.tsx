@@ -24,7 +24,9 @@ type UIKey =
   | "send"
   | "language_label"
   | "login"
-  | "logout";
+  | "logout"
+  | "link_telegram"
+  | "link_whatsapp";
 
 const STRINGS: Record<Locale, Record<UIKey, string>> = {
   pt: {
@@ -38,6 +40,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     language_label: "Idioma",
     login: "Entrar",
     logout: "Sair",
+    link_telegram: "Vincular Telegram",
+    link_whatsapp: "Vincular WhatsApp",
   },
   en: {
     status_connected: "connected",
@@ -50,6 +54,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     language_label: "Language",
     login: "Sign in",
     logout: "Sign out",
+    link_telegram: "Link Telegram",
+    link_whatsapp: "Link WhatsApp",
   },
   es: {
     status_connected: "conectado",
@@ -62,6 +68,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     language_label: "Idioma",
     login: "Entrar",
     logout: "Salir",
+    link_telegram: "Vincular Telegram",
+    link_whatsapp: "Vincular WhatsApp",
   },
 };
 

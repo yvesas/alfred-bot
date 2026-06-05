@@ -11,4 +11,5 @@ export const KNOWN_COMMANDS = [
   "idioma",
   "orcamento",
   "lembretes",
+  "vincular",
 ];

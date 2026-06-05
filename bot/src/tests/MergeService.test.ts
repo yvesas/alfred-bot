@@ -118,6 +118,25 @@ describe("MergeService.link*", () => {
     expect(purchaseRepo.reassignUser.called).toBe(false);
     expect(userRepo.deleteById.called).toBe(false);
   });
+
+  it("linkAccounts funde a conta de chat na conta canônica (deep-link)", async () => {
+    const current = { _id: "tg", identities: [{ platform: "telegram", externalId: "t" }] } as any;
+    const canonical = { _id: "web1", identities: [{ platform: "web", externalId: "w" }] } as any;
+    userRepo.findByIdentity.withArgs("telegram", "t").resolves(current);
+    userRepo.findById.withArgs("web1").resolves(canonical);
+
+    const ok = await service.linkAccounts("telegram", "t", "web1");
+
+    expect(ok).toBe(true);
+    expect(purchaseRepo.reassignUser.calledWith("tg", "web1")).toBe(true);
+    expect(userRepo.deleteById.calledWith("tg")).toBe(true);
+  });
+
+  it("linkAccounts retorna false quando a conta canônica não existe", async () => {
+    userRepo.findByIdentity.resolves({ _id: "tg" } as any);
+    userRepo.findById.resolves(null);
+    expect(await service.linkAccounts("telegram", "t", "x")).toBe(false);
+  });
 });
 
 describe("MergeService helpers", () => {

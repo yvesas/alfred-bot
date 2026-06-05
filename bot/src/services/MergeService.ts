@@ -46,6 +46,22 @@ export class MergeService {
     await this.maybeMerge(current, twin);
   }
 
+  // Vincula a identidade (platform, externalId) à conta canônica de um deep-link (Fase 6).
+  // A conta canônica (web/login) é a primária; a de chat é fundida nela. Retorna false se algo
+  // não existir. true também quando já são a mesma conta (idempotente).
+  async linkAccounts(
+    platform: Platform,
+    externalId: string,
+    canonicalUserId: string,
+  ): Promise<boolean> {
+    const current = await this.userRepo.findByIdentity(platform, externalId);
+    const canonical = await this.userRepo.findById(canonicalUserId);
+    if (!current || !canonical) return false;
+    if (String(current._id) === String(canonical._id)) return true;
+    await this.mergeUsers(canonical, current);
+    return true;
+  }
+
   // Funde `secondary` em `primary` (canônico). Reatribui compras por `_id`, une identidades e
   // preferências, e remove o doc secundário. Idempotente p/ ids iguais.
   async mergeUsers(primary: IUser, secondary: IUser): Promise<IUser> {

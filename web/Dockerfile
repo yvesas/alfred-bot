@@ -14,6 +14,9 @@ ENV VITE_WS_URL=$VITE_WS_URL
 # URL do AuthServer (login WorkOS), também embutida no build. Default: bot publicado em :3001.
 ARG VITE_AUTH_URL=http://localhost:3001
 ENV VITE_AUTH_URL=$VITE_AUTH_URL
+# Habilita o botão "Vincular WhatsApp" (Fase 6). "false" enquanto não houver número de bot.
+ARG VITE_WHATSAPP_ENABLED=false
+ENV VITE_WHATSAPP_ENABLED=$VITE_WHATSAPP_ENABLED
 RUN pnpm build
 
 # ---------- runtime ----------

@@ -60,6 +60,8 @@ services:
         VITE_WS_URL: ws://localhost:3100
         # URL do AuthServer embutida no build (botão "Entrar"). O bot publica :3001 no host.
         VITE_AUTH_URL: http://localhost:3001
+        # Botão "Vincular WhatsApp" (Fase 6) — "true" quando houver número de bot configurado.
+        VITE_WHATSAPP_ENABLED: "false"
     ports:
       - "8081:80" # chat em http://localhost:8081
     depends_on: [bot]

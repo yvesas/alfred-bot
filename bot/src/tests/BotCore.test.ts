@@ -10,6 +10,7 @@ import { PurchaseService } from "../services/PurchaseService";
 import { BudgetService } from "../services/BudgetService";
 import { ReminderService } from "../services/ReminderService";
 import { MergeService } from "../services/MergeService";
+import { LinkTokenService } from "../services/LinkTokenService";
 import { RateLimiter } from "../services/RateLimiter";
 import { MessageProcessingService } from "../services/MessageProcessingService";
 
@@ -24,6 +25,7 @@ describe("BotCore", () => {
   let budgetService: sinon.SinonStubbedInstance<BudgetService>;
   let reminderService: sinon.SinonStubbedInstance<ReminderService>;
   let mergeService: sinon.SinonStubbedInstance<MergeService>;
+  let linkTokens: sinon.SinonStubbedInstance<LinkTokenService>;
   let rateLimiter: sinon.SinonStubbedInstance<RateLimiter>;
   let mps: sinon.SinonStubbedInstance<MessageProcessingService>;
   let core: BotCore;
@@ -37,6 +39,7 @@ describe("BotCore", () => {
     budgetService = sinon.createStubInstance(BudgetService);
     reminderService = sinon.createStubInstance(ReminderService);
     mergeService = sinon.createStubInstance(MergeService);
+    linkTokens = sinon.createStubInstance(LinkTokenService);
     rateLimiter = sinon.createStubInstance(RateLimiter);
     mps = sinon.createStubInstance(MessageProcessingService);
     core = new BotCore(
@@ -46,6 +49,7 @@ describe("BotCore", () => {
       budgetService,
       reminderService,
       mergeService,
+      linkTokens,
       rateLimiter,
       mps,
     );
@@ -243,5 +247,50 @@ describe("BotCore", () => {
     );
 
     expect(replies.some((r) => r.includes("dia 10") && r.includes("Conta de luz"))).toBe(true);
+  });
+
+  it("links an account via /vincular <token>", async () => {
+    userService.ensureUser.resolves({ user: { status: "complete" } as any, question: "" });
+    linkTokens.consume.returns("canonId");
+    mergeService.linkAccounts.resolves(true);
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "vincular", args: ["TOK123"] } }),
+      reply,
+    );
+
+    expect(linkTokens.consume.calledWith("TOK123")).toBe(true);
+    expect(mergeService.linkAccounts.calledWith("telegram", "1", "canonId")).toBe(true);
+    expect(replies.some((r) => r.includes("vinculada"))).toBe(true);
+  });
+
+  it("rejects /vincular with an invalid token", async () => {
+    userService.ensureUser.resolves({ user: { status: "complete" } as any, question: "" });
+    linkTokens.consume.returns(null);
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "vincular", args: ["BAD"] } }),
+      reply,
+    );
+
+    expect(mergeService.linkAccounts.called).toBe(false);
+    expect(replies.some((r) => r.toLowerCase().includes("inválido"))).toBe(true);
+  });
+
+  it("links via /start <token> (Telegram deep-link)", async () => {
+    userService.ensureUser.resolves({
+      user: { status: "complete", name: "Yves", _id: "u1" } as any,
+      question: "",
+    });
+    linkTokens.consume.returns("canonId");
+    mergeService.linkAccounts.resolves(true);
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "start", args: ["TOK123"] } }),
+      reply,
+    );
+
+    expect(mergeService.linkAccounts.calledWith("telegram", "1", "canonId")).toBe(true);
+    expect(replies.some((r) => r.includes("vinculada"))).toBe(true);
   });
 });

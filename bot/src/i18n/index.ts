@@ -55,6 +55,9 @@ export type MessageKey =
   | "reminder_list_footer"
   | "reminder_list_item"
   | "reminder_push"
+  // vínculo (deep-link)
+  | "link_success"
+  | "link_invalid"
   // IA
   | "ia_usage"
   | "ia_invalid"
@@ -144,6 +147,8 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     reminder_list_footer: '"/lembretes add <dia> <descrição>" ou "/lembretes remover <nº>".',
     reminder_list_item: "{index}. dia {day} — {description}",
     reminder_push: "🔔 Lembrete: {description} (vence dia {day}).",
+    link_success: "✅ Conta vinculada! Agora seus gastos somam numa conta só.",
+    link_invalid: "❌ Código de vínculo inválido ou expirado. Gere um novo no app web.",
     ia_usage: "Use: /ia gpt ou /ia gemini",
     ia_invalid: 'Modelo inválido! Escolha entre "gpt" ou "gemini".',
     ia_set: "🤖 Modelo atualizado para {model}!",
@@ -231,6 +236,8 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     reminder_list_footer: '"/lembretes add <day> <description>" or "/lembretes remover <no.>".',
     reminder_list_item: "{index}. day {day} — {description}",
     reminder_push: "🔔 Reminder: {description} (due on the {day}th).",
+    link_success: "✅ Account linked! Your spending now adds up in a single account.",
+    link_invalid: "❌ Invalid or expired link code. Generate a new one in the web app.",
     ia_usage: "Use: /ia gpt or /ia gemini",
     ia_invalid: 'Invalid model! Choose between "gpt" or "gemini".',
     ia_set: "🤖 Model updated to {model}!",
@@ -317,6 +324,8 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     reminder_list_footer: '"/lembretes add <día> <descripción>" o "/lembretes remover <n.º>".',
     reminder_list_item: "{index}. día {day} — {description}",
     reminder_push: "🔔 Recordatorio: {description} (vence el día {day}).",
+    link_success: "✅ ¡Cuenta vinculada! Ahora tus gastos suman en una sola cuenta.",
+    link_invalid: "❌ Código de vínculo inválido o expirado. Genera uno nuevo en la app web.",
     ia_usage: "Use: /ia gpt o /ia gemini",
     ia_invalid: '¡Modelo inválido! Elige entre "gpt" o "gemini".',
     ia_set: "🤖 ¡Modelo actualizado a {model}!",

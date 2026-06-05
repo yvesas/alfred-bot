@@ -2,6 +2,7 @@ import http from "node:http";
 import { inject, injectable } from "inversify";
 import { AuthService } from "../services/AuthService";
 import { AccountService } from "../services/AccountService";
+import { LinkTokenService } from "../services/LinkTokenService";
 import { config } from "./config";
 import { logger } from "./logger";
 
@@ -16,6 +17,7 @@ export class AuthServer {
   constructor(
     @inject(AuthService) private auth: AuthService,
     @inject(AccountService) private accounts: AccountService,
+    @inject(LinkTokenService) private linkTokens: LinkTokenService,
   ) {}
 
   start(port: number = config.authPort): http.Server {
@@ -34,7 +36,33 @@ export class AuthServer {
     const url = new URL(req.url ?? "/", "http://localhost");
     if (url.pathname === "/auth/login") return this.login(url, res);
     if (url.pathname === "/auth/callback") return this.callback(url, res);
+    if (url.pathname === "/auth/link/telegram") return this.link(url, res, "telegram");
+    if (url.pathname === "/auth/link/whatsapp") return this.link(url, res, "whatsapp");
     res.writeHead(404);
+    res.end();
+  }
+
+  // Gera um token de vínculo para o usuário logado (JWT em ?token=) e redireciona ao deep-link
+  // da plataforma. O usuário inicia o contato com o bot (Start/enviar) carregando o token.
+  private link(url: URL, res: http.ServerResponse, platform: "telegram" | "whatsapp"): void {
+    const session = this.auth.verifyJwt(url.searchParams.get("token") ?? "");
+    if (!session) {
+      res.writeHead(401);
+      res.end("not authenticated");
+      return;
+    }
+
+    const target =
+      platform === "telegram"
+        ? telegramDeepLink(this.linkTokens.issue(session.sub))
+        : whatsappDeepLink(this.linkTokens.issue(session.sub));
+
+    if (!target) {
+      res.writeHead(503);
+      res.end(`${platform} link not configured`);
+      return;
+    }
+    res.writeHead(302, { Location: target });
     res.end();
   }
 
@@ -76,6 +104,18 @@ export class AuthServer {
       res.end("auth error");
     }
   }
+}
+
+// Deep-links de vínculo. Vazios quando o bot username / número não está configurado.
+function telegramDeepLink(linkToken: string): string | null {
+  if (!config.telegramBotUsername) return null;
+  return `https://t.me/${config.telegramBotUsername}?start=${linkToken}`;
+}
+
+function whatsappDeepLink(linkToken: string): string | null {
+  if (!config.whatsappBotNumber) return null;
+  const text = encodeURIComponent(`/vincular ${linkToken}`);
+  return `https://wa.me/${config.whatsappBotNumber}?text=${text}`;
 }
 
 // State opaco (base64url de JSON) trafegado pelo WorkOS de volta ao callback.

@@ -7,6 +7,7 @@ import { PurchaseService } from "../services/PurchaseService";
 import { BudgetService } from "../services/BudgetService";
 import { ReminderService } from "../services/ReminderService";
 import { MergeService } from "../services/MergeService";
+import { LinkTokenService } from "../services/LinkTokenService";
 import { RateLimiter } from "../services/RateLimiter";
 import {
   MessageProcessingService,
@@ -64,6 +65,7 @@ export class BotCore {
     @inject(BudgetService) private budgetService: BudgetService,
     @inject(ReminderService) private reminderService: ReminderService,
     @inject(MergeService) private mergeService: MergeService,
+    @inject(LinkTokenService) private linkTokens: LinkTokenService,
     @inject(RateLimiter) private rateLimiter: RateLimiter,
     @inject(MessageProcessingService) private messageProcessingService: MessageProcessingService,
   ) {}
@@ -359,6 +361,11 @@ export class BotCore {
       return this.handleStart(msg, reply);
     }
 
+    // /vincular não exige cadastro: cria a identidade e funde na conta do token.
+    if (name === "vincular") {
+      return this.handleLink(msg, reply, args[0] ?? "");
+    }
+
     const user = await this.requireRegistered(reply, platform, externalId);
     if (!user) return;
     const lang = langOf(user);
@@ -632,6 +639,24 @@ export class BotCore {
     );
   }
 
+  // ---------- Vínculo de contas por deep-link (Fase 6) ----------
+
+  // Consome o token de vínculo e funde a identidade atual na conta canônica (web).
+  private async tryLink(platform: Platform, externalId: string, token: string): Promise<boolean> {
+    const canonicalUserId = this.linkTokens.consume(token);
+    if (!canonicalUserId) return false;
+    return this.mergeService.linkAccounts(platform, externalId, canonicalUserId);
+  }
+
+  // /vincular <token> (WhatsApp/Web/Telegram). Não exige cadastro: garante a identidade e funde.
+  private async handleLink(msg: IncomingMessage, reply: Replier, token: string): Promise<void> {
+    const { platform, externalId } = msg;
+    const lang = await this.resolveLang(platform, externalId);
+    await this.userService.ensureUser(platform, externalId, msg.profile, lang);
+    const linked = token ? await this.tryLink(platform, externalId, token) : false;
+    await reply.text(t(lang, linked ? "link_success" : "link_invalid"));
+  }
+
   private async handleStart(msg: IncomingMessage, reply: Replier): Promise<void> {
     // Resolve o idioma antes para localizar já a saudação/pergunta.
     const lang = await this.resolveLang(msg.platform, msg.externalId);
@@ -646,6 +671,14 @@ export class BotCore {
 
     // No WhatsApp o número já é verificado → registra/auto-vincula (Fase 6).
     await this.autoLinkWhatsappPhone(msg.platform, msg.externalId);
+
+    // Deep-link do Telegram: /start carrega o token de vínculo no payload.
+    const startToken = msg.command?.args?.[0] ?? "";
+    if (startToken) {
+      const linked = await this.tryLink(msg.platform, msg.externalId, startToken);
+      await reply.text(t(userLang, linked ? "link_success" : "link_invalid"));
+      return;
+    }
 
     if (user.status === "complete") {
       await reply.text(t(userLang, "greeting_returning", { name }));

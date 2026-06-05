@@ -116,7 +116,15 @@ Cada `User` acumula **identificadores verificados**:
 - Remove o doc `secondary`.
 - Reaproveita os `reassign*` já criados na Fase 5 (agora por `_id`, não por `externalId`).
 
-### Vínculo cross-plataforma por **deep-link** (mecanismo principal, sem SMS)
+### Vínculo cross-plataforma por **deep-link** (mecanismo principal, sem SMS) — ✅ CONCLUÍDA
+> Feito: `LinkTokenService` (token curto, TTL ~10 min, uso único, em memória). `AuthServer`
+> `GET /auth/link/telegram|whatsapp` (valida o JWT, emite o token, 302 → `t.me`/`wa.me`).
+> `BotCore`: `/start <token>` (deep-link Telegram) e `/vincular <token>` (WhatsApp/Web) →
+> `MergeService.linkAccounts` (funde na conta web). Config `TELEGRAM_BOT_USERNAME` /
+> `WHATSAPP_BOT_NUMBER`. Front: barra "Vincular Telegram/WhatsApp" (WhatsApp gated por
+> `VITE_WHATSAPP_ENABLED`). Testes: `LinkTokenService`, `linkAccounts`, `/vincular` e `/start <token>`.
+> 102 testes (bot) + 12 (web) verdes.
+
 Inverte o fluxo: em vez de o bot ir atrás do usuário, **o usuário inicia o contato carregando um
 token** — funciona mesmo se nunca falou com o bot, sem cold-message e sem risco de ban.
 

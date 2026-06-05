@@ -13,6 +13,11 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL ?? "",
   telegramToken: process.env.TELEGRAM_TOKEN ?? "",
 
+  // Deep-links de vínculo (Fase 6). Username do bot do Telegram (sem @) e número do bot no
+  // WhatsApp (só dígitos). Vazios = o respectivo botão de vínculo fica indisponível.
+  telegramBotUsername: (process.env.TELEGRAM_BOT_USERNAME ?? "").replace(/^@/, ""),
+  whatsappBotNumber: (process.env.WHATSAPP_BOT_NUMBER ?? "").replace(/[^\d]/g, ""),
+
   // Por provider (validadas no uso)
   gcpProjectId: process.env.GCP_PROJECT_ID ?? "",
   googleCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "",

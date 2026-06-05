@@ -5,15 +5,16 @@ import { ChatInput } from "./components/ChatInput";
 import { getTheme, toggleTheme, type Theme } from "../../lib/theme";
 import { useI18n, LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
 import { linkUrl } from "../../lib/auth";
+import { LoginModal } from "../auth/LoginModal";
 
 // Botão de vínculo do WhatsApp só aparece quando há um número de bot configurado.
 const WHATSAPP_ENABLED = import.meta.env.VITE_WHATSAPP_ENABLED === "true";
 
 export function ChatPage() {
-  const { messages, typing, status, session, sendText, sendPhoto, setLanguage, login, logout } =
-    useChat();
+  const { messages, typing, status, session, sendText, sendPhoto, setLanguage, logout } = useChat();
   const connected = status === "open";
   const [theme, setTheme] = useState<Theme>(getTheme());
+  const [loginOpen, setLoginOpen] = useState(false);
   const { locale, setLocale, t } = useI18n();
 
   const statusLabel = connected
@@ -78,7 +79,7 @@ export function ChatPage() {
             ) : (
               <button
                 type="button"
-                onClick={login}
+                onClick={() => setLoginOpen(true)}
                 className="rounded-lg bg-brand px-3 py-1 text-xs font-medium text-white hover:opacity-90"
               >
                 {t("login")}
@@ -116,6 +117,8 @@ export function ChatPage() {
 
       <MessageList messages={messages} typing={typing} />
       <ChatInput disabled={!connected} onSendText={sendText} onSendPhoto={sendPhoto} />
+
+      {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
     </div>
   );
 }

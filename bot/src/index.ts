@@ -54,9 +54,7 @@ async function main() {
   if (isAuthEnabled()) {
     authServer.start();
   } else if (config.workosApiKey || config.workosClientId) {
-    logger.warn(
-      "Login web desabilitado: defina WORKOS_REDIRECT_URI, WEB_APP_URL e JWT_SECRET para habilitar.",
-    );
+    logger.warn("Login web desabilitado: defina WORKOS_API_KEY, WORKOS_CLIENT_ID e JWT_SECRET.");
   }
 
   setAppReady(true);

@@ -23,9 +23,32 @@ export function clearToken(): void {
   if (typeof localStorage !== "undefined") localStorage.removeItem(TOKEN_KEY);
 }
 
-// Inicia o login: redireciona ao backend levando o clientId anônimo (para o merge).
-export function login(clientId: string): void {
-  window.location.href = `${AUTH_URL}/auth/login?clientId=${encodeURIComponent(clientId)}`;
+// Login por e-mail + OTP (telas próprias, WorkOS Magic Auth). Passo 1: envia o código.
+export async function startEmailLogin(email: string): Promise<boolean> {
+  const res = await fetch(`${AUTH_URL}/auth/email/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  return res.ok;
+}
+
+// Passo 2: valida o código. Em caso de sucesso, guarda o JWT e retorna true.
+export async function verifyEmailLogin(
+  email: string,
+  code: string,
+  clientId: string,
+): Promise<boolean> {
+  const res = await fetch(`${AUTH_URL}/auth/email/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, code, clientId }),
+  });
+  if (!res.ok) return false;
+  const data = (await res.json()) as { token?: string };
+  if (!data?.token) return false;
+  setToken(data.token);
+  return true;
 }
 
 // URL do deep-link de vínculo: o backend gera o token e redireciona ao t.me/wa.me (Fase 6).

@@ -56,15 +56,11 @@ export const config = {
   },
 };
 
-// Login web habilitado só quando todas as variáveis necessárias estão presentes.
-// (apenas API key + client id não bastam: precisamos da redirect URI e do segredo do JWT)
+// Login web habilitado quando dá para autenticar (WorkOS Magic Auth) e assinar a sessão.
+// A redirect URI NÃO é necessária no fluxo de e-mail+OTP (telas próprias); ela só é usada pelo
+// fluxo hospedado/social opcional do AuthKit.
 export function isAuthEnabled(): boolean {
-  return !!(
-    config.workosApiKey &&
-    config.workosClientId &&
-    config.workosRedirectUri &&
-    config.jwtSecret
-  );
+  return !!(config.workosApiKey && config.workosClientId && config.jwtSecret);
 }
 
 // Valida as variáveis essenciais no startup. Chamada em index.ts antes de subir o bot.

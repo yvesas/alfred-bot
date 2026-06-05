@@ -64,18 +64,24 @@ export class AuthService {
     await this.client().userManagement.createMagicAuth({ email: email.trim().toLowerCase() });
   }
 
-  // Valida o código do e-mail. true se autenticou; false em qualquer falha.
-  async verifyEmailCode(email: string, code: string): Promise<boolean> {
+  // Valida o código e retorna o perfil do WorkOS (para o login web). null em qualquer falha.
+  async authenticateEmail(email: string, code: string): Promise<AuthProfile | null> {
     try {
-      await this.client().userManagement.authenticateWithMagicAuth({
+      const { user } = await this.client().userManagement.authenticateWithMagicAuth({
         clientId: config.workosClientId,
         email: email.trim().toLowerCase(),
         code: code.trim(),
       });
-      return true;
+      const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+      return { id: user.id, email: user.email ?? undefined, name: name || undefined };
     } catch {
-      return false;
+      return null;
     }
+  }
+
+  // Valida o código do e-mail (usado na verificação do chat). true se autenticou.
+  async verifyEmailCode(email: string, code: string): Promise<boolean> {
+    return (await this.authenticateEmail(email, code)) !== null;
   }
 
   verifyJwt(token: string): SessionToken | null {

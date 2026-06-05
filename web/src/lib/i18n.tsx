@@ -26,7 +26,15 @@ type UIKey =
   | "login"
   | "logout"
   | "link_telegram"
-  | "link_whatsapp";
+  | "link_whatsapp"
+  | "login_title"
+  | "login_email_placeholder"
+  | "login_send_code"
+  | "login_code_placeholder"
+  | "login_verify"
+  | "login_back"
+  | "login_code_sent"
+  | "login_error";
 
 const STRINGS: Record<Locale, Record<UIKey, string>> = {
   pt: {
@@ -42,6 +50,14 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     logout: "Sair",
     link_telegram: "Vincular Telegram",
     link_whatsapp: "Vincular WhatsApp",
+    login_title: "Entrar",
+    login_email_placeholder: "seu@email.com",
+    login_send_code: "Enviar código",
+    login_code_placeholder: "Código de 6 dígitos",
+    login_verify: "Entrar",
+    login_back: "Voltar",
+    login_code_sent: "Enviamos um código para",
+    login_error: "Algo deu errado. Tente novamente.",
   },
   en: {
     status_connected: "connected",
@@ -56,6 +72,14 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     logout: "Sign out",
     link_telegram: "Link Telegram",
     link_whatsapp: "Link WhatsApp",
+    login_title: "Sign in",
+    login_email_placeholder: "you@email.com",
+    login_send_code: "Send code",
+    login_code_placeholder: "6-digit code",
+    login_verify: "Sign in",
+    login_back: "Back",
+    login_code_sent: "We sent a code to",
+    login_error: "Something went wrong. Please try again.",
   },
   es: {
     status_connected: "conectado",
@@ -70,6 +94,14 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     logout: "Salir",
     link_telegram: "Vincular Telegram",
     link_whatsapp: "Vincular WhatsApp",
+    login_title: "Entrar",
+    login_email_placeholder: "tu@email.com",
+    login_send_code: "Enviar código",
+    login_code_placeholder: "Código de 6 dígitos",
+    login_verify: "Entrar",
+    login_back: "Volver",
+    login_code_sent: "Enviamos un código a",
+    login_error: "Algo salió mal. Inténtalo de nuevo.",
   },
 };
 

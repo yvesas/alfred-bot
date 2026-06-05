@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getClientId } from "../../../lib/clientId";
 import { notifyIfHidden, requestNotificationPermission } from "../../../lib/notify";
-import {
-  captureTokenFromUrl,
-  decodeSession,
-  getToken,
-  login as startLogin,
-  logout as doLogout,
-} from "../../../lib/auth";
+import { captureTokenFromUrl, decodeSession, getToken, logout as doLogout } from "../../../lib/auth";
 import type { ChatMessage, Inbound, Role } from "../types";
 import { useChatSocket } from "./useChatSocket";
 
@@ -91,7 +85,15 @@ export function useChat() {
     [send, clientId, auth],
   );
 
-  const login = useCallback(() => startLogin(clientId), [clientId]);
-
-  return { messages, typing, status, session, sendText, sendPhoto, setLanguage, login, logout: doLogout };
+  return {
+    messages,
+    typing,
+    status,
+    session,
+    clientId,
+    sendText,
+    sendPhoto,
+    setLanguage,
+    logout: doLogout,
+  };
 }

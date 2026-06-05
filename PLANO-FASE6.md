@@ -9,8 +9,9 @@
 > Última atualização: 05/06/2026.
 >
 > **Status:** Parte 1 (canônica) ✅ · Parte 2 (auto-merge e-mail/telefone) ✅ · Parte 3 (deep-link) ✅ ·
-> Parte 4 (verificação de e-mail no chat) ✅. Pendente (pós-Fase 6): **tela própria de login + OTP**
-> (Magic Auth), reusando o mesmo fluxo do `/email`+`/codigo`.
+> Parte 4 (verificação de e-mail no chat) ✅ · **Tela própria de login + OTP** ✅ (Magic Auth headless:
+> `POST /auth/email/start` + `/auth/email/verify` no AuthServer com CORS; `LoginModal` em 2 passos;
+> `isAuthEnabled` não exige mais a redirect URI). Fase 6 **completa**.
 
 ## Por que NÃO usamos código por SMS/telefone
 

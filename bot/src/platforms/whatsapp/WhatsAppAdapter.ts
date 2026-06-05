@@ -13,11 +13,9 @@ import { IMessagingAdapter } from "../../core/IMessagingAdapter";
 import { IncomingMessage } from "../../core/IncomingMessage";
 import { Replier } from "../../core/Replier";
 import { BotCore } from "../../core/BotCore";
+import { KNOWN_COMMANDS } from "../../core/commands";
 import { config } from "../../infra/config";
 import { logger } from "../../infra/logger";
-
-// Comandos reconhecidos (mesma lógica do Telegram: só estes viram "command"; o resto é texto).
-const KNOWN_COMMANDS = ["start", "compras", "gastos", "ia"];
 
 // Baileys é bem verboso — usa um logger próprio só para erros.
 const waLogger = pino({ level: "error" });

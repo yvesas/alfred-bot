@@ -1,6 +1,6 @@
 // Mensagem normalizada, independente de plataforma. Cada adapter (Telegram, WhatsApp, ...)
 // traduz os eventos do seu SDK para este formato e entrega ao BotCore.
-export type Platform = "telegram" | "whatsapp";
+export type Platform = "telegram" | "whatsapp" | "web";
 
 export type MessageKind = "text" | "photo" | "command" | "contact";
 

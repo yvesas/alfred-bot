@@ -22,6 +22,9 @@ export const config = {
   // Com default
   platforms: (process.env.PLATFORMS ?? "telegram").toLowerCase(),
   whatsappSessionDir: process.env.WHATSAPP_SESSION_DIR ?? "./.wa-session",
+  webPort: Number(process.env.WEB_PORT) || 3100,
+  // Origens permitidas no WebSocket do chat web (CSV) ou "*". Em prod, defina a origem do front.
+  webAllowedOrigin: process.env.WEB_ALLOWED_ORIGIN || "*",
   ocrProvider: (process.env.OCR_PROVIDER ?? "gemini").toLowerCase(),
   ocrMode: (process.env.OCR_MODE ?? "ocr").toLowerCase(),
   // Usa || (não ??) para que variáveis presentes porém VAZIAS no .env caiam no default.

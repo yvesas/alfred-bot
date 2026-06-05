@@ -18,6 +18,7 @@ import { RateLimiter } from "../services/RateLimiter";
 import { BotCore } from "../core/BotCore";
 import { TelegramAdapter } from "../platforms/telegram/TelegramAdapter";
 import { WhatsAppAdapter } from "../platforms/whatsapp/WhatsAppAdapter";
+import { WebAdapter } from "../platforms/web/WebAdapter";
 import { logger } from "./logger";
 import { config } from "./config";
 
@@ -57,5 +58,6 @@ container.bind<BotCore>(BotCore).toSelf().inSingletonScope();
 
 container.bind(TelegramAdapter).toSelf().inSingletonScope();
 container.bind(WhatsAppAdapter).toSelf().inSingletonScope();
+container.bind(WebAdapter).toSelf().inSingletonScope();
 
 export { container };

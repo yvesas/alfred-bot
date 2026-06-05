@@ -3,6 +3,7 @@ import { Platform } from "../core/IncomingMessage";
 
 export type UserStatus = "awaiting_name" | "awaiting_email" | "complete";
 export type AiModel = "gemini" | "gpt";
+export type Language = "pt" | "en" | "es";
 
 // Identidade do usuário numa plataforma (telegram id, número do WhatsApp, ...).
 // Um usuário pode ter várias (multi-plataforma).
@@ -20,6 +21,7 @@ export interface IUserBase {
   status: UserStatus;
   aiModel?: AiModel;
   categories?: string[]; // categorias personalizadas; vazio = usa as padrão
+  language?: Language; // idioma preferido (default "pt")
 }
 
 export type IUserCreate = Omit<IUserBase, "_id">;
@@ -49,6 +51,7 @@ const UserSchema = new Schema<IUser>(
     },
     aiModel: { type: String, enum: ["gemini", "gpt"] },
     categories: { type: [String], default: [] },
+    language: { type: String, enum: ["pt", "en", "es"], default: "pt" },
   },
   {
     timestamps: true,

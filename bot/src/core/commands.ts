@@ -8,4 +8,5 @@ export const KNOWN_COMMANDS = [
   "excluir",
   "editar",
   "categorias",
+  "idioma",
 ];

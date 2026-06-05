@@ -54,7 +54,13 @@ Isso exige uma pequena evolução do `Replier` (`withQuickReplies?`) — opciona
 - **Comando:** `/categorias` (listar/adicionar/remover) ou linguagem natural.
 - **Risco:** baixo–médio. Toca `User` + prompt + `BotCore`.
 
-### A4. Multi-idioma
+### A4. Multi-idioma — 🟡 EM ANDAMENTO
+> **Feito (etapa 1 — backend):** `User.language` (default `pt`) + comando `/idioma <pt|en|es>`;
+> a **IA responde/categoriza no idioma do usuário** (`languageLabel` → `getPrompt001`); base de i18n
+> em `src/i18n/` (`t()` + catálogo). Testes: setLanguage e `/idioma`.
+> **Falta:** migrar as **strings fixas** restantes (BotCore/UserService, hoje PT) para o catálogo
+> `t(lang, key)`; e o **i18n do frontend web** + seletor de idioma.
+
 **Objetivo:** bot e UI em pt/en/es… (o prompt já aceita `lang`).
 - **Backend:** `User.language`; o prompt usa `lang`; **as respostas fixas do bot** (hoje hardcoded em
   PT) vão para um **catálogo i18n** (`messages/{pt,en,es}.ts`) consultado pelo `BotCore`.

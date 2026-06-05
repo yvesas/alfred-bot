@@ -26,6 +26,7 @@ export class TelegramAdapter implements IMessagingAdapter {
     this.bot.command("excluir", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "excluir")));
     this.bot.command("editar", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "editar")));
     this.bot.command("categorias", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "categorias")));
+    this.bot.command("idioma", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "idioma")));
 
     this.bot.on("text", (ctx) => this.dispatch(ctx, this.toText(ctx)));
     this.bot.on("photo", (ctx) => this.dispatch(ctx, this.toPhoto(ctx)));

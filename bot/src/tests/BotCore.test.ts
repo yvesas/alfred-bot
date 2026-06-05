@@ -149,4 +149,17 @@ describe("BotCore", () => {
     expect(purchaseService.updatePurchase.calledWith("1", "p1", { total: 10 })).toBe(true);
     expect(replies.some((r) => r.includes("Atualizado"))).toBe(true);
   });
+
+  it("sets the language via /idioma", async () => {
+    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.setLanguage.resolves();
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "idioma", args: ["en"] } }),
+      reply,
+    );
+
+    expect(userService.setLanguage.calledWith("telegram", "1", "en")).toBe(true);
+    expect(replies.some((r) => r.includes("English"))).toBe(true);
+  });
 });

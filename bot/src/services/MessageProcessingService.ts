@@ -7,6 +7,7 @@ import { Platform } from "../core/IncomingMessage";
 import { UserRepository } from "../repositories/UserRepository";
 import { logger } from "../infra/logger";
 import { aiErrorsTotal } from "../infra/metrics";
+import { languageLabel } from "../i18n";
 
 export type Intent = "purchase" | "query" | "other" | "unknown";
 export type SpendingPeriod = "current_month" | "last_month" | "all";
@@ -29,9 +30,17 @@ export interface ModelResponse {
 }
 
 export interface IMessageProcessor {
-  processMessage(message: string, categories?: string[]): Promise<ModelResponse | null>;
+  processMessage(
+    message: string,
+    categories?: string[],
+    lang?: string,
+  ): Promise<ModelResponse | null>;
   // Opcional: modelos multimodais leem a imagem direto (OCR + extração em uma chamada).
-  processImage?(base64Image: string, categories?: string[]): Promise<ModelResponse | null>;
+  processImage?(
+    base64Image: string,
+    categories?: string[],
+    lang?: string,
+  ): Promise<ModelResponse | null>;
 }
 
 @injectable()
@@ -52,15 +61,19 @@ export class MessageProcessingService {
     return `🤖 Modelo atualizado para ${model.toUpperCase()}!`;
   }
 
-  // Resolve o processador (pela preferência do usuário) e as categorias personalizadas dele.
+  // Resolve o processador (modelo), as categorias personalizadas e o idioma do usuário.
   private async resolveProcessor(
     platform: Platform,
     externalId: string,
-  ): Promise<{ processor: IMessageProcessor; categories: string[] }> {
+  ): Promise<{ processor: IMessageProcessor; categories: string[]; language: string }> {
     const user = await this.userRepo.findByIdentity(platform, externalId);
     const model: AiModel = user?.aiModel ?? "gemini";
     const processor = model === "gpt" ? this.gptProcessor : this.geminiProcessor;
-    return { processor, categories: user?.categories ?? [] };
+    return {
+      processor,
+      categories: user?.categories ?? [],
+      language: languageLabel(user?.language ?? "pt"),
+    };
   }
 
   async processMessage(
@@ -69,8 +82,8 @@ export class MessageProcessingService {
     text: string,
   ): Promise<ModelResponse> {
     try {
-      const { processor, categories } = await this.resolveProcessor(platform, externalId);
-      const response = await processor.processMessage(text, categories);
+      const { processor, categories, language } = await this.resolveProcessor(platform, externalId);
+      const response = await processor.processMessage(text, categories, language);
 
       if (!response) {
         return { intent: "unknown", message: "🤖 Não entendi. Pode reformular?" };
@@ -93,13 +106,13 @@ export class MessageProcessingService {
     externalId: string,
     base64Image: string,
   ): Promise<ModelResponse | null> {
-    const { processor, categories } = await this.resolveProcessor(platform, externalId);
+    const { processor, categories, language } = await this.resolveProcessor(platform, externalId);
     if (!processor.processImage) {
       return null;
     }
 
     try {
-      const response = await processor.processImage(base64Image, categories);
+      const response = await processor.processImage(base64Image, categories, language);
       if (!response) {
         return { intent: "unknown", message: "🤖 Não entendi. Pode reformular?" };
       }

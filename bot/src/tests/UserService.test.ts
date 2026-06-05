@@ -143,4 +143,10 @@ describe("UserService (onboarding)", () => {
 
     expect(result).toEqual(["Farmácia"]);
   });
+
+  it("sets the language", async () => {
+    await userService.setLanguage(TG, "123", "en");
+
+    expect(userRepoMock.updateByIdentity.calledWith(TG, "123", { language: "en" })).toBe(true);
+  });
 });

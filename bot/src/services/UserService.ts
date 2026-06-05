@@ -1,6 +1,6 @@
 import { inject, injectable } from "inversify";
 import { UserRepository } from "../repositories/UserRepository";
-import { IUser, IUserCreate, UserStatus } from "../models/User";
+import { IUser, IUserCreate, UserStatus, Language } from "../models/User";
 import { Platform } from "../core/IncomingMessage";
 import { isValidEmail } from "../utils/validation";
 
@@ -40,6 +40,10 @@ export class UserService {
     const next = current.filter((c) => c.toLowerCase() !== name.toLowerCase());
     await this.userRepo.updateByIdentity(platform, externalId, { categories: next });
     return next;
+  }
+
+  async setLanguage(platform: Platform, externalId: string, language: Language): Promise<void> {
+    await this.userRepo.updateByIdentity(platform, externalId, { language });
   }
 
   // Garante que existe um registro para a identidade. Se a plataforma informar o nome,

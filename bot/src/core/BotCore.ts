@@ -16,6 +16,8 @@ import {
   validatePurchaseData,
 } from "../infra/converters/purchaseConverter";
 import { IPurchaseCreate } from "../models/Purchase";
+import { Language } from "../models/User";
+import { t } from "../i18n";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
 import { messagesReceivedTotal } from "../infra/metrics";
@@ -314,6 +316,10 @@ export class BotCore {
         if (!(await this.requireRegistered(reply, platform, externalId))) return;
         return this.handleCategories(reply, platform, externalId, args);
 
+      case "idioma":
+        if (!(await this.requireRegistered(reply, platform, externalId))) return;
+        return this.handleSetLanguage(reply, platform, externalId, args[0]);
+
       case "ia":
         if (!(await this.requireRegistered(reply, platform, externalId))) return;
         return this.handleSetIAModel(reply, platform, externalId, args[0]);
@@ -371,6 +377,23 @@ export class BotCore {
       return;
     }
     await reply.text(`✏️ Atualizado: ${updated.description} — R$ ${updated.total.toFixed(2)}`);
+  }
+
+  // ---------- Idioma (A4) ----------
+
+  private async handleSetLanguage(
+    reply: Replier,
+    platform: Platform,
+    externalId: string,
+    langArg?: string,
+  ): Promise<void> {
+    const lang = (langArg ?? "").toLowerCase();
+    if (lang !== "pt" && lang !== "en" && lang !== "es") {
+      await reply.text("Use: /idioma pt | en | es");
+      return;
+    }
+    await this.userService.setLanguage(platform, externalId, lang as Language);
+    await reply.text(t(lang as Language, "language_set"));
   }
 
   // ---------- Categorias personalizadas (A3) ----------

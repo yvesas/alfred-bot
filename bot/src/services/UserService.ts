@@ -3,6 +3,7 @@ import { UserRepository } from "../repositories/UserRepository";
 import { IUser, IUserCreate, UserStatus, Language, IBudget } from "../models/User";
 import { Platform } from "../core/IncomingMessage";
 import { isValidEmail } from "../utils/validation";
+import { t } from "../i18n";
 
 export const SKIP_COMMAND = "/pular";
 
@@ -80,6 +81,7 @@ export class UserService {
     platform: Platform,
     externalId: string,
     profile?: PlatformProfile,
+    lang: Language = "pt",
   ): Promise<{ user: IUser; question: string }> {
     let user = await this.userRepo.findByIdentity(platform, externalId);
 
@@ -96,16 +98,16 @@ export class UserService {
       user = await this.userRepo.create(initial);
     }
 
-    return { user, question: this.questionFor(user.status) };
+    return { user, question: this.questionFor(user.status, user.language ?? lang) };
   }
 
   // Pergunta correspondente ao passo atual do onboarding (usada em re-prompts).
-  questionFor(status: UserStatus): string {
+  questionFor(status: UserStatus, lang: Language = "pt"): string {
     switch (status) {
       case "awaiting_name":
-        return "Para começar, como você se chama? 🙂";
+        return t(lang, "onboarding_ask_name");
       case "awaiting_email":
-        return `Me informe seu e-mail 📧 (ou envie ${SKIP_COMMAND}). Se quiser, toque no botão abaixo para compartilhar seu telefone.`;
+        return t(lang, "onboarding_ask_email");
       default:
         return "";
     }
@@ -116,27 +118,32 @@ export class UserService {
     platform: Platform,
     externalId: string,
     text: string,
+    lang: Language = "pt",
   ): Promise<{ reply: string; completed: boolean }> {
     const user = await this.userRepo.findByIdentity(platform, externalId);
     if (!user) {
       // Sem registro ainda: cria e faz a primeira pergunta sem consumir o texto como resposta.
-      const { question } = await this.ensureUser(platform, externalId);
+      const { question } = await this.ensureUser(platform, externalId, undefined, lang);
       return { reply: question, completed: false };
     }
 
+    const userLang = user.language ?? lang;
     const answer = text.trim();
 
     switch (user.status) {
       case "awaiting_name": {
         if (answer.length < 2) {
-          return { reply: "Por favor, me diga seu nome. 🙂", completed: false };
+          return { reply: t(userLang, "onboarding_name_too_short"), completed: false };
         }
         await this.userRepo.updateByIdentity(platform, externalId, {
           name: answer,
           status: "awaiting_email",
         });
         return {
-          reply: `Prazer, ${answer}! ${this.questionFor("awaiting_email")}`,
+          reply: t(userLang, "onboarding_name_saved", {
+            name: answer,
+            askEmail: this.questionFor("awaiting_email", userLang),
+          }),
           completed: false,
         };
       }
@@ -144,19 +151,16 @@ export class UserService {
       case "awaiting_email": {
         if (answer.toLowerCase() === SKIP_COMMAND) {
           await this.userRepo.updateByIdentity(platform, externalId, { status: "complete" });
-          return { reply: this.completionMessage(), completed: true };
+          return { reply: t(userLang, "onboarding_complete"), completed: true };
         }
         if (!isValidEmail(answer)) {
-          return {
-            reply: `Hmm, esse e-mail não parece válido. Pode digitar novamente? (ou ${SKIP_COMMAND})`,
-            completed: false,
-          };
+          return { reply: t(userLang, "onboarding_email_invalid"), completed: false };
         }
         await this.userRepo.updateByIdentity(platform, externalId, {
           email: answer.toLowerCase(),
           status: "complete",
         });
-        return { reply: this.completionMessage(), completed: true };
+        return { reply: t(userLang, "onboarding_complete"), completed: true };
       }
 
       default:
@@ -171,10 +175,13 @@ export class UserService {
     externalId: string,
     phone: string,
     contactName?: string,
+    lang: Language = "pt",
   ): Promise<{ reply: string; completed: boolean }> {
     const user =
       (await this.userRepo.findByIdentity(platform, externalId)) ??
-      (await this.ensureUser(platform, externalId)).user;
+      (await this.ensureUser(platform, externalId, undefined, lang)).user;
+
+    const userLang = user.language ?? lang;
 
     const patch: Partial<IUserCreate> = { phone };
     if (!user.name && contactName) {
@@ -189,11 +196,11 @@ export class UserService {
     await this.userRepo.updateByIdentity(platform, externalId, patch);
 
     if (user.status === "complete") {
-      return { reply: "📱 Telefone atualizado com sucesso!", completed: true };
+      return { reply: t(userLang, "phone_updated"), completed: true };
     }
 
     return {
-      reply: `📱 Telefone salvo! ${this.questionFor("awaiting_email")}`,
+      reply: t(userLang, "phone_saved", { askEmail: this.questionFor("awaiting_email", userLang) }),
       completed: false,
     };
   }
@@ -203,9 +210,5 @@ export class UserService {
       return undefined;
     }
     return [profile.firstName, profile.lastName].filter(Boolean).join(" ").trim();
-  }
-
-  private completionMessage(): string {
-    return '✅ Cadastro concluído! Agora é só me enviar uma compra (ex.: "agua 7") ou um cupom fiscal. Use /gastos para ver seus gastos.';
   }
 }

@@ -69,5 +69,13 @@ export function useChat() {
     [append, send, clientId],
   );
 
-  return { messages, typing, status, sendText, sendPhoto };
+  // Troca o idioma do bot (reusa o comando /idioma) sem exibir o comando no chat.
+  const setLanguage = useCallback(
+    (lang: string) => {
+      send({ type: "user_message", clientId, text: `/idioma ${lang}` });
+    },
+    [send, clientId],
+  );
+
+  return { messages, typing, status, sendText, sendPhoto, setLanguage };
 }

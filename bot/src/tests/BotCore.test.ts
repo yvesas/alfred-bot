@@ -70,7 +70,8 @@ describe("BotCore", () => {
     await core.handle(baseMsg({ kind: "text", text: "oi" }), reply);
 
     expect(replies[0]).toContain("Muitas mensagens");
-    expect(userService.findByIdentity.called).toBe(false);
+    // O caminho caro (processamento pela IA) não roda quando bloqueado.
+    expect(mps.processMessage.called).toBe(false);
   });
 
   it("asks to confirm a purchase, then saves on 'sim'", async () => {

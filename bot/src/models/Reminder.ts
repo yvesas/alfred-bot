@@ -1,5 +1,6 @@
 import { Schema, model, Document } from "mongoose";
 import { Platform } from "../core/IncomingMessage";
+import { Language } from "./User";
 
 // Lembrete recorrente mensal (ex.: conta a pagar no dia 10). Dispara um push na
 // plataforma de origem (platform+externalId) quando `nextRun` vence.
@@ -10,6 +11,7 @@ export interface IReminderBase {
   dayOfMonth: number; // 1..28 (dia do vencimento/recorrência)
   nextRun: Date; // próximo disparo
   active: boolean;
+  language: Language; // idioma para localizar o push
   lastNotifiedAt?: Date;
 }
 
@@ -25,6 +27,7 @@ const ReminderSchema = new Schema<IReminder>(
     dayOfMonth: { type: Number, required: true, min: 1, max: 28 },
     nextRun: { type: Date, required: true },
     active: { type: Boolean, default: true },
+    language: { type: String, enum: ["pt", "en", "es"], default: "pt" },
     lastNotifiedAt: { type: Date },
   },
   { timestamps: true },

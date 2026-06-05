@@ -54,12 +54,19 @@ Isso exige uma pequena evolução do `Replier` (`withQuickReplies?`) — opciona
 - **Comando:** `/categorias` (listar/adicionar/remover) ou linguagem natural.
 - **Risco:** baixo–médio. Toca `User` + prompt + `BotCore`.
 
-### A4. Multi-idioma — 🟡 EM ANDAMENTO
-> **Feito (etapa 1 — backend):** `User.language` (default `pt`) + comando `/idioma <pt|en|es>`;
-> a **IA responde/categoriza no idioma do usuário** (`languageLabel` → `getPrompt001`); base de i18n
-> em `src/i18n/` (`t()` + catálogo). Testes: setLanguage e `/idioma`.
-> **Falta:** migrar as **strings fixas** restantes (BotCore/UserService, hoje PT) para o catálogo
-> `t(lang, key)`; e o **i18n do frontend web** + seletor de idioma.
+### A4. Multi-idioma — ✅ CONCLUÍDA
+> **Etapa 1 (backend IA):** `User.language` (default `pt`) + `/idioma <pt|en|es>`; a **IA
+> responde/categoriza no idioma do usuário** (`languageLabel` → `getPrompt001`).
+> **Etapa 2 (strings fixas):** catálogo i18n completo em `src/i18n/` — `t(lang, key, params?)` com
+> interpolação `{x}` e tipo `Record<Language, Record<Key,…>>` (o TS exige todas as chaves em pt/en/es).
+> Migradas **todas** as respostas fixas de `BotCore`, `UserService`, `BudgetService` e
+> `MessageProcessingService`; o `lang` é resolvido por mensagem e threadado nos handlers. Lembretes
+> guardam o idioma (`Reminder.language`) para localizar o **push**.
+> **Etapa 3 (frontend web):** `web/src/lib/i18n.tsx` (provider + `useI18n`, detecção pelo navegador,
+> persistência) + **seletor de idioma** no header; ao trocar, o front envia `/idioma` ao bot para
+> alinhar as respostas. Testes: bot 78 verdes; web i18n + notify.
+> **Observação:** as razões de validação em `purchaseConverter` (técnicas, raramente exibidas)
+> seguem em PT — fora do escopo BotCore/UserService.
 
 **Objetivo:** bot e UI em pt/en/es… (o prompt já aceita `lang`).
 - **Backend:** `User.language`; o prompt usa `lang`; **as respostas fixas do bot** (hoje hardcoded em

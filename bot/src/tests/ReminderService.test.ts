@@ -36,7 +36,7 @@ describe("ReminderService", () => {
     repo.create.resolves({} as any);
     const from = new Date(2026, 5, 1, 12, 0, 0);
 
-    await service.add(TG, "1", 10, "Conta de luz", from);
+    await service.add(TG, "1", 10, "Conta de luz", "pt", from);
 
     const arg = repo.create.firstCall.args[0];
     expect(arg.description).toBe("Conta de luz");

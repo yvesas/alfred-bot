@@ -2,6 +2,7 @@ import { inject, injectable } from "inversify";
 import { ReminderRepository } from "../repositories/ReminderRepository";
 import { IReminder } from "../models/Reminder";
 import { Platform } from "../core/IncomingMessage";
+import { Language } from "../models/User";
 
 // Hora do dia (local) em que os lembretes disparam.
 const REMINDER_HOUR = 9;
@@ -31,6 +32,7 @@ export class ReminderService {
     externalId: string,
     dayOfMonth: number,
     description: string,
+    language: Language = "pt",
     from: Date = new Date(),
   ): Promise<IReminder> {
     return await this.reminderRepo.create({
@@ -40,6 +42,7 @@ export class ReminderService {
       dayOfMonth,
       nextRun: nextOccurrence(dayOfMonth, from),
       active: true,
+      language,
     });
   }
 

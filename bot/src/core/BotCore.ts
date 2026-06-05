@@ -18,8 +18,8 @@ import {
   validatePurchaseData,
 } from "../infra/converters/purchaseConverter";
 import { IPurchaseCreate } from "../models/Purchase";
-import { Language } from "../models/User";
-import { t } from "../i18n";
+import { IUser, Language } from "../models/User";
+import { MessageKey, t } from "../i18n";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
 import { messagesReceivedTotal } from "../infra/metrics";
@@ -38,6 +38,16 @@ const AFFIRMATIVE = new Set([
   "✅",
 ]);
 const NEGATIVE = new Set(["não", "nao", "n", "no", "cancelar", "cancela", "cancelado"]);
+
+// Idioma do usuário (default "pt") — usado para localizar as respostas fixas do bot.
+function langOf(user: Pick<IUser, "language"> | null | undefined): Language {
+  return user?.language ?? "pt";
+}
+
+// Símbolo de moeda por idioma (pt usa R$; en/es usam $ neste MVP).
+function currency(lang: Language): string {
+  return lang === "pt" ? "R$" : "$";
+}
 
 // Lógica de conversa do bot, independente de plataforma. Recebe uma IncomingMessage
 // normalizada e um Replier; os adapters cuidam do transporte (Telegram, WhatsApp, ...).
@@ -71,18 +81,24 @@ export class BotCore {
     }
   }
 
+  // Idioma do usuário sem um documento em mãos (DB lookup leve).
+  private async resolveLang(platform: Platform, externalId: string): Promise<Language> {
+    const user = await this.userService.findByIdentity(platform, externalId);
+    return langOf(user);
+  }
+
   // ---------- Onboarding / cadastro ----------
 
   private async handleText(msg: IncomingMessage, reply: Replier): Promise<void> {
     const { platform, externalId } = msg;
     if (!this.rateLimiter.allow(externalId)) {
-      await reply.text(
-        "⏳ Muitas mensagens em pouco tempo. Aguarde um instante e tente novamente.",
-      );
+      // Só consulta o idioma quando realmente bloqueia (caminho raro).
+      await reply.text(t(await this.resolveLang(platform, externalId), "rate_limited"));
       return;
     }
 
     const user = await this.userService.findByIdentity(platform, externalId);
+    const lang = langOf(user);
 
     if (!user) {
       // Primeiro contato: aproveita o perfil (nome) quando a plataforma fornece.
@@ -90,9 +106,13 @@ export class BotCore {
         platform,
         externalId,
         msg.profile,
+        lang,
       );
       await reply.text(
-        `👋 Olá${created.name ? `, ${created.name}` : ""}! Eu registro suas compras e gastos. ${question}`,
+        t(langOf(created), "greeting_new", {
+          name: created.name ? `, ${created.name}` : "",
+          question,
+        }),
         { requestPhone: created.status !== "complete" },
       );
       return;
@@ -104,13 +124,14 @@ export class BotCore {
         platform,
         externalId,
         msg.text ?? "",
+        lang,
       );
       await reply.text(answer, { requestPhone: !completed });
       return;
     }
 
     // Se há uma compra aguardando confirmação, interpreta esta mensagem como a resposta.
-    if (await this.resolvePendingConfirmation(reply, platform, externalId, msg.text ?? "")) {
+    if (await this.resolvePendingConfirmation(reply, platform, externalId, lang, msg.text ?? "")) {
       return;
     }
 
@@ -119,35 +140,37 @@ export class BotCore {
       externalId,
       msg.text ?? "",
     );
-    await this.handleProcessed(reply, platform, externalId, processed);
+    await this.handleProcessed(reply, platform, externalId, lang, processed);
   }
 
   private async handleContact(msg: IncomingMessage, reply: Replier): Promise<void> {
     if (!msg.contact) return;
+    const lang = await this.resolveLang(msg.platform, msg.externalId);
     const { reply: answer, completed } = await this.userService.saveContact(
       msg.platform,
       msg.externalId,
       msg.contact.phone,
       msg.contact.name,
+      lang,
     );
     await reply.text(answer, { requestPhone: !completed });
   }
 
-  // Garante o cadastro completo antes de um comando. Conduz o cadastro e retorna false se incompleto.
+  // Garante o cadastro completo antes de um comando. Conduz o cadastro e retorna o usuário
+  // completo, ou null (já respondendo com a próxima pergunta do cadastro).
   private async requireRegistered(
     reply: Replier,
     platform: Platform,
     externalId: string,
-  ): Promise<boolean> {
+  ): Promise<IUser | null> {
     const user = await this.userService.findByIdentity(platform, externalId);
     if (user && user.status === "complete") {
-      return true;
+      return user;
     }
-    const { question } = await this.userService.ensureUser(platform, externalId);
-    await reply.text(`Antes disso, vamos concluir seu cadastro. ${question}`, {
-      requestPhone: true,
-    });
-    return false;
+    const lang = langOf(user);
+    const { question } = await this.userService.ensureUser(platform, externalId, undefined, lang);
+    await reply.text(t(lang, "finish_registration", { question }), { requestPhone: true });
+    return null;
   }
 
   // ---------- Foto ----------
@@ -155,22 +178,20 @@ export class BotCore {
   private async handlePhoto(msg: IncomingMessage, reply: Replier): Promise<void> {
     const { platform, externalId } = msg;
     if (!this.rateLimiter.allow(externalId)) {
-      await reply.text(
-        "⏳ Muitas mensagens em pouco tempo. Aguarde um instante e tente novamente.",
-      );
+      await reply.text(t(await this.resolveLang(platform, externalId), "rate_limited"));
       return;
     }
-    if (!(await this.requireRegistered(reply, platform, externalId))) {
-      return;
-    }
+    const user = await this.requireRegistered(reply, platform, externalId);
+    if (!user) return;
+    const lang = langOf(user);
 
     try {
       const base64Image = msg.getImageBase64 ? await msg.getImageBase64() : "";
       const processed = await this.processReceiptImage(platform, externalId, base64Image);
-      await this.handleProcessed(reply, platform, externalId, processed);
+      await this.handleProcessed(reply, platform, externalId, lang, processed);
     } catch (error) {
       logger.error({ err: error }, "Erro ao baixar/processar a imagem");
-      await reply.text("Houve um erro ao processar a imagem. Tente novamente.");
+      await reply.text(t(lang, "photo_error"));
     }
   }
 
@@ -203,18 +224,17 @@ export class BotCore {
     reply: Replier,
     platform: Platform,
     externalId: string,
+    lang: Language,
     processed: ModelResponse,
   ): Promise<void> {
     if (processed.intent === "query") {
-      await this.handleSpendingQuery(reply, externalId, processed.period, processed.groupBy);
+      await this.handleSpendingQuery(reply, externalId, lang, processed.period, processed.groupBy);
       return;
     }
 
     if (processed.intent !== "purchase") {
-      await reply.text(
-        processed.message ||
-          "❌ Não consegui identificar os dados. Pode repetir com mais detalhes?",
-      );
+      // processed.message vem da IA já no idioma do usuário; senão, fallback localizado.
+      await reply.text(processed.message || t(lang, "not_understood"));
       return;
     }
 
@@ -230,12 +250,15 @@ export class BotCore {
     if (config.confirmPurchase) {
       this.pendingPurchases.set(this.pendingKey(platform, externalId), purchaseData);
       await reply.text(
-        `Confirmar esta compra?\n\n🛒 ${purchaseData.description} — R$ ${purchaseData.total.toFixed(2)}\n\nResponda "sim" para salvar ou "não" para cancelar.`,
+        t(lang, "purchase_confirm", {
+          description: purchaseData.description,
+          total: purchaseData.total.toFixed(2),
+        }),
       );
       return;
     }
 
-    await this.savePurchase(reply, platform, externalId, purchaseData);
+    await this.savePurchase(reply, platform, externalId, lang, purchaseData);
   }
 
   // ---------- Confirmação de compra (A1) ----------
@@ -251,6 +274,7 @@ export class BotCore {
     reply: Replier,
     platform: Platform,
     externalId: string,
+    lang: Language,
     text: string,
   ): Promise<boolean> {
     const key = this.pendingKey(platform, externalId);
@@ -261,12 +285,12 @@ export class BotCore {
 
     if (AFFIRMATIVE.has(answer)) {
       this.pendingPurchases.delete(key);
-      await this.savePurchase(reply, platform, externalId, pending);
+      await this.savePurchase(reply, platform, externalId, lang, pending);
       return true;
     }
     if (NEGATIVE.has(answer)) {
       this.pendingPurchases.delete(key);
-      await reply.text("Ok, cancelei essa compra. 👍");
+      await reply.text(t(lang, "purchase_cancelled"));
       return true;
     }
 
@@ -279,23 +303,30 @@ export class BotCore {
     reply: Replier,
     platform: Platform,
     externalId: string,
+    lang: Language,
     purchaseData: IPurchaseCreate,
   ): Promise<void> {
     try {
       await this.purchaseService.addPurchase(purchaseData);
 
       // Alertas de orçamento (se a categoria desta compra tiver limite definido).
-      const alerts = await this.budgetService.alertsForPurchase(platform, externalId, purchaseData);
+      const alerts = await this.budgetService.alertsForPurchase(
+        platform,
+        externalId,
+        purchaseData,
+        lang,
+      );
       const suffix = alerts.length ? `\n\n${alerts.join("\n")}` : "";
 
       await reply.text(
-        `🛒 Compra registrada: ${purchaseData.description} - Total de R$ ${purchaseData.total.toFixed(2)}${suffix}`,
+        t(lang, "purchase_saved", {
+          description: purchaseData.description,
+          total: purchaseData.total.toFixed(2),
+        }) + suffix,
       );
     } catch (error) {
       logger.error({ err: error }, "Erro ao registrar compra");
-      await reply.text(
-        "❌ Não consegui registrar essa compra. Verifique os valores e tente novamente.",
-      );
+      await reply.text(t(lang, "purchase_save_error"));
     }
   }
 
@@ -306,45 +337,33 @@ export class BotCore {
     const name = msg.command?.name;
     const args = msg.command?.args ?? [];
 
+    if (name === "start") {
+      return this.handleStart(msg, reply);
+    }
+
+    const user = await this.requireRegistered(reply, platform, externalId);
+    if (!user) return;
+    const lang = langOf(user);
+
     switch (name) {
-      case "start":
-        return this.handleStart(msg, reply);
-
       case "gastos":
-        if (!(await this.requireRegistered(reply, platform, externalId))) return;
-        return this.handleSpendingQuery(reply, externalId, "current_month");
-
+        return this.handleSpendingQuery(reply, externalId, lang, "current_month");
       case "compras":
-        if (!(await this.requireRegistered(reply, platform, externalId))) return;
-        return this.handleGetPurchases(reply, externalId, this.parsePage(args[0]));
-
+        return this.handleGetPurchases(reply, lang, externalId, this.parsePage(args[0]));
       case "excluir":
-        if (!(await this.requireRegistered(reply, platform, externalId))) return;
-        return this.handleDeletePurchase(reply, externalId, args[0]);
-
+        return this.handleDeletePurchase(reply, lang, externalId, args[0]);
       case "editar":
-        if (!(await this.requireRegistered(reply, platform, externalId))) return;
-        return this.handleEditPurchase(reply, externalId, args);
-
+        return this.handleEditPurchase(reply, lang, externalId, args);
       case "categorias":
-        if (!(await this.requireRegistered(reply, platform, externalId))) return;
-        return this.handleCategories(reply, platform, externalId, args);
-
+        return this.handleCategories(reply, platform, externalId, lang, args);
       case "orcamento":
-        if (!(await this.requireRegistered(reply, platform, externalId))) return;
-        return this.handleBudgets(reply, platform, externalId, args);
-
+        return this.handleBudgets(reply, platform, externalId, lang, args);
       case "lembretes":
-        if (!(await this.requireRegistered(reply, platform, externalId))) return;
-        return this.handleReminders(reply, platform, externalId, args);
-
+        return this.handleReminders(reply, platform, externalId, lang, args);
       case "idioma":
-        if (!(await this.requireRegistered(reply, platform, externalId))) return;
-        return this.handleSetLanguage(reply, platform, externalId, args[0]);
-
+        return this.handleSetLanguage(reply, platform, externalId, lang, args[0]);
       case "ia":
-        if (!(await this.requireRegistered(reply, platform, externalId))) return;
-        return this.handleSetIAModel(reply, platform, externalId, args[0]);
+        return this.handleSetIAModel(reply, platform, externalId, lang, args[0]);
     }
   }
 
@@ -358,23 +377,35 @@ export class BotCore {
     return all[n - 1] ?? null;
   }
 
-  private async handleDeletePurchase(reply: Replier, userId: string, nStr: string): Promise<void> {
+  private async handleDeletePurchase(
+    reply: Replier,
+    lang: Language,
+    userId: string,
+    nStr: string,
+  ): Promise<void> {
     const target = await this.nthRecentPurchase(userId, nStr);
     if (!target) {
-      await reply.text('Número inválido. Use /compras para ver a lista (ex.: "/excluir 2").');
+      await reply.text(t(lang, "delete_invalid"));
       return;
     }
     await this.purchaseService.deletePurchase(userId, String(target._id));
-    await reply.text(`🗑️ Excluído: ${target.description} — R$ ${target.total.toFixed(2)}`);
+    await reply.text(
+      t(lang, "delete_done", { description: target.description, total: target.total.toFixed(2) }),
+    );
   }
 
-  private async handleEditPurchase(reply: Replier, userId: string, args: string[]): Promise<void> {
+  private async handleEditPurchase(
+    reply: Replier,
+    lang: Language,
+    userId: string,
+    args: string[],
+  ): Promise<void> {
     const field = (args[1] ?? "").toLowerCase();
     const value = args.slice(2).join(" ").trim();
     const target = await this.nthRecentPurchase(userId, args[0] ?? "");
 
     if (!target || !field || !value) {
-      await reply.text('Uso: /editar <nº> <total|descrição> <valor>. Ex.: "/editar 2 total 10".');
+      await reply.text(t(lang, "edit_usage"));
       return;
     }
 
@@ -382,23 +413,25 @@ export class BotCore {
     if (field === "total" || field === "valor") {
       const v = Number(value.replace(",", "."));
       if (!Number.isFinite(v) || v <= 0) {
-        await reply.text("Valor inválido. Ex.: /editar 2 total 10");
+        await reply.text(t(lang, "edit_invalid_value"));
         return;
       }
       patch.total = v;
     } else if (field === "descrição" || field === "descricao" || field === "desc") {
       patch.description = value;
     } else {
-      await reply.text('Campo inválido. Use "total" ou "descrição".');
+      await reply.text(t(lang, "edit_invalid_field"));
       return;
     }
 
     const updated = await this.purchaseService.updatePurchase(userId, String(target._id), patch);
     if (!updated) {
-      await reply.text("Não consegui editar essa compra.");
+      await reply.text(t(lang, "edit_failed"));
       return;
     }
-    await reply.text(`✏️ Atualizado: ${updated.description} — R$ ${updated.total.toFixed(2)}`);
+    await reply.text(
+      t(lang, "edit_done", { description: updated.description, total: updated.total.toFixed(2) }),
+    );
   }
 
   // ---------- Idioma (A4) ----------
@@ -407,15 +440,16 @@ export class BotCore {
     reply: Replier,
     platform: Platform,
     externalId: string,
+    lang: Language,
     langArg?: string,
   ): Promise<void> {
-    const lang = (langArg ?? "").toLowerCase();
-    if (lang !== "pt" && lang !== "en" && lang !== "es") {
-      await reply.text("Use: /idioma pt | en | es");
+    const chosen = (langArg ?? "").toLowerCase();
+    if (chosen !== "pt" && chosen !== "en" && chosen !== "es") {
+      await reply.text(t(lang, "language_usage"));
       return;
     }
-    await this.userService.setLanguage(platform, externalId, lang as Language);
-    await reply.text(t(lang as Language, "language_set"));
+    await this.userService.setLanguage(platform, externalId, chosen as Language);
+    await reply.text(t(chosen as Language, "language_set"));
   }
 
   // ---------- Categorias personalizadas (A3) ----------
@@ -424,6 +458,7 @@ export class BotCore {
     reply: Replier,
     platform: Platform,
     externalId: string,
+    lang: Language,
     args: string[],
   ): Promise<void> {
     const sub = (args[0] ?? "").toLowerCase();
@@ -431,36 +466,32 @@ export class BotCore {
 
     if (sub === "add" || sub === "adicionar") {
       if (!name) {
-        await reply.text('Uso: /categorias add <nome>. Ex.: "/categorias add Mercado".');
+        await reply.text(t(lang, "categories_add_usage"));
         return;
       }
       const cats = await this.userService.addCategory(platform, externalId, name);
-      await reply.text(`✅ Categoria adicionada.\n📂 Suas categorias: ${cats.join(", ")}`);
+      await reply.text(t(lang, "categories_added", { list: cats.join(", ") }));
       return;
     }
 
     if (sub === "remover" || sub === "remove" || sub === "rm" || sub === "del") {
       if (!name) {
-        await reply.text("Uso: /categorias remover <nome>.");
+        await reply.text(t(lang, "categories_remove_usage"));
         return;
       }
       const cats = await this.userService.removeCategory(platform, externalId, name);
-      const list = cats.length ? cats.join(", ") : "(usando as padrão)";
-      await reply.text(`🗑️ Categoria removida.\n📂 Suas categorias: ${list}`);
+      const list = cats.length ? cats.join(", ") : t(lang, "categories_default_label");
+      await reply.text(t(lang, "categories_removed", { list }));
       return;
     }
 
     // Sem subcomando: lista.
     const cats = await this.userService.getCategories(platform, externalId);
     if (cats.length === 0) {
-      await reply.text(
-        'Você usa as categorias padrão. Crie as suas com "/categorias add Mercado".',
-      );
+      await reply.text(t(lang, "categories_default_hint"));
       return;
     }
-    await reply.text(
-      `📂 Suas categorias: ${cats.join(", ")}\n\n"/categorias add <nome>" ou "/categorias remover <nome>".`,
-    );
+    await reply.text(t(lang, "categories_list", { list: cats.join(", ") }));
   }
 
   // ---------- Orçamento mensal (alertas em savePurchase) ----------
@@ -469,21 +500,23 @@ export class BotCore {
     reply: Replier,
     platform: Platform,
     externalId: string,
+    lang: Language,
     args: string[],
   ): Promise<void> {
     const sub = (args[0] ?? "").toLowerCase();
+    const cur = currency(lang);
 
     if (sub === "remover" || sub === "remove" || sub === "rm" || sub === "del") {
       const category = args.slice(1).join(" ").trim();
       if (!category) {
-        await reply.text("Uso: /orcamento remover <categoria>.");
+        await reply.text(t(lang, "budget_remove_usage"));
         return;
       }
       const budgets = await this.userService.removeBudget(platform, externalId, category);
       const list = budgets.length
-        ? budgets.map((b) => `• ${b.category}: R$ ${b.limit.toFixed(2)}`).join("\n")
-        : "(nenhum)";
-      await reply.text(`🗑️ Orçamento removido.\n💰 Seus orçamentos:\n${list}`);
+        ? budgets.map((b) => `• ${b.category}: ${cur} ${b.limit.toFixed(2)}`).join("\n")
+        : t(lang, "budget_none_label");
+      await reply.text(t(lang, "budget_removed", { list }));
       return;
     }
 
@@ -492,22 +525,18 @@ export class BotCore {
       const limit = Number(args[args.length - 1].replace(",", "."));
       const category = args.slice(0, -1).join(" ").trim();
       if (!category || !Number.isFinite(limit) || limit <= 0) {
-        await reply.text('Uso: /orcamento <categoria> <valor>. Ex.: "/orcamento Alimentação 500".');
+        await reply.text(t(lang, "budget_set_usage"));
         return;
       }
       await this.userService.setBudget(platform, externalId, category, limit);
-      await reply.text(
-        `✅ Orçamento de ${category} definido em R$ ${limit.toFixed(2)} por mês. Eu te aviso ao chegar perto.`,
-      );
+      await reply.text(t(lang, "budget_set", { category, limit: limit.toFixed(2) }));
       return;
     }
 
     // Sem argumentos: lista os orçamentos com o gasto do mês atual.
     const budgets = await this.userService.getBudgets(platform, externalId);
     if (budgets.length === 0) {
-      await reply.text(
-        'Você ainda não tem orçamentos. Crie com "/orcamento Alimentação 500" (limite mensal por categoria).',
-      );
+      await reply.text(t(lang, "budget_empty"));
       return;
     }
 
@@ -517,12 +546,11 @@ export class BotCore {
         .filter(([k]) => k.toLowerCase() === b.category.toLowerCase())
         .reduce((sum, [, v]) => sum + v, 0);
       const pct = b.limit > 0 ? Math.round((spent / b.limit) * 100) : 0;
-      return `• ${b.category}: R$ ${spent.toFixed(2)} de R$ ${b.limit.toFixed(2)} (${pct}%)`;
+      return `• ${b.category}: ${cur} ${spent.toFixed(2)} / ${cur} ${b.limit.toFixed(2)} (${pct}%)`;
     });
 
     await reply.text(
-      `💰 Orçamentos deste mês:\n${lines.join("\n")}\n\n` +
-        '"/orcamento <categoria> <valor>" para alterar, "/orcamento remover <categoria>".',
+      `${t(lang, "budget_list_header")}\n${lines.join("\n")}\n\n${t(lang, "budget_list_footer")}`,
     );
   }
 
@@ -532,6 +560,7 @@ export class BotCore {
     reply: Replier,
     platform: Platform,
     externalId: string,
+    lang: Language,
     args: string[],
   ): Promise<void> {
     const sub = (args[0] ?? "").toLowerCase();
@@ -540,14 +569,15 @@ export class BotCore {
       const day = Number(args[1]);
       const description = args.slice(2).join(" ").trim();
       if (!Number.isInteger(day) || day < 1 || day > 28 || !description) {
-        await reply.text(
-          'Uso: /lembretes add <dia 1-28> <descrição>. Ex.: "/lembretes add 10 Conta de luz".',
-        );
+        await reply.text(t(lang, "reminder_add_usage"));
         return;
       }
-      const reminder = await this.reminderService.add(platform, externalId, day, description);
+      const reminder = await this.reminderService.add(platform, externalId, day, description, lang);
       await reply.text(
-        `⏰ Lembrete criado: "${reminder.description}" — todo dia ${reminder.dayOfMonth}. Eu te aviso por aqui.`,
+        t(lang, "reminder_created", {
+          description: reminder.description,
+          day: reminder.dayOfMonth,
+        }),
       );
       return;
     }
@@ -555,62 +585,69 @@ export class BotCore {
     if (sub === "remover" || sub === "remove" || sub === "rm" || sub === "del") {
       const removed = await this.reminderService.removeNth(platform, externalId, args[1] ?? "");
       if (!removed) {
-        await reply.text("Número inválido. Use /lembretes para ver a lista.");
+        await reply.text(t(lang, "reminder_remove_invalid"));
         return;
       }
-      await reply.text(`🗑️ Lembrete removido: "${removed.description}".`);
+      await reply.text(t(lang, "reminder_removed", { description: removed.description }));
       return;
     }
 
     // Sem subcomando: lista.
     const list = await this.reminderService.list(platform, externalId);
     if (list.length === 0) {
-      await reply.text(
-        'Você não tem lembretes. Crie com "/lembretes add 10 Conta de luz" (dia do mês + descrição).',
-      );
+      await reply.text(t(lang, "reminder_empty"));
       return;
     }
-    const body = list.map((r, i) => `${i + 1}. dia ${r.dayOfMonth} — ${r.description}`).join("\n");
+    const body = list
+      .map((r, i) =>
+        t(lang, "reminder_list_item", {
+          index: i + 1,
+          day: r.dayOfMonth,
+          description: r.description,
+        }),
+      )
+      .join("\n");
     await reply.text(
-      `⏰ Seus lembretes:\n\n${body}\n\n` +
-        '"/lembretes add <dia> <descrição>" ou "/lembretes remover <nº>".',
+      `${t(lang, "reminder_list_header")}\n\n${body}\n\n${t(lang, "reminder_list_footer")}`,
     );
   }
 
   private async handleStart(msg: IncomingMessage, reply: Replier): Promise<void> {
+    // Resolve o idioma antes para localizar já a saudação/pergunta.
+    const lang = await this.resolveLang(msg.platform, msg.externalId);
     const { user, question } = await this.userService.ensureUser(
       msg.platform,
       msg.externalId,
       msg.profile,
+      lang,
     );
+    const userLang = langOf(user);
+    const name = user.name ? `, ${user.name}` : "";
 
     if (user.status === "complete") {
-      await reply.text(
-        `Olá de novo${user.name ? `, ${user.name}` : ""}! 👋 Envie uma compra (ex.: "agua 7"), um cupom fiscal, ou use /gastos.`,
-      );
+      await reply.text(t(userLang, "greeting_returning", { name }));
       return;
     }
 
-    await reply.text(
-      `👋 Olá${user.name ? `, ${user.name}` : ""}! Eu registro suas compras e gastos. ${question}`,
-      { requestPhone: true },
-    );
+    await reply.text(t(userLang, "greeting_new", { name, question }), { requestPhone: true });
   }
 
   private async handleSetIAModel(
     reply: Replier,
     platform: Platform,
     externalId: string,
+    lang: Language,
     model?: string,
   ): Promise<void> {
     if (!model) {
-      await reply.text("Use: /ia gpt ou /ia gemini");
+      await reply.text(t(lang, "ia_usage"));
       return;
     }
     const response = await this.messageProcessingService.setUserModel(
       platform,
       externalId,
       model.toLowerCase(),
+      lang,
     );
     await reply.text(response);
   }
@@ -620,8 +657,14 @@ export class BotCore {
     return Number.isInteger(n) && n > 0 ? n : 1;
   }
 
-  private async handleGetPurchases(reply: Replier, userId: string, page = 1): Promise<void> {
+  private async handleGetPurchases(
+    reply: Replier,
+    lang: Language,
+    userId: string,
+    page = 1,
+  ): Promise<void> {
     const pageSize = 5;
+    const cur = currency(lang);
     const {
       items,
       total,
@@ -630,25 +673,29 @@ export class BotCore {
     } = await this.purchaseService.getUserPurchasesPage(userId, page, pageSize);
 
     if (total === 0) {
-      await reply.text("Você ainda não tem compras registradas.");
+      await reply.text(t(lang, "purchases_empty"));
       return;
     }
 
     const offset = (current - 1) * pageSize;
     const body = items
-      .map(
-        (p, i) =>
-          `${offset + i + 1}. ${p.description}: R$ ${p.total.toFixed(2)} em ${p.date.toLocaleDateString()}`,
+      .map((p, i) =>
+        t(lang, "purchases_item", {
+          index: offset + i + 1,
+          description: p.description,
+          total: `${cur} ${p.total.toFixed(2)}`,
+          date: p.date.toLocaleDateString(),
+        }),
       )
       .join("\n");
 
-    let footer = `\n\n📄 Página ${current}/${pages} — ${total} compra(s) no total.`;
+    let footer = `\n\n${t(lang, "purchases_page_info", { current, pages, total })}`;
     if (current < pages) {
-      footer += `\nVer mais: "/compras ${current + 1}".`;
+      footer += `\n${t(lang, "purchases_more", { next: current + 1 })}`;
     }
-    footer += '\nPara corrigir: "/editar 2 total 10" ou "/excluir 2".';
+    footer += `\n${t(lang, "purchases_fix_hint")}`;
 
-    await reply.text(`📋 Suas compras:\n\n${body}${footer}`);
+    await reply.text(`${t(lang, "purchases_header")}\n\n${body}${footer}`);
   }
 
   // ---------- Consulta de gastos ----------
@@ -656,44 +703,48 @@ export class BotCore {
   private async handleSpendingQuery(
     reply: Replier,
     userId: string,
+    lang: Language,
     period: SpendingPeriod = "current_month",
     groupBy?: SpendingGroupBy,
   ): Promise<void> {
     const report = await this.purchaseService.getSpendingReport(userId, period);
-    const label = this.periodLabel(report.period);
+    const periodLabel = this.periodLabel(report.period, lang);
 
     if (report.count === 0) {
-      await reply.text(`Você não tem gastos registrados ${label}.`);
+      await reply.text(t(lang, "spending_empty", { period: periodLabel }));
       return;
     }
 
-    let message = `📊 Gastos ${label}: R$ ${report.total.toFixed(2)} em ${report.count} compra(s).`;
+    let message = t(lang, "spending_report", {
+      period: periodLabel,
+      total: report.total.toFixed(2),
+      count: report.count,
+    });
 
     if (groupBy === "category") {
-      message += this.formatBreakdown("Por categoria", report.byCategory);
+      message += this.formatBreakdown(t(lang, "breakdown_category"), report.byCategory, lang);
     } else if (groupBy === "store") {
-      message += this.formatBreakdown("Por loja", report.byStore);
+      message += this.formatBreakdown(t(lang, "breakdown_store"), report.byStore, lang);
     }
 
     await reply.text(message);
   }
 
-  private periodLabel(period: SpendingPeriod): string {
-    switch (period) {
-      case "last_month":
-        return "do mês passado";
-      case "all":
-        return "no total";
-      case "current_month":
-      default:
-        return "deste mês";
-    }
+  private periodLabel(period: SpendingPeriod, lang: Language): string {
+    const key: MessageKey =
+      period === "last_month"
+        ? "period_last_month"
+        : period === "all"
+          ? "period_all"
+          : "period_current_month";
+    return t(lang, key);
   }
 
-  private formatBreakdown(title: string, data: Record<string, number>): string {
+  private formatBreakdown(title: string, data: Record<string, number>, lang: Language): string {
+    const cur = currency(lang);
     const lines = Object.entries(data)
       .sort(([, a], [, b]) => b - a)
-      .map(([key, value]) => `• ${key}: R$ ${value.toFixed(2)}`);
+      .map(([key, value]) => `• ${key}: ${cur} ${value.toFixed(2)}`);
 
     if (lines.length === 0) {
       return "";

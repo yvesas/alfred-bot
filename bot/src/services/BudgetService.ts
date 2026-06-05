@@ -3,6 +3,8 @@ import { UserService } from "./UserService";
 import { PurchaseService } from "./PurchaseService";
 import { Platform } from "../core/IncomingMessage";
 import { IPurchaseCreate } from "../models/Purchase";
+import { Language } from "../models/User";
+import { t } from "../i18n";
 
 // Limiares de alerta (fração do orçamento mensal).
 const WARN_RATIO = 0.8;
@@ -20,6 +22,7 @@ export class BudgetService {
     platform: Platform,
     externalId: string,
     purchase: IPurchaseCreate,
+    lang: Language = "pt",
   ): Promise<string[]> {
     const budgets = await this.userService.getBudgets(platform, externalId);
     if (budgets.length === 0) return [];
@@ -45,14 +48,16 @@ export class BudgetService {
       const ratio = spent / b.limit;
       const pct = Math.round(ratio * 100);
 
+      const params = {
+        category: b.category,
+        spent: spent.toFixed(2),
+        limit: b.limit.toFixed(2),
+        pct,
+      };
       if (ratio >= 1) {
-        alerts.push(
-          `🚨 Orçamento de ${b.category} estourado: R$ ${spent.toFixed(2)} de R$ ${b.limit.toFixed(2)} (${pct}%).`,
-        );
+        alerts.push(t(lang, "budget_alert_over", params));
       } else if (ratio >= WARN_RATIO) {
-        alerts.push(
-          `🔔 Você já usou ${pct}% do orçamento de ${b.category}: R$ ${spent.toFixed(2)} de R$ ${b.limit.toFixed(2)}.`,
-        );
+        alerts.push(t(lang, "budget_alert_warn", params));
       }
     }
     return alerts;

@@ -3,11 +3,25 @@ import { useChat } from "./hooks/useChat";
 import { MessageList } from "./components/MessageList";
 import { ChatInput } from "./components/ChatInput";
 import { getTheme, toggleTheme, type Theme } from "../../lib/theme";
+import { useI18n, LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
 
 export function ChatPage() {
-  const { messages, typing, status, sendText, sendPhoto } = useChat();
+  const { messages, typing, status, sendText, sendPhoto, setLanguage } = useChat();
   const connected = status === "open";
   const [theme, setTheme] = useState<Theme>(getTheme());
+  const { locale, setLocale, t } = useI18n();
+
+  const statusLabel = connected
+    ? t("status_connected")
+    : status === "connecting"
+      ? t("status_connecting")
+      : t("status_offline");
+
+  const onLocaleChange = (l: Locale) => {
+    setLocale(l);
+    // Avisa o bot para responder no novo idioma (reusa /idioma).
+    if (connected) setLanguage(l);
+  };
 
   return (
     <div className="flex h-full flex-col bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
@@ -19,13 +33,28 @@ export function ChatPage() {
               <span
                 className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-500" : "bg-amber-500"}`}
               />
-              {connected ? "conectado" : status === "connecting" ? "conectando…" : "offline"}
+              {statusLabel}
             </span>
+
+            <select
+              value={locale}
+              onChange={(e) => onLocaleChange(e.target.value as Locale)}
+              title={t("language_label")}
+              aria-label={t("language_label")}
+              className="rounded-lg border border-zinc-200 bg-transparent px-1.5 py-1 text-xs text-zinc-600 outline-none hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              {LOCALES.map((l) => (
+                <option key={l} value={l} className="bg-white dark:bg-zinc-900">
+                  {LOCALE_LABELS[l]}
+                </option>
+              ))}
+            </select>
+
             <button
               type="button"
               onClick={() => setTheme(toggleTheme())}
-              title="Alternar tema"
-              aria-label="Alternar tema"
+              title={t("toggle_theme")}
+              aria-label={t("toggle_theme")}
               className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
             >
               {theme === "dark" ? "☀️" : "🌙"}

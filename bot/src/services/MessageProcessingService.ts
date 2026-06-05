@@ -2,12 +2,12 @@ import { inject, injectable } from "inversify";
 import { GptProcessor } from "./GptProcessor";
 import { GeminiProcessor } from "./GeminiProcessor";
 import { IPurchaseItem, IStoreInfo, ITaxInfo } from "../models/Purchase";
-import { AiModel } from "../models/User";
+import { AiModel, Language } from "../models/User";
 import { Platform } from "../core/IncomingMessage";
 import { UserRepository } from "../repositories/UserRepository";
 import { logger } from "../infra/logger";
 import { aiErrorsTotal } from "../infra/metrics";
-import { languageLabel } from "../i18n";
+import { languageLabel, t } from "../i18n";
 
 export type Intent = "purchase" | "query" | "other" | "unknown";
 export type SpendingPeriod = "current_month" | "last_month" | "all";
@@ -52,27 +52,39 @@ export class MessageProcessingService {
   ) {}
 
   // Persiste a escolha do modelo de IA no usuário (sobrevive a reinício do bot).
-  async setUserModel(platform: Platform, externalId: string, model: string): Promise<string> {
+  async setUserModel(
+    platform: Platform,
+    externalId: string,
+    model: string,
+    lang: Language = "pt",
+  ): Promise<string> {
     if (model !== "gpt" && model !== "gemini") {
-      return `Modelo inválido! Escolha entre "gpt" ou "gemini".`;
+      return t(lang, "ia_invalid");
     }
 
     await this.userRepo.updateByIdentity(platform, externalId, { aiModel: model as AiModel });
-    return `🤖 Modelo atualizado para ${model.toUpperCase()}!`;
+    return t(lang, "ia_set", { model: model.toUpperCase() });
   }
 
   // Resolve o processador (modelo), as categorias personalizadas e o idioma do usuário.
   private async resolveProcessor(
     platform: Platform,
     externalId: string,
-  ): Promise<{ processor: IMessageProcessor; categories: string[]; language: string }> {
+  ): Promise<{
+    processor: IMessageProcessor;
+    categories: string[];
+    language: string;
+    lang: Language;
+  }> {
     const user = await this.userRepo.findByIdentity(platform, externalId);
     const model: AiModel = user?.aiModel ?? "gemini";
     const processor = model === "gpt" ? this.gptProcessor : this.geminiProcessor;
+    const lang: Language = user?.language ?? "pt";
     return {
       processor,
       categories: user?.categories ?? [],
-      language: languageLabel(user?.language ?? "pt"),
+      language: languageLabel(lang), // rótulo p/ o prompt da IA
+      lang, // código p/ o catálogo i18n
     };
   }
 
@@ -81,12 +93,15 @@ export class MessageProcessingService {
     externalId: string,
     text: string,
   ): Promise<ModelResponse> {
+    const { processor, categories, language, lang } = await this.resolveProcessor(
+      platform,
+      externalId,
+    );
     try {
-      const { processor, categories, language } = await this.resolveProcessor(platform, externalId);
       const response = await processor.processMessage(text, categories, language);
 
       if (!response) {
-        return { intent: "unknown", message: "🤖 Não entendi. Pode reformular?" };
+        return { intent: "unknown", message: t(lang, "ai_not_understood") };
       }
 
       // O userId dos dados é o id externo da plataforma — a IA não o conhece.
@@ -95,7 +110,7 @@ export class MessageProcessingService {
     } catch (error) {
       aiErrorsTotal.inc();
       logger.error({ err: error }, "Erro ao processar a mensagem");
-      return { intent: "unknown", message: "🤖 Erro ao processar a mensagem." };
+      return { intent: "unknown", message: t(lang, "ai_error") };
     }
   }
 
@@ -106,7 +121,10 @@ export class MessageProcessingService {
     externalId: string,
     base64Image: string,
   ): Promise<ModelResponse | null> {
-    const { processor, categories, language } = await this.resolveProcessor(platform, externalId);
+    const { processor, categories, language, lang } = await this.resolveProcessor(
+      platform,
+      externalId,
+    );
     if (!processor.processImage) {
       return null;
     }
@@ -114,14 +132,14 @@ export class MessageProcessingService {
     try {
       const response = await processor.processImage(base64Image, categories, language);
       if (!response) {
-        return { intent: "unknown", message: "🤖 Não entendi. Pode reformular?" };
+        return { intent: "unknown", message: t(lang, "ai_not_understood") };
       }
       response.userId = externalId;
       return response;
     } catch (error) {
       aiErrorsTotal.inc();
       logger.error({ err: error }, "Erro ao processar a imagem");
-      return { intent: "unknown", message: "🤖 Erro ao processar a imagem." };
+      return { intent: "unknown", message: t(lang, "ai_error") };
     }
   }
 }

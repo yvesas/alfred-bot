@@ -4,6 +4,7 @@ import { OutboundRegistry } from "../core/OutboundRegistry";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
 import { remindersSentTotal } from "../infra/metrics";
+import { t } from "../i18n";
 
 // Verifica periodicamente lembretes vencidos e dispara o push na plataforma de origem.
 // Background job (não é um adapter): iniciado no index após os adapters subirem.
@@ -36,7 +37,10 @@ export class ReminderScheduler {
     try {
       const due = await this.reminders.findDue(now);
       for (const r of due) {
-        const text = `🔔 Lembrete: ${r.description} (vence dia ${r.dayOfMonth}).`;
+        const text = t(r.language ?? "pt", "reminder_push", {
+          description: r.description,
+          day: r.dayOfMonth,
+        });
         const delivered = await this.outbound.send(r.platform, r.externalId, text);
         // Reprograma para o próximo mês de qualquer forma (lembrete mensal); se o usuário
         // estava offline (ex.: web sem aba aberta), apenas registramos.

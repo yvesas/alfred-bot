@@ -39,7 +39,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - ✅ **Histórico paginado** em `/compras` — `/compras <página>` (5 por página)
 - ✅ **Categorias personalizadas** pelo usuário (A3) — `/categorias`
 - ✅ **Lembretes** (contas a pagar / gasto recorrente) — `/lembretes` + push (Telegram/WhatsApp/Web)
-- 🟡 **Multi-idioma** (A4) — `User.language` + `/idioma`; a IA responde no idioma. Falta migrar as strings fixas + i18n do front
+- ✅ **Multi-idioma** (A4) — `User.language` + `/idioma`; IA responde no idioma; **todas** as strings fixas no catálogo i18n (pt/en/es) + i18n do front com seletor
 - ⬜ **Relatórios mais ricos**: gráfico/resumo mensal, comparativo entre meses
 - ⬜ **Exportação** de dados (CSV / PDF)
 - ⬜ **Leitura de QR Code / NFC-e** do cupom fiscal (dados estruturados, sem depender só de OCR)
@@ -54,7 +54,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - 🟡 **Chat web (React + Tailwind)** — frontend de chat reusando o `BotCore` via `WebAdapter` (WebSocket). Plano em [../PLANO-WEB-CHAT.md](../PLANO-WEB-CHAT.md)
   - ✅ Fases 1-4 — backend `WebAdapter` (WS), frontend (chat UI, dark/light), Docker/CI, polimento. Sem login (id anônimo)
   - ⬜ Fases 5-6 — login web (e-mail magic-link/OAuth) + vínculo de contas multi-plataforma
-- 🟡 **Evolução de produto (cross-plataforma via `BotCore`)** — A1 confirmar, A2 editar/excluir, A3 categorias ✅; A4 multi-idioma 🟡. Plano em [../PLANO-EVOLUCAO.md](../PLANO-EVOLUCAO.md)
+- ✅ **Evolução de produto (cross-plataforma via `BotCore`)** — A1 confirmar, A2 editar/excluir, A3 categorias, A4 multi-idioma. Plano em [../PLANO-EVOLUCAO.md](../PLANO-EVOLUCAO.md)
 - ✅ **Push / mensagens não-solicitadas** — `OutboundRegistry` + `sendTo` nos adapters (Telegram/WhatsApp/Web), base para lembretes e futuros avisos
 - ⬜ **Planos e limites de uso** (free/pago)
 - ⬜ **Painel web** para visualizar gastos fora do Telegram

@@ -123,7 +123,10 @@ indicador de conexão. Estado mínimo (sem Redux) — `useReducer`/Zustand.
 3. ✅ **Integração + Docker** — `web/Dockerfile` (nginx) + serviço `web` no compose (porta 8081), bot
    publica a porta WS (3100), `PLATFORMS=telegram,web`, `WEB_ALLOWED_ORIGIN` (Origin allowlist),
    `VITE_WS_URL` no build, CI `web.yml`. **Validado E2E**: `/start` → saudação pelo WebSocket.
-4. **Polimento** — "digitando…", upload de foto, dark/light, reconexão, estados de erro/empty.
+4. ✅ **Polimento** — **dark/light toggle** (persistido, sem flash, default do sistema) + variantes
+   claras nos componentes; "digitando…", upload de foto, reconexão e empty state já presentes;
+   **teste de frontend** (Vitest + jsdom — `theme.test.ts`) + passo de teste na CI. *(MVP completo;
+   Fases 5–6 = login/vínculo são evolução.)*
 5. **Login web (T1)** — e-mail magic-link/OTP **ou** OAuth (Google); JWT no handshake do WS;
    promoção anônimo → logado (merge do histórico).
 6. **Vínculo multi-plataforma (T2 = Fase 4 do multi-plataforma)** — unificar web + telegram + whatsapp

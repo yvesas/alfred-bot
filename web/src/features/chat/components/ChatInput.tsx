@@ -36,14 +36,14 @@ export function ChatInput({ disabled, onSendText, onSendPhoto }: Props) {
   };
 
   return (
-    <div className="border-t border-zinc-800 bg-zinc-900 px-4 py-3">
+    <div className="border-t border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="mx-auto flex max-w-2xl items-end gap-2">
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={disabled}
           title="Enviar foto de cupom"
-          className="shrink-0 rounded-xl p-2.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-40"
+          className="shrink-0 rounded-xl p-2.5 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800 disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
         >
           📎
         </button>
@@ -55,7 +55,7 @@ export function ChatInput({ disabled, onSendText, onSendPhoto }: Props) {
           onKeyDown={onKeyDown}
           rows={1}
           placeholder="Mensagem…"
-          className="max-h-32 flex-1 resize-none rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-brand"
+          className="max-h-32 flex-1 resize-none rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-brand dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
         />
 
         <button

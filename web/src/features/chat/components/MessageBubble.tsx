@@ -8,7 +8,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
         className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
           isUser
             ? "rounded-br-sm bg-brand text-white"
-            : "rounded-bl-sm bg-zinc-800 text-zinc-100"
+            : "rounded-bl-sm bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
         }`}
       >
         {message.text}

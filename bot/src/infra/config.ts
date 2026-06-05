@@ -24,11 +24,12 @@ export const config = {
   whatsappSessionDir: process.env.WHATSAPP_SESSION_DIR ?? "./.wa-session",
   ocrProvider: (process.env.OCR_PROVIDER ?? "gemini").toLowerCase(),
   ocrMode: (process.env.OCR_MODE ?? "ocr").toLowerCase(),
-  healthPort: Number(process.env.HEALTH_PORT ?? 3000),
-  logLevel: process.env.LOG_LEVEL ?? (isProd ? "info" : "debug"),
+  // Usa || (não ??) para que variáveis presentes porém VAZIAS no .env caiam no default.
+  healthPort: Number(process.env.HEALTH_PORT) || 3000,
+  logLevel: process.env.LOG_LEVEL || (isProd ? "info" : "debug"),
   rateLimit: {
-    max: Number(process.env.RATE_LIMIT_MAX ?? 20),
-    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000),
+    max: Number(process.env.RATE_LIMIT_MAX) || 20,
+    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
   },
 };
 

@@ -22,11 +22,16 @@ services:
       # As credenciais do Google não vão na imagem (gitignored); são montadas via volume abaixo.
       # Este valor sobrescreve o do .env para apontar ao caminho montado dentro do container.
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/google-credentials.json
+      # DEV: habilita também o chat web; origens permitidas no WebSocket (front em :8081 e :5173).
+      PLATFORMS: telegram,web
+      WEB_ALLOWED_ORIGIN: http://localhost:8081,http://localhost:5173
     depends_on:
       mongo:
         condition: service_healthy
     networks: [app-net]
     restart: unless-stopped
+    ports:
+      - "3100:3100" # WebSocket do chat web (browser conecta em ws://localhost:3100)
     volumes:
       # Sessão do WhatsApp (Baileys) — persiste o login por QR entre reinícios.
       - wa-session:/app/.wa-session
@@ -40,6 +45,19 @@ services:
       timeout: 5s
       start_period: 40s
       retries: 3
+
+  # Frontend de chat (React/Vite) servido por nginx.
+  web:
+    build:
+      context: ./web
+      args:
+        # URL do WebSocket embutida no build (o bot publica :3100 no host).
+        VITE_WS_URL: ws://localhost:3100
+    ports:
+      - "8081:80" # chat em http://localhost:8081
+    depends_on: [bot]
+    networks: [app-net]
+    restart: unless-stopped
 
   # MongoDB interno para desenvolvimento/testes (em prod use o Atlas).
   mongo:

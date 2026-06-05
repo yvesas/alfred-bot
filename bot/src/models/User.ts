@@ -4,6 +4,7 @@ import { Platform } from "../core/IncomingMessage";
 export type UserStatus = "awaiting_name" | "awaiting_email" | "complete";
 export type AiModel = "gemini" | "gpt";
 export type Language = "pt" | "en" | "es";
+export type Plan = "free" | "pro";
 
 // Identidade do usuário numa plataforma (telegram id, número do WhatsApp, ...).
 // Um usuário pode ter várias (multi-plataforma).
@@ -32,6 +33,7 @@ export interface IUserBase {
   // Identificadores VERIFICADOS (Fase 6) — chaves de auto-vínculo entre contas.
   verifiedEmail?: string; // verificado via WorkOS (login/Magic Auth)
   verifiedPhone?: string; // verificado pela plataforma (WhatsApp; Telegram via "compartilhar contato")
+  plan?: Plan; // plano de uso (default "free")
 }
 
 export type IUserCreate = Omit<IUserBase, "_id">;
@@ -74,6 +76,7 @@ const UserSchema = new Schema<IUser>(
     // Índices declarados abaixo via schema.index (evita índice duplicado).
     verifiedEmail: { type: String },
     verifiedPhone: { type: String },
+    plan: { type: String, enum: ["free", "pro"], default: "free" },
   },
   {
     timestamps: true,

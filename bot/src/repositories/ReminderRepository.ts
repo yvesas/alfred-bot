@@ -36,6 +36,17 @@ export class ReminderRepository {
     ).exec();
   }
 
+  // Exclui todos os lembretes das identidades informadas (exclusão de conta).
+  async deleteByIdentities(
+    identities: { platform: Platform; externalId: string }[],
+  ): Promise<number> {
+    if (!identities.length) return 0;
+    const result = await ReminderModel.deleteMany({
+      $or: identities.map((i) => ({ platform: i.platform, externalId: i.externalId })),
+    }).exec();
+    return result.deletedCount ?? 0;
+  }
+
   // Migra os lembretes de uma identidade para outra (merge de conta anônima → logada).
   async reassignExternalId(
     platform: Platform,

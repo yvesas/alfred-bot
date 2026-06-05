@@ -12,6 +12,7 @@ import { ReminderService } from "../services/ReminderService";
 import { MergeService } from "../services/MergeService";
 import { LinkTokenService } from "../services/LinkTokenService";
 import { AuthService } from "../services/AuthService";
+import { PlanService } from "../services/PlanService";
 import { RateLimiter } from "../services/RateLimiter";
 import { MessageProcessingService } from "../services/MessageProcessingService";
 
@@ -28,6 +29,7 @@ describe("BotCore", () => {
   let mergeService: sinon.SinonStubbedInstance<MergeService>;
   let linkTokens: sinon.SinonStubbedInstance<LinkTokenService>;
   let authService: sinon.SinonStubbedInstance<AuthService>;
+  let planService: sinon.SinonStubbedInstance<PlanService>;
   let rateLimiter: sinon.SinonStubbedInstance<RateLimiter>;
   let mps: sinon.SinonStubbedInstance<MessageProcessingService>;
   let core: BotCore;
@@ -43,6 +45,7 @@ describe("BotCore", () => {
     mergeService = sinon.createStubInstance(MergeService);
     linkTokens = sinon.createStubInstance(LinkTokenService);
     authService = sinon.createStubInstance(AuthService);
+    planService = sinon.createStubInstance(PlanService);
     rateLimiter = sinon.createStubInstance(RateLimiter);
     mps = sinon.createStubInstance(MessageProcessingService);
     core = new BotCore(
@@ -54,6 +57,7 @@ describe("BotCore", () => {
       mergeService,
       linkTokens,
       authService,
+      planService,
       rateLimiter,
       mps,
     );
@@ -62,6 +66,7 @@ describe("BotCore", () => {
     reply = { text: async (m: string) => void replies.push(m) };
     rateLimiter.allow.returns(true);
     budgetService.alertsForPurchase.resolves([]);
+    planService.canRegister.resolves(true);
   });
 
   it("greets a returning user on /start", async () => {
@@ -210,6 +215,24 @@ describe("BotCore", () => {
     await core.handle(baseMsg({ kind: "text", text: "sim" }), reply);
 
     expect(replies.some((r) => r.includes("Orçamento de Alimentação estourado"))).toBe(true);
+  });
+
+  it("blocks a purchase when the free plan limit is reached", async () => {
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+    mps.processMessage.resolves({
+      intent: "purchase",
+      userId: "u1",
+      description: "agua",
+      total: 7,
+      date: new Date(),
+      items: [],
+    });
+    planService.canRegister.resolves(false);
+
+    await core.handle(baseMsg({ kind: "text", text: "agua 7" }), reply);
+
+    expect(purchaseService.addPurchase.called).toBe(false);
+    expect(replies.some((r) => r.toLowerCase().includes("limite"))).toBe(true);
   });
 
   it("sets a category budget via /orcamento", async () => {

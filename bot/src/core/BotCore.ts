@@ -9,6 +9,7 @@ import { ReminderService } from "../services/ReminderService";
 import { MergeService } from "../services/MergeService";
 import { LinkTokenService } from "../services/LinkTokenService";
 import { AuthService } from "../services/AuthService";
+import { PlanService } from "../services/PlanService";
 import { RateLimiter } from "../services/RateLimiter";
 import { isValidEmail } from "../utils/validation";
 import {
@@ -22,7 +23,7 @@ import {
   validatePurchaseData,
 } from "../infra/converters/purchaseConverter";
 import { IPurchaseCreate } from "../models/Purchase";
-import { IUser, Language } from "../models/User";
+import { IUser, Language, Plan } from "../models/User";
 import { MessageKey, t } from "../i18n";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
@@ -71,6 +72,7 @@ export class BotCore {
     @inject(MergeService) private mergeService: MergeService,
     @inject(LinkTokenService) private linkTokens: LinkTokenService,
     @inject(AuthService) private authService: AuthService,
+    @inject(PlanService) private planService: PlanService,
     @inject(RateLimiter) private rateLimiter: RateLimiter,
     @inject(MessageProcessingService) private messageProcessingService: MessageProcessingService,
   ) {}
@@ -153,12 +155,13 @@ export class BotCore {
     }
 
     const userId = String(user._id); // identidade canônica (Fase 6)
+    const plan = user.plan ?? "free";
     const processed = await this.messageProcessingService.processMessage(
       platform,
       externalId,
       msg.text ?? "",
     );
-    await this.handleProcessed(reply, platform, externalId, userId, lang, processed);
+    await this.handleProcessed(reply, platform, externalId, userId, lang, plan, processed);
   }
 
   private async handleContact(msg: IncomingMessage, reply: Replier): Promise<void> {
@@ -207,11 +210,12 @@ export class BotCore {
     if (!user) return;
     const lang = langOf(user);
     const userId = String(user._id);
+    const plan = user.plan ?? "free";
 
     try {
       const base64Image = msg.getImageBase64 ? await msg.getImageBase64() : "";
       const processed = await this.processReceiptImage(platform, externalId, base64Image);
-      await this.handleProcessed(reply, platform, externalId, userId, lang, processed);
+      await this.handleProcessed(reply, platform, externalId, userId, lang, plan, processed);
     } catch (error) {
       logger.error({ err: error }, "Erro ao baixar/processar a imagem");
       await reply.text(t(lang, "photo_error"));
@@ -249,6 +253,7 @@ export class BotCore {
     externalId: string,
     userId: string,
     lang: Language,
+    plan: Plan,
     processed: ModelResponse,
   ): Promise<void> {
     if (processed.intent === "query") {
@@ -259,6 +264,12 @@ export class BotCore {
     if (processed.intent !== "purchase") {
       // processed.message vem da IA já no idioma do usuário; senão, fallback localizado.
       await reply.text(processed.message || t(lang, "not_understood"));
+      return;
+    }
+
+    // Limite do plano free (compras/mês). Pro é ilimitado.
+    if (!(await this.planService.canRegister(userId, plan))) {
+      await reply.text(t(lang, "plan_limit_reached", { limit: this.planService.freeLimit }));
       return;
     }
 

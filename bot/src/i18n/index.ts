@@ -58,6 +58,8 @@ export type MessageKey =
   // vínculo (deep-link)
   | "link_success"
   | "link_invalid"
+  // planos / limites
+  | "plan_limit_reached"
   // verificação de e-mail no chat (Magic Auth)
   | "email_usage"
   | "email_invalid_address"
@@ -158,6 +160,8 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     reminder_push: "🔔 Lembrete: {description} (vence dia {day}).",
     link_success: "✅ Conta vinculada! Agora seus gastos somam numa conta só.",
     link_invalid: "❌ Código de vínculo inválido ou expirado. Gere um novo no app web.",
+    plan_limit_reached:
+      "🚫 Você atingiu o limite do plano grátis ({limit} compras/mês). Faça upgrade para o Pro no painel web para registrar sem limite.",
     email_usage: "Uso: /email seu@email.com",
     email_invalid_address: "E-mail inválido. Ex.: /email maria@exemplo.com",
     verification_unavailable: "Verificação de e-mail indisponível no momento.",
@@ -255,6 +259,8 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     reminder_push: "🔔 Reminder: {description} (due on the {day}th).",
     link_success: "✅ Account linked! Your spending now adds up in a single account.",
     link_invalid: "❌ Invalid or expired link code. Generate a new one in the web app.",
+    plan_limit_reached:
+      "🚫 You reached the free plan limit ({limit} purchases/month). Upgrade to Pro in the web dashboard to register without limits.",
     email_usage: "Usage: /email you@email.com",
     email_invalid_address: "Invalid email. E.g., /email maria@example.com",
     verification_unavailable: "Email verification is unavailable right now.",
@@ -352,6 +358,8 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     reminder_push: "🔔 Recordatorio: {description} (vence el día {day}).",
     link_success: "✅ ¡Cuenta vinculada! Ahora tus gastos suman en una sola cuenta.",
     link_invalid: "❌ Código de vínculo inválido o expirado. Genera uno nuevo en la app web.",
+    plan_limit_reached:
+      "🚫 Alcanzaste el límite del plan gratis ({limit} compras/mes). Pasa a Pro en el panel web para registrar sin límite.",
     email_usage: "Uso: /email tu@email.com",
     email_invalid_address: "Correo inválido. Ej.: /email maria@ejemplo.com",
     verification_unavailable: "La verificación de correo no está disponible ahora.",

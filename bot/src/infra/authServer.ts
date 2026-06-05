@@ -3,6 +3,10 @@ import { inject, injectable } from "inversify";
 import { AuthService } from "../services/AuthService";
 import { AccountService } from "../services/AccountService";
 import { LinkTokenService } from "../services/LinkTokenService";
+import { ReportService } from "../services/ReportService";
+import { PlanService } from "../services/PlanService";
+import { UserService } from "../services/UserService";
+import { IUser } from "../models/User";
 import { config } from "./config";
 import { logger } from "./logger";
 
@@ -21,6 +25,9 @@ export class AuthServer {
     @inject(AuthService) private auth: AuthService,
     @inject(AccountService) private accounts: AccountService,
     @inject(LinkTokenService) private linkTokens: LinkTokenService,
+    @inject(ReportService) private reports: ReportService,
+    @inject(PlanService) private plans: PlanService,
+    @inject(UserService) private users: UserService,
   ) {}
 
   start(port: number = config.authPort): http.Server {
@@ -56,15 +63,74 @@ export class AuthServer {
     if (url.pathname === "/auth/callback") return this.callback(url, res);
     if (url.pathname === "/auth/link/telegram") return this.link(url, res, "telegram");
     if (url.pathname === "/auth/link/whatsapp") return this.link(url, res, "whatsapp");
+
+    // API autenticada por JWT (Bearer) — usada pelo painel/conta do app web.
+    if (url.pathname === "/api/me") return this.apiMe(req, res);
+    if (url.pathname === "/api/report") return this.apiReport(req, res);
+    if (req.method === "DELETE" && url.pathname === "/api/account") {
+      return this.apiDeleteAccount(req, res);
+    }
+
     res.writeHead(404);
     res.end();
+  }
+
+  // ---------- API do app web (JWT) ----------
+
+  // Resolve o usuário canônico a partir do Bearer JWT (sub = id do WorkOS → identidade web).
+  private async authedUser(req: http.IncomingMessage): Promise<IUser | null> {
+    const header = req.headers.authorization ?? "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+    const session = this.auth.verifyJwt(token);
+    if (!session) return null;
+    return this.users.findByIdentity("web", session.sub);
+  }
+
+  private async apiMe(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    const user = await this.authedUser(req);
+    if (!user) {
+      json(res, 401, { error: "unauthorized" });
+      return;
+    }
+    const plan = user.plan ?? "free";
+    const usage = await this.plans.usage(String(user._id), plan);
+    json(res, 200, {
+      sub: user.identities.find((i) => i.platform === "web")?.externalId,
+      name: user.name,
+      email: user.email,
+      plan,
+      usage,
+      identities: user.identities.map((i) => i.platform),
+    });
+  }
+
+  private async apiReport(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    const user = await this.authedUser(req);
+    if (!user) {
+      json(res, 401, { error: "unauthorized" });
+      return;
+    }
+    json(res, 200, await this.reports.dashboard(String(user._id)));
+  }
+
+  private async apiDeleteAccount(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ): Promise<void> {
+    const user = await this.authedUser(req);
+    if (!user) {
+      json(res, 401, { error: "unauthorized" });
+      return;
+    }
+    const result = await this.accounts.deleteAccount(user);
+    json(res, 200, { ok: true, ...result });
   }
 
   // CORS para as chamadas XHR do app web (telas próprias). Origem da allowlist ou "*".
   private cors(res: http.ServerResponse): void {
     res.setHeader("Access-Control-Allow-Origin", config.webAppUrl || "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   }
 
   // ---------- Login por e-mail + OTP (Magic Auth, telas próprias) ----------

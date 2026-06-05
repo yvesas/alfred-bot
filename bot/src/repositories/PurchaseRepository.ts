@@ -28,6 +28,37 @@ export class PurchaseRepository {
     return await PurchaseModel.countDocuments({ userId }).exec();
   }
 
+  // Totais por mês (ano/mês) desde os últimos `months` meses — para o painel/relatórios.
+  async getMonthlyTotals(
+    userId: string,
+    months: number,
+    now: Date = new Date(),
+  ): Promise<{ year: number; month: number; total: number; count: number }[]> {
+    const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+    const rows = await PurchaseModel.aggregate<{
+      _id: { y: number; m: number };
+      total: number;
+      count: number;
+    }>([
+      { $match: { userId, date: { $gte: start } } },
+      {
+        $group: {
+          _id: { y: { $year: "$date" }, m: { $month: "$date" } },
+          total: { $sum: "$total" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.y": 1, "_id.m": 1 } },
+    ]);
+    return rows.map((r) => ({ year: r._id.y, month: r._id.m, total: r.total, count: r.count }));
+  }
+
+  // Exclui todas as compras do usuário (exclusão de conta). Retorna o total removido.
+  async deleteByUser(userId: string): Promise<number> {
+    const result = await PurchaseModel.deleteMany({ userId }).exec();
+    return result.deletedCount ?? 0;
+  }
+
   // Migra as compras de um userId para outro (merge de conta anônima → logada). Retorna o total.
   async reassignUser(oldUserId: string, newUserId: string): Promise<number> {
     const result = await PurchaseModel.updateMany(

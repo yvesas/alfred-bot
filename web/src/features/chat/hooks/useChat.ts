@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getClientId } from "../../../lib/clientId";
 import { notifyIfHidden, requestNotificationPermission } from "../../../lib/notify";
-import { captureTokenFromUrl, decodeSession, getToken, logout as doLogout } from "../../../lib/auth";
+import { useAuth } from "../../auth/AuthProvider";
 import type { ChatMessage, Inbound, Role } from "../types";
 import { useChatSocket } from "./useChatSocket";
 
@@ -11,9 +11,7 @@ const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:3100";
 // A UI consome só este hook — não conhece WebSocket.
 export function useChat() {
   const clientId = useMemo(getClientId, []);
-  // Captura o token do retorno do login (ou recupera o salvo). Estável por carregamento de página.
-  const token = useMemo(() => captureTokenFromUrl() ?? getToken(), []);
-  const session = useMemo(() => decodeSession(token), [token]);
+  const { token } = useAuth(); // quando logado, anexamos o JWT às mensagens
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typing, setTyping] = useState(false);
@@ -85,15 +83,5 @@ export function useChat() {
     [send, clientId, auth],
   );
 
-  return {
-    messages,
-    typing,
-    status,
-    session,
-    clientId,
-    sendText,
-    sendPhoto,
-    setLanguage,
-    logout: doLogout,
-  };
+  return { messages, typing, status, clientId, sendText, sendPhoto, setLanguage };
 }

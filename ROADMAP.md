@@ -40,7 +40,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - ✅ **Categorias personalizadas** pelo usuário (A3) — `/categorias`
 - ✅ **Lembretes** (contas a pagar / gasto recorrente) — `/lembretes` + push (Telegram/WhatsApp/Web)
 - ✅ **Multi-idioma** (A4) — `User.language` + `/idioma`; IA responde no idioma; **todas** as strings fixas no catálogo i18n (pt/en/es) + i18n do front com seletor
-- ⬜ **Relatórios mais ricos**: gráfico/resumo mensal, comparativo entre meses
+- ✅ **Relatórios mais ricos**: painel web com resumo do mês, comparativo mês a mês (gráfico de barras) e quebra por categoria (`/api/report` + `ReportService`)
 - ⬜ **Exportação** de dados (CSV / PDF)
 - ⬜ **Leitura de QR Code / NFC-e** do cupom fiscal (dados estruturados, sem depender só de OCR)
 - 🟡 **Gestão de produtos/estoque** — `ProductService`/`ProductRepository` existem, mas **não estão ligados** ao bot
@@ -57,8 +57,10 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
   - ✅ Fase 6 — identidade canônica (`Purchase.userId = User._id`) + vínculo multi-plataforma: auto-merge por e-mail/telefone verificados, deep-link (`/start`/`/vincular`) e verificação de e-mail no chat (Magic Auth). Plano em [PLANO-FASE6.md](../PLANO-FASE6.md). Pendente: tela própria de login+OTP
 - ✅ **Evolução de produto (cross-plataforma via `BotCore`)** — A1 confirmar, A2 editar/excluir, A3 categorias, A4 multi-idioma. Plano em [../PLANO-EVOLUCAO.md](../PLANO-EVOLUCAO.md)
 - ✅ **Push / mensagens não-solicitadas** — `OutboundRegistry` + `sendTo` nos adapters (Telegram/WhatsApp/Web), base para lembretes e futuros avisos
-- ⬜ **Planos e limites de uso** (free/pago)
-- ⬜ **Painel web** para visualizar gastos fora do Telegram
+- 🟡 **Planos e limites de uso** (free/pago) — `User.plan` (free/pro); limite de compras/mês no free com CTA de upgrade; planos exibidos na landing. **Falta:** cobrança (Stripe)
+- ✅ **Painel web** (React Router) — landing (`/`) + chat (`/chat`) + **painel** (`/painel`, gastos/relatórios) + **conta** (`/conta`, perfil, contas vinculadas, **excluir conta**)
+- ✅ **Site de apresentação** — landing no app web com descrição do produto e planos, levando ao login
+- ⬜ **Cobrança (Stripe)** — checkout/assinatura para o plano Pro
 - ⬜ **Política de privacidade / LGPD** — dados financeiros são sensíveis
 
 ---

@@ -78,4 +78,13 @@ export class AccountService {
       "Conta anônima absorvida no login",
     );
   }
+
+  // Exclui a conta e todos os dados do usuário (compras, lembretes e o documento).
+  async deleteAccount(user: IUser): Promise<{ purchases: number; reminders: number }> {
+    const purchases = await this.purchaseRepo.deleteByUser(String(user._id));
+    const reminders = await this.reminderRepo.deleteByIdentities(user.identities ?? []);
+    await this.userRepo.deleteById(String(user._id));
+    logger.info({ user: String(user._id), purchases, reminders }, "Conta excluída");
+    return { purchases, reminders };
+  }
 }

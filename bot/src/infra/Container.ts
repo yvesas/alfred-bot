@@ -23,6 +23,8 @@ import { AuthService } from "../services/AuthService";
 import { AccountService } from "../services/AccountService";
 import { MergeService } from "../services/MergeService";
 import { LinkTokenService } from "../services/LinkTokenService";
+import { PlanService } from "../services/PlanService";
+import { ReportService } from "../services/ReportService";
 import { AuthServer } from "./authServer";
 import { OutboundRegistry } from "../core/OutboundRegistry";
 import { BotCore } from "../core/BotCore";
@@ -70,6 +72,8 @@ container.bind<AuthService>(AuthService).toSelf().inSingletonScope();
 container.bind<MergeService>(MergeService).toSelf();
 // Singleton: os tokens de vínculo vivem em memória entre o web e os adapters.
 container.bind<LinkTokenService>(LinkTokenService).toSelf().inSingletonScope();
+container.bind<PlanService>(PlanService).toSelf();
+container.bind<ReportService>(ReportService).toSelf();
 container.bind<AccountService>(AccountService).toSelf();
 container.bind<AuthServer>(AuthServer).toSelf().inSingletonScope();
 container.bind<MessageProcessingService>(MessageProcessingService).toSelf();

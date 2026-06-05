@@ -1,10 +1,17 @@
+import { Routes, Route, Navigate } from "react-router-dom";
+import { Landing } from "./pages/Landing";
 import { ChatPage } from "./features/chat/ChatPage";
-import { I18nProvider } from "./lib/i18n";
+import { Dashboard } from "./pages/Dashboard";
+import { Account } from "./pages/Account";
 
 export default function App() {
   return (
-    <I18nProvider>
-      <ChatPage />
-    </I18nProvider>
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/chat" element={<ChatPage />} />
+      <Route path="/painel" element={<Dashboard />} />
+      <Route path="/conta" element={<Account />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

@@ -117,4 +117,36 @@ describe("BotCore", () => {
     expect(replies[0]).toContain("Gastos deste mês");
     expect(replies[0]).toContain("150");
   });
+
+  it("deletes the nth purchase via /excluir", async () => {
+    userService.findByIdentity.resolves({ status: "complete" } as any);
+    purchaseService.getUserPurchases.resolves([
+      { _id: "p1", description: "agua", total: 7 } as any,
+    ]);
+    purchaseService.deletePurchase.resolves({} as any);
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "excluir", args: ["1"] } }),
+      reply,
+    );
+
+    expect(purchaseService.deletePurchase.calledWith("1", "p1")).toBe(true);
+    expect(replies.some((r) => r.includes("Excluído"))).toBe(true);
+  });
+
+  it("edits the nth purchase total via /editar", async () => {
+    userService.findByIdentity.resolves({ status: "complete" } as any);
+    purchaseService.getUserPurchases.resolves([
+      { _id: "p1", description: "agua", total: 7 } as any,
+    ]);
+    purchaseService.updatePurchase.resolves({ description: "agua", total: 10 } as any);
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "editar", args: ["1", "total", "10"] } }),
+      reply,
+    );
+
+    expect(purchaseService.updatePurchase.calledWith("1", "p1", { total: 10 })).toBe(true);
+    expect(replies.some((r) => r.includes("Atualizado"))).toBe(true);
+  });
 });

@@ -19,6 +19,19 @@ export class PurchaseRepository {
     return await PurchaseModel.find({ userId }).sort({ date: -1 }).exec();
   }
 
+  // Escopados ao userId: o usuário só altera/exclui as próprias compras.
+  async deleteById(userId: string, id: string): Promise<IPurchase | null> {
+    return await PurchaseModel.findOneAndDelete({ _id: id, userId }).exec();
+  }
+
+  async updateById(
+    userId: string,
+    id: string,
+    patch: Partial<IPurchaseCreate>,
+  ): Promise<IPurchase | null> {
+    return await PurchaseModel.findOneAndUpdate({ _id: id, userId }, patch, { new: true }).exec();
+  }
+
   async getTotalSpent(userId: string, month: number, year: number): Promise<number> {
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 1);

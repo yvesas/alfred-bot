@@ -29,7 +29,12 @@ Isso exige uma pequena evolução do `Replier` (`withQuickReplies?`) — opciona
 - **Cross-plataforma:** baseline textual (sim/não); Web/Telegram podem mostrar botões depois.
 - **Risco:** baixo. Toca `BotCore` + um campo no `User`.
 
-### A2. Editar e excluir compras
+### A2. Editar e excluir compras ✅ CONCLUÍDA
+> Implementado: `/compras` numerado (1–5); `/excluir <n>` e `/editar <n> <total|descrição> <valor>`.
+> `PurchaseRepository.deleteById/updateById` **escopados ao userId** (segurança); `PurchaseService`
+> expõe `deletePurchase/updatePurchase`. `BotCore.nthRecentPurchase` resolve o n-ésimo da lista atual.
+> `excluir`/`editar` em `KNOWN_COMMANDS` + registrados no `TelegramAdapter`. Testes: excluir e editar.
+
 **Objetivo:** corrigir/remover lançamentos.
 - **Backend:** `PurchaseService`/`Repository` ganham `deleteById` e `updateById` (por usuário).
 - **Referência da compra:** `/compras` passa a numerar e mostrar um id curto; comandos

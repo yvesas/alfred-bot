@@ -25,6 +25,18 @@ export class PurchaseService {
     return await this.purchaseRepo.findByUser(userId);
   }
 
+  async deletePurchase(userId: string, id: string): Promise<IPurchase | null> {
+    return await this.purchaseRepo.deleteById(userId, id);
+  }
+
+  async updatePurchase(
+    userId: string,
+    id: string,
+    patch: Partial<IPurchaseCreate>,
+  ): Promise<IPurchase | null> {
+    return await this.purchaseRepo.updateById(userId, id, patch);
+  }
+
   async getTotalSpent(userId: string, month: number, year: number): Promise<number> {
     return await this.purchaseRepo.getTotalSpent(userId, month, year);
   }

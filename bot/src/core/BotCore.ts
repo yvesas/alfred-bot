@@ -302,10 +302,71 @@ export class BotCore {
         if (!(await this.requireRegistered(reply, platform, externalId))) return;
         return this.handleGetPurchases(reply, externalId);
 
+      case "excluir":
+        if (!(await this.requireRegistered(reply, platform, externalId))) return;
+        return this.handleDeletePurchase(reply, externalId, args[0]);
+
+      case "editar":
+        if (!(await this.requireRegistered(reply, platform, externalId))) return;
+        return this.handleEditPurchase(reply, externalId, args);
+
       case "ia":
         if (!(await this.requireRegistered(reply, platform, externalId))) return;
         return this.handleSetIAModel(reply, platform, externalId, args[0]);
     }
+  }
+
+  // ---------- Editar / excluir compras (A2) ----------
+
+  // Resolve o n-ésimo item (1-based) da lista de últimas compras (mesma ordem de /compras).
+  private async nthRecentPurchase(userId: string, nStr: string) {
+    const n = Number(nStr);
+    if (!Number.isInteger(n) || n < 1) return null;
+    const recent = (await this.purchaseService.getUserPurchases(userId)).slice(0, 5);
+    return recent[n - 1] ?? null;
+  }
+
+  private async handleDeletePurchase(reply: Replier, userId: string, nStr: string): Promise<void> {
+    const target = await this.nthRecentPurchase(userId, nStr);
+    if (!target) {
+      await reply.text('Número inválido. Use /compras para ver a lista (ex.: "/excluir 2").');
+      return;
+    }
+    await this.purchaseService.deletePurchase(userId, String(target._id));
+    await reply.text(`🗑️ Excluído: ${target.description} — R$ ${target.total.toFixed(2)}`);
+  }
+
+  private async handleEditPurchase(reply: Replier, userId: string, args: string[]): Promise<void> {
+    const field = (args[1] ?? "").toLowerCase();
+    const value = args.slice(2).join(" ").trim();
+    const target = await this.nthRecentPurchase(userId, args[0] ?? "");
+
+    if (!target || !field || !value) {
+      await reply.text('Uso: /editar <nº> <total|descrição> <valor>. Ex.: "/editar 2 total 10".');
+      return;
+    }
+
+    const patch: { total?: number; description?: string } = {};
+    if (field === "total" || field === "valor") {
+      const v = Number(value.replace(",", "."));
+      if (!Number.isFinite(v) || v <= 0) {
+        await reply.text("Valor inválido. Ex.: /editar 2 total 10");
+        return;
+      }
+      patch.total = v;
+    } else if (field === "descrição" || field === "descricao" || field === "desc") {
+      patch.description = value;
+    } else {
+      await reply.text('Campo inválido. Use "total" ou "descrição".');
+      return;
+    }
+
+    const updated = await this.purchaseService.updatePurchase(userId, String(target._id), patch);
+    if (!updated) {
+      await reply.text("Não consegui editar essa compra.");
+      return;
+    }
+    await reply.text(`✏️ Atualizado: ${updated.description} — R$ ${updated.total.toFixed(2)}`);
   }
 
   private async handleStart(msg: IncomingMessage, reply: Replier): Promise<void> {
@@ -356,10 +417,16 @@ export class BotCore {
 
     const message = purchases
       .slice(0, 5)
-      .map((p) => `🛒 ${p.description}: R$${p.total.toFixed(2)} em ${p.date.toLocaleDateString()}`)
+      .map(
+        (p, i) =>
+          `${i + 1}. ${p.description}: R$ ${p.total.toFixed(2)} em ${p.date.toLocaleDateString()}`,
+      )
       .join("\n");
 
-    await reply.text(`📋 Suas últimas compras:\n\n${message}`);
+    await reply.text(
+      `📋 Suas últimas compras:\n\n${message}\n\n` +
+        'Para corrigir: "/editar 2 total 10" ou "/excluir 2".',
+    );
   }
 
   // ---------- Consulta de gastos ----------

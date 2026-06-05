@@ -122,4 +122,25 @@ describe("UserService (onboarding)", () => {
     expect(completed).toBe(true);
     expect(userRepoMock.updateByIdentity.calledWith(TG, "123", { status: "complete" })).toBe(true);
   });
+
+  it("adds a category (idempotente) e persiste", async () => {
+    userRepoMock.findByIdentity.resolves(fakeUser({ categories: ["Mercado"] }));
+
+    const result = await userService.addCategory(TG, "123", "Farmácia");
+
+    expect(result).toEqual(["Mercado", "Farmácia"]);
+    expect(
+      userRepoMock.updateByIdentity.calledWith(TG, "123", {
+        categories: ["Mercado", "Farmácia"],
+      }),
+    ).toBe(true);
+  });
+
+  it("removes a category (case-insensitive)", async () => {
+    userRepoMock.findByIdentity.resolves(fakeUser({ categories: ["Mercado", "Farmácia"] }));
+
+    const result = await userService.removeCategory(TG, "123", "mercado");
+
+    expect(result).toEqual(["Farmácia"]);
+  });
 });

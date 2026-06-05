@@ -19,6 +19,7 @@ export interface IUserBase {
   phone?: string;
   status: UserStatus;
   aiModel?: AiModel;
+  categories?: string[]; // categorias personalizadas; vazio = usa as padrão
 }
 
 export type IUserCreate = Omit<IUserBase, "_id">;
@@ -47,6 +48,7 @@ const UserSchema = new Schema<IUser>(
       required: true,
     },
     aiModel: { type: String, enum: ["gemini", "gpt"] },
+    categories: { type: [String], default: [] },
   },
   {
     timestamps: true,

@@ -20,6 +20,28 @@ export class UserService {
     return await this.userRepo.findByIdentity(platform, externalId);
   }
 
+  // ---------- Categorias personalizadas ----------
+
+  async getCategories(platform: Platform, externalId: string): Promise<string[]> {
+    const user = await this.userRepo.findByIdentity(platform, externalId);
+    return user?.categories ?? [];
+  }
+
+  async addCategory(platform: Platform, externalId: string, name: string): Promise<string[]> {
+    const current = await this.getCategories(platform, externalId);
+    const exists = current.some((c) => c.toLowerCase() === name.toLowerCase());
+    const next = exists ? current : [...current, name];
+    await this.userRepo.updateByIdentity(platform, externalId, { categories: next });
+    return next;
+  }
+
+  async removeCategory(platform: Platform, externalId: string, name: string): Promise<string[]> {
+    const current = await this.getCategories(platform, externalId);
+    const next = current.filter((c) => c.toLowerCase() !== name.toLowerCase());
+    await this.userRepo.updateByIdentity(platform, externalId, { categories: next });
+    return next;
+  }
+
   // Garante que existe um registro para a identidade. Se a plataforma informar o nome,
   // ele é aproveitado e o cadastro já pula para a etapa do e-mail.
   async ensureUser(

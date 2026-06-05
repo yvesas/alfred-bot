@@ -1,5 +1,9 @@
-export function getPrompt001(lang: string | null, message: string) {
+export function getPrompt001(lang: string | null, message: string, categories?: string[]) {
   lang = lang ? lang : "português do Brasil";
+  const catList =
+    categories && categories.length > 0
+      ? categories.join(", ")
+      : "Eletrônicos, Vestuário, Alimentação, Livros";
 
   return `
   Você é um assistente especializado em análise de recibos e comandos de compra, responda na lingua ${lang}. 
@@ -71,7 +75,7 @@ export function getPrompt001(lang: string | null, message: string) {
     - Quantidade (se não informado, assumir 1).
     - Preço unitário (calculado automaticamente, se necessário).
     - Total do item.
-    - Categoria do produto (inferida a partir da descrição, usando categorias conhecidas como "Eletrônicos", "Vestuário", "Alimentação", "Livros", etc. Caso não seja possível classificar, usar "Outros").
+    - Categoria do produto (inferida a partir da descrição, usando **estas categorias**: ${catList}. Caso não encaixe em nenhuma, usar "Outros").
   - **Impostos**:
     - Federal: Se informado, extrair. Se não, assumir 0.
     - Estadual: Se informado, extrair. Se não, assumir 0.

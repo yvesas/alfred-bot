@@ -29,9 +29,9 @@ export interface ModelResponse {
 }
 
 export interface IMessageProcessor {
-  processMessage(message: string): Promise<ModelResponse | null>;
+  processMessage(message: string, categories?: string[]): Promise<ModelResponse | null>;
   // Opcional: modelos multimodais leem a imagem direto (OCR + extração em uma chamada).
-  processImage?(base64Image: string): Promise<ModelResponse | null>;
+  processImage?(base64Image: string, categories?: string[]): Promise<ModelResponse | null>;
 }
 
 @injectable()
@@ -52,11 +52,15 @@ export class MessageProcessingService {
     return `🤖 Modelo atualizado para ${model.toUpperCase()}!`;
   }
 
-  // Seleciona o processador conforme a preferência salva do usuário (default: gemini).
-  private async getProcessor(platform: Platform, externalId: string): Promise<IMessageProcessor> {
+  // Resolve o processador (pela preferência do usuário) e as categorias personalizadas dele.
+  private async resolveProcessor(
+    platform: Platform,
+    externalId: string,
+  ): Promise<{ processor: IMessageProcessor; categories: string[] }> {
     const user = await this.userRepo.findByIdentity(platform, externalId);
     const model: AiModel = user?.aiModel ?? "gemini";
-    return model === "gpt" ? this.gptProcessor : this.geminiProcessor;
+    const processor = model === "gpt" ? this.gptProcessor : this.geminiProcessor;
+    return { processor, categories: user?.categories ?? [] };
   }
 
   async processMessage(
@@ -65,8 +69,8 @@ export class MessageProcessingService {
     text: string,
   ): Promise<ModelResponse> {
     try {
-      const processor = await this.getProcessor(platform, externalId);
-      const response = await processor.processMessage(text);
+      const { processor, categories } = await this.resolveProcessor(platform, externalId);
+      const response = await processor.processMessage(text, categories);
 
       if (!response) {
         return { intent: "unknown", message: "🤖 Não entendi. Pode reformular?" };
@@ -89,13 +93,13 @@ export class MessageProcessingService {
     externalId: string,
     base64Image: string,
   ): Promise<ModelResponse | null> {
-    const processor = await this.getProcessor(platform, externalId);
+    const { processor, categories } = await this.resolveProcessor(platform, externalId);
     if (!processor.processImage) {
       return null;
     }
 
     try {
-      const response = await processor.processImage(base64Image);
+      const response = await processor.processImage(base64Image, categories);
       if (!response) {
         return { intent: "unknown", message: "🤖 Não entendi. Pode reformular?" };
       }

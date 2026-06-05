@@ -310,6 +310,10 @@ export class BotCore {
         if (!(await this.requireRegistered(reply, platform, externalId))) return;
         return this.handleEditPurchase(reply, externalId, args);
 
+      case "categorias":
+        if (!(await this.requireRegistered(reply, platform, externalId))) return;
+        return this.handleCategories(reply, platform, externalId, args);
+
       case "ia":
         if (!(await this.requireRegistered(reply, platform, externalId))) return;
         return this.handleSetIAModel(reply, platform, externalId, args[0]);
@@ -367,6 +371,51 @@ export class BotCore {
       return;
     }
     await reply.text(`✏️ Atualizado: ${updated.description} — R$ ${updated.total.toFixed(2)}`);
+  }
+
+  // ---------- Categorias personalizadas (A3) ----------
+
+  private async handleCategories(
+    reply: Replier,
+    platform: Platform,
+    externalId: string,
+    args: string[],
+  ): Promise<void> {
+    const sub = (args[0] ?? "").toLowerCase();
+    const name = args.slice(1).join(" ").trim();
+
+    if (sub === "add" || sub === "adicionar") {
+      if (!name) {
+        await reply.text('Uso: /categorias add <nome>. Ex.: "/categorias add Mercado".');
+        return;
+      }
+      const cats = await this.userService.addCategory(platform, externalId, name);
+      await reply.text(`✅ Categoria adicionada.\n📂 Suas categorias: ${cats.join(", ")}`);
+      return;
+    }
+
+    if (sub === "remover" || sub === "remove" || sub === "rm" || sub === "del") {
+      if (!name) {
+        await reply.text("Uso: /categorias remover <nome>.");
+        return;
+      }
+      const cats = await this.userService.removeCategory(platform, externalId, name);
+      const list = cats.length ? cats.join(", ") : "(usando as padrão)";
+      await reply.text(`🗑️ Categoria removida.\n📂 Suas categorias: ${list}`);
+      return;
+    }
+
+    // Sem subcomando: lista.
+    const cats = await this.userService.getCategories(platform, externalId);
+    if (cats.length === 0) {
+      await reply.text(
+        'Você usa as categorias padrão. Crie as suas com "/categorias add Mercado".',
+      );
+      return;
+    }
+    await reply.text(
+      `📂 Suas categorias: ${cats.join(", ")}\n\n"/categorias add <nome>" ou "/categorias remover <nome>".`,
+    );
   }
 
   private async handleStart(msg: IncomingMessage, reply: Replier): Promise<void> {

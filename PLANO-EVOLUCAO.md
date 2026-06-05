@@ -42,7 +42,12 @@ Isso exige uma pequena evolução do `Replier` (`withQuickReplies?`) — opciona
 - **BotCore:** roteia os novos comandos; confirma antes de excluir.
 - **Risco:** médio (referência estável da compra; idealmente o id canônico).
 
-### A3. Categorias personalizadas
+### A3. Categorias personalizadas ✅ CONCLUÍDA
+> Implementado: `User.categories[]`; `UserService.get/add/removeCategory`; comando `/categorias`
+> (listar, `add <nome>`, `remover <nome>`). O `getPrompt001` recebe as categorias do usuário e a IA
+> classifica conforme elas (vazio = lista padrão). Threading via `MessageProcessingService.resolveProcessor`
+> → processadores → prompt. Testes: add (idempotente) e remove (case-insensitive).
+
 **Objetivo:** o usuário define as próprias categorias.
 - **Backend:** `User.categories: string[]`. `getPrompt001` passa a receber as categorias do usuário
   (hoje são fixas no prompt) para a IA classificar conforme elas.

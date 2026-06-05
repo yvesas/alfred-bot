@@ -19,8 +19,8 @@ export class GptProcessor implements IMessageProcessor {
     });
   }
 
-  async processMessage(message: string): Promise<ModelResponse | null> {
-    const prompt = getPrompt001(null, message);
+  async processMessage(message: string, categories?: string[]): Promise<ModelResponse | null> {
+    const prompt = getPrompt001(null, message, categories);
 
     const completion = await this.ai.chat.completions.create({
       model: this.model,

@@ -38,8 +38,8 @@ export class BudgetService {
     const relevant = budgets.filter((b) => touched.has(b.category.toLowerCase()));
     if (relevant.length === 0) return [];
 
-    // userId das compras = externalId da plataforma.
-    const report = await this.purchaseService.getSpendingReport(externalId, "current_month");
+    // Relatório pela identidade canônica da compra (User._id, Fase 6).
+    const report = await this.purchaseService.getSpendingReport(purchase.userId, "current_month");
 
     const alerts: string[] = [];
     for (const b of relevant) {

@@ -41,30 +41,32 @@ export class AccountService {
   }
 
   // Migra os dados da sessão anônima (clientId) para a conta logada (id do WorkOS).
-  // Idempotente e seguro: nada acontece se os ids forem iguais ou não houver dados.
+  // Idempotente e seguro: nada acontece se os ids forem iguais ou não houver doc anônimo.
   async absorbAnonymous(canonicalExternalId: string, anonExternalId: string): Promise<void> {
     if (!anonExternalId || canonicalExternalId === anonExternalId) return;
 
-    const purchases = await this.purchaseRepo.reassignUser(anonExternalId, canonicalExternalId);
+    const anon = await this.userRepo.findByIdentity(WEB, anonExternalId);
+    if (!anon) return; // sem conta anônima → nada a absorver
+    const canonical = await this.userRepo.findByIdentity(WEB, canonicalExternalId);
+    if (!canonical) return; // ensureWorkosUser roda antes; defensivo
+
+    // Compras chaveiam por User._id (Fase 6); lembretes ainda por (platform, externalId) — alvo do push.
+    const purchases = await this.purchaseRepo.reassignUser(String(anon._id), String(canonical._id));
     const reminders = await this.reminderRepo.reassignExternalId(
       WEB,
       anonExternalId,
       canonicalExternalId,
     );
 
-    // Funde categorias/orçamentos do documento anônimo (se existir) e o remove.
-    const anon = await this.userRepo.findByIdentity(WEB, anonExternalId);
-    if (anon) {
-      const canonical = await this.userRepo.findByIdentity(WEB, canonicalExternalId);
-      await this.userRepo.updateByIdentity(WEB, canonicalExternalId, {
-        categories: mergeCategories(canonical?.categories, anon.categories),
-        budgets: mergeBudgets(canonical?.budgets, anon.budgets),
-      });
-      await this.userRepo.deleteByIdentity(WEB, anonExternalId);
-    }
+    // Funde categorias/orçamentos do documento anônimo e o remove.
+    await this.userRepo.updateByIdentity(WEB, canonicalExternalId, {
+      categories: mergeCategories(canonical.categories, anon.categories),
+      budgets: mergeBudgets(canonical.budgets, anon.budgets),
+    });
+    await this.userRepo.deleteByIdentity(WEB, anonExternalId);
 
     logger.info(
-      { canonicalExternalId, anonExternalId, purchases, reminders },
+      { canonical: String(canonical._id), anon: String(anon._id), purchases, reminders },
       "Conta anônima absorvida no login",
     );
   }

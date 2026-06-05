@@ -49,19 +49,22 @@ describe("AccountService", () => {
     expect(userRepo.create.called).toBe(false);
   });
 
-  it("absorve o anônimo: reatribui compras/lembretes, funde e remove o doc anônimo", async () => {
+  it("absorve o anônimo: reatribui compras (por _id)/lembretes, funde e remove o doc anônimo", async () => {
     purchaseRepo.reassignUser.resolves(3);
     reminderRepo.reassignExternalId.resolves(1);
-    userRepo.findByIdentity
-      .withArgs("web", "anon")
-      .resolves({ categories: ["Bar"], budgets: [{ category: "Bar", limit: 50 }] } as any);
+    userRepo.findByIdentity.withArgs("web", "anon").resolves({
+      _id: "anonDoc",
+      categories: ["Bar"],
+      budgets: [{ category: "Bar", limit: 50 }],
+    } as any);
     userRepo.findByIdentity
       .withArgs("web", "canon")
-      .resolves({ categories: ["Mercado"], budgets: [] } as any);
+      .resolves({ _id: "canonDoc", categories: ["Mercado"], budgets: [] } as any);
 
     await service.absorbAnonymous("canon", "anon");
 
-    expect(purchaseRepo.reassignUser.calledWith("anon", "canon")).toBe(true);
+    // Compras reatribuídas por User._id (Fase 6); lembretes ainda por externalId (entrega do push).
+    expect(purchaseRepo.reassignUser.calledWith("anonDoc", "canonDoc")).toBe(true);
     expect(reminderRepo.reassignExternalId.calledWith("web", "anon", "canon")).toBe(true);
     const patch = userRepo.updateByIdentity.firstCall.args[2] as any;
     expect(patch.categories).toEqual(["Mercado", "Bar"]);

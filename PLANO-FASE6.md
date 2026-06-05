@@ -28,7 +28,13 @@ chavear tudo por **`User._id`** e introduz **identificadores verificados** (e-ma
 
 ---
 
-## Parte 1 — Migração para identidade canônica (`Purchase.userId = User._id`)
+## Parte 1 — Migração para identidade canônica (`Purchase.userId = User._id`) — ✅ CONCLUÍDA
+> Feito: `MessageProcessingService` resolve `User._id` (`resolveProcessor`) e o injeta em
+> `response.userId`; `BotCore` threada o `userId` canônico em compras/gastos/orçamento;
+> `BudgetService` usa `purchase.userId`; `AccountService.absorbAnonymous` reatribui por `_id`.
+> Script `src/scripts/migrateCanonical.ts` (`--apply`/dry-run) + `pnpm migrate:canonical`.
+> Lembretes seguem por `(platform, externalId)` (alvo do push) — `userId` entra no merge (Parte 2/3).
+> 87 testes verdes.
 
 ### Por que
 Para "somar" gastos de várias plataformas numa conta só, a chave de propriedade precisa ser o

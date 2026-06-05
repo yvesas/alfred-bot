@@ -75,7 +75,7 @@ describe("BotCore", () => {
   });
 
   it("asks to confirm a purchase, then saves on 'sim'", async () => {
-    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
     mps.processMessage.resolves({
       intent: "purchase",
       userId: "1",
@@ -99,7 +99,7 @@ describe("BotCore", () => {
   });
 
   it("cancels a pending purchase on 'não'", async () => {
-    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
     mps.processMessage.resolves({
       intent: "purchase",
       userId: "1",
@@ -118,7 +118,7 @@ describe("BotCore", () => {
   });
 
   it("answers a spending query", async () => {
-    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
     mps.processMessage.resolves({ intent: "query", period: "current_month" });
     purchaseService.getSpendingReport.resolves({
       period: "current_month",
@@ -135,7 +135,7 @@ describe("BotCore", () => {
   });
 
   it("deletes the nth purchase via /excluir", async () => {
-    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
     purchaseService.getUserPurchases.resolves([
       { _id: "p1", description: "agua", total: 7 } as any,
     ]);
@@ -146,12 +146,12 @@ describe("BotCore", () => {
       reply,
     );
 
-    expect(purchaseService.deletePurchase.calledWith("1", "p1")).toBe(true);
+    expect(purchaseService.deletePurchase.calledWith("u1", "p1")).toBe(true);
     expect(replies.some((r) => r.includes("Excluído"))).toBe(true);
   });
 
   it("edits the nth purchase total via /editar", async () => {
-    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
     purchaseService.getUserPurchases.resolves([
       { _id: "p1", description: "agua", total: 7 } as any,
     ]);
@@ -162,12 +162,12 @@ describe("BotCore", () => {
       reply,
     );
 
-    expect(purchaseService.updatePurchase.calledWith("1", "p1", { total: 10 })).toBe(true);
+    expect(purchaseService.updatePurchase.calledWith("u1", "p1", { total: 10 })).toBe(true);
     expect(replies.some((r) => r.includes("Atualizado"))).toBe(true);
   });
 
   it("sets the language via /idioma", async () => {
-    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
     userService.setLanguage.resolves();
 
     await core.handle(
@@ -180,7 +180,7 @@ describe("BotCore", () => {
   });
 
   it("appends a budget alert when saving a purchase over the limit", async () => {
-    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
     mps.processMessage.resolves({
       intent: "purchase",
       userId: "1",
@@ -201,7 +201,7 @@ describe("BotCore", () => {
   });
 
   it("sets a category budget via /orcamento", async () => {
-    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
     userService.setBudget.resolves([{ category: "Alimentação", limit: 500 }] as any);
 
     await core.handle(
@@ -214,7 +214,7 @@ describe("BotCore", () => {
   });
 
   it("creates a reminder via /lembretes add", async () => {
-    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
     reminderService.add.resolves({ description: "Conta de luz", dayOfMonth: 10 } as any);
 
     await core.handle(
@@ -230,7 +230,7 @@ describe("BotCore", () => {
   });
 
   it("lists reminders via /lembretes", async () => {
-    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
     reminderService.list.resolves([{ description: "Conta de luz", dayOfMonth: 10 } as any]);
 
     await core.handle(

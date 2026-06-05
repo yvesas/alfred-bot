@@ -135,12 +135,13 @@ export class BotCore {
       return;
     }
 
+    const userId = String(user._id); // identidade canônica (Fase 6)
     const processed = await this.messageProcessingService.processMessage(
       platform,
       externalId,
       msg.text ?? "",
     );
-    await this.handleProcessed(reply, platform, externalId, lang, processed);
+    await this.handleProcessed(reply, platform, externalId, userId, lang, processed);
   }
 
   private async handleContact(msg: IncomingMessage, reply: Replier): Promise<void> {
@@ -184,11 +185,12 @@ export class BotCore {
     const user = await this.requireRegistered(reply, platform, externalId);
     if (!user) return;
     const lang = langOf(user);
+    const userId = String(user._id);
 
     try {
       const base64Image = msg.getImageBase64 ? await msg.getImageBase64() : "";
       const processed = await this.processReceiptImage(platform, externalId, base64Image);
-      await this.handleProcessed(reply, platform, externalId, lang, processed);
+      await this.handleProcessed(reply, platform, externalId, userId, lang, processed);
     } catch (error) {
       logger.error({ err: error }, "Erro ao baixar/processar a imagem");
       await reply.text(t(lang, "photo_error"));
@@ -224,11 +226,12 @@ export class BotCore {
     reply: Replier,
     platform: Platform,
     externalId: string,
+    userId: string,
     lang: Language,
     processed: ModelResponse,
   ): Promise<void> {
     if (processed.intent === "query") {
-      await this.handleSpendingQuery(reply, externalId, lang, processed.period, processed.groupBy);
+      await this.handleSpendingQuery(reply, userId, lang, processed.period, processed.groupBy);
       return;
     }
 
@@ -239,6 +242,7 @@ export class BotCore {
     }
 
     const purchaseData = convertModelResponseToPurchase(processed);
+    purchaseData.userId = userId; // garante a identidade canônica (Fase 6)
 
     const validation = validatePurchaseData(purchaseData);
     if (!validation.ok) {
@@ -344,20 +348,21 @@ export class BotCore {
     const user = await this.requireRegistered(reply, platform, externalId);
     if (!user) return;
     const lang = langOf(user);
+    const userId = String(user._id); // identidade canônica (Fase 6)
 
     switch (name) {
       case "gastos":
-        return this.handleSpendingQuery(reply, externalId, lang, "current_month");
+        return this.handleSpendingQuery(reply, userId, lang, "current_month");
       case "compras":
-        return this.handleGetPurchases(reply, lang, externalId, this.parsePage(args[0]));
+        return this.handleGetPurchases(reply, lang, userId, this.parsePage(args[0]));
       case "excluir":
-        return this.handleDeletePurchase(reply, lang, externalId, args[0]);
+        return this.handleDeletePurchase(reply, lang, userId, args[0]);
       case "editar":
-        return this.handleEditPurchase(reply, lang, externalId, args);
+        return this.handleEditPurchase(reply, lang, userId, args);
       case "categorias":
         return this.handleCategories(reply, platform, externalId, lang, args);
       case "orcamento":
-        return this.handleBudgets(reply, platform, externalId, lang, args);
+        return this.handleBudgets(reply, platform, externalId, userId, lang, args);
       case "lembretes":
         return this.handleReminders(reply, platform, externalId, lang, args);
       case "idioma":
@@ -500,6 +505,7 @@ export class BotCore {
     reply: Replier,
     platform: Platform,
     externalId: string,
+    userId: string,
     lang: Language,
     args: string[],
   ): Promise<void> {
@@ -540,7 +546,7 @@ export class BotCore {
       return;
     }
 
-    const report = await this.purchaseService.getSpendingReport(externalId, "current_month");
+    const report = await this.purchaseService.getSpendingReport(userId, "current_month");
     const lines = budgets.map((b) => {
       const spent = Object.entries(report.byCategory)
         .filter(([k]) => k.toLowerCase() === b.category.toLowerCase())

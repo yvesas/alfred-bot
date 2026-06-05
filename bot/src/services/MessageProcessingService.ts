@@ -75,6 +75,7 @@ export class MessageProcessingService {
     categories: string[];
     language: string;
     lang: Language;
+    userId: string;
   }> {
     const user = await this.userRepo.findByIdentity(platform, externalId);
     const model: AiModel = user?.aiModel ?? "gemini";
@@ -85,6 +86,9 @@ export class MessageProcessingService {
       categories: user?.categories ?? [],
       language: languageLabel(lang), // rótulo p/ o prompt da IA
       lang, // código p/ o catálogo i18n
+      // Identidade canônica: a compra pertence ao User._id (Fase 6), não ao externalId.
+      // Fallback ao externalId só se o usuário ainda não existir (não deve ocorrer no fluxo normal).
+      userId: user ? String(user._id) : externalId,
     };
   }
 
@@ -93,7 +97,7 @@ export class MessageProcessingService {
     externalId: string,
     text: string,
   ): Promise<ModelResponse> {
-    const { processor, categories, language, lang } = await this.resolveProcessor(
+    const { processor, categories, language, lang, userId } = await this.resolveProcessor(
       platform,
       externalId,
     );
@@ -104,8 +108,8 @@ export class MessageProcessingService {
         return { intent: "unknown", message: t(lang, "ai_not_understood") };
       }
 
-      // O userId dos dados é o id externo da plataforma — a IA não o conhece.
-      response.userId = externalId;
+      // Chaveia a compra pelo User._id canônico (a IA não conhece o id).
+      response.userId = userId;
       return response;
     } catch (error) {
       aiErrorsTotal.inc();
@@ -121,7 +125,7 @@ export class MessageProcessingService {
     externalId: string,
     base64Image: string,
   ): Promise<ModelResponse | null> {
-    const { processor, categories, language, lang } = await this.resolveProcessor(
+    const { processor, categories, language, lang, userId } = await this.resolveProcessor(
       platform,
       externalId,
     );
@@ -134,7 +138,7 @@ export class MessageProcessingService {
       if (!response) {
         return { intent: "unknown", message: t(lang, "ai_not_understood") };
       }
-      response.userId = externalId;
+      response.userId = userId;
       return response;
     } catch (error) {
       aiErrorsTotal.inc();

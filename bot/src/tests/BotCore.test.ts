@@ -9,6 +9,7 @@ import { OcrService } from "../services/OcrService";
 import { PurchaseService } from "../services/PurchaseService";
 import { BudgetService } from "../services/BudgetService";
 import { ReminderService } from "../services/ReminderService";
+import { MergeService } from "../services/MergeService";
 import { RateLimiter } from "../services/RateLimiter";
 import { MessageProcessingService } from "../services/MessageProcessingService";
 
@@ -22,6 +23,7 @@ describe("BotCore", () => {
   let purchaseService: sinon.SinonStubbedInstance<PurchaseService>;
   let budgetService: sinon.SinonStubbedInstance<BudgetService>;
   let reminderService: sinon.SinonStubbedInstance<ReminderService>;
+  let mergeService: sinon.SinonStubbedInstance<MergeService>;
   let rateLimiter: sinon.SinonStubbedInstance<RateLimiter>;
   let mps: sinon.SinonStubbedInstance<MessageProcessingService>;
   let core: BotCore;
@@ -34,6 +36,7 @@ describe("BotCore", () => {
     purchaseService = sinon.createStubInstance(PurchaseService);
     budgetService = sinon.createStubInstance(BudgetService);
     reminderService = sinon.createStubInstance(ReminderService);
+    mergeService = sinon.createStubInstance(MergeService);
     rateLimiter = sinon.createStubInstance(RateLimiter);
     mps = sinon.createStubInstance(MessageProcessingService);
     core = new BotCore(
@@ -42,6 +45,7 @@ describe("BotCore", () => {
       purchaseService,
       budgetService,
       reminderService,
+      mergeService,
       rateLimiter,
       mps,
     );

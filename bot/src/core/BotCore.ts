@@ -6,6 +6,7 @@ import { OcrService } from "../services/OcrService";
 import { PurchaseService } from "../services/PurchaseService";
 import { BudgetService } from "../services/BudgetService";
 import { ReminderService } from "../services/ReminderService";
+import { MergeService } from "../services/MergeService";
 import { RateLimiter } from "../services/RateLimiter";
 import {
   MessageProcessingService,
@@ -62,6 +63,7 @@ export class BotCore {
     @inject(PurchaseService) private purchaseService: PurchaseService,
     @inject(BudgetService) private budgetService: BudgetService,
     @inject(ReminderService) private reminderService: ReminderService,
+    @inject(MergeService) private mergeService: MergeService,
     @inject(RateLimiter) private rateLimiter: RateLimiter,
     @inject(MessageProcessingService) private messageProcessingService: MessageProcessingService,
   ) {}
@@ -85,6 +87,13 @@ export class BotCore {
   private async resolveLang(platform: Platform, externalId: string): Promise<Language> {
     const user = await this.userService.findByIdentity(platform, externalId);
     return langOf(user);
+  }
+
+  // No WhatsApp o externalId É o número verificado pela plataforma → registra como telefone
+  // verificado e tenta auto-vincular com uma conta existente do mesmo número (Fase 6).
+  private async autoLinkWhatsappPhone(platform: Platform, externalId: string): Promise<void> {
+    if (platform !== "whatsapp") return;
+    await this.mergeService.linkVerifiedPhone(platform, externalId, externalId);
   }
 
   // ---------- Onboarding / cadastro ----------
@@ -115,6 +124,7 @@ export class BotCore {
         }),
         { requestPhone: created.status !== "complete" },
       );
+      await this.autoLinkWhatsappPhone(platform, externalId);
       return;
     }
 
@@ -155,6 +165,10 @@ export class BotCore {
       lang,
     );
     await reply.text(answer, { requestPhone: !completed });
+    // Telefone compartilhado é verificado pela plataforma → registra e tenta auto-vincular (Fase 6).
+    if (msg.contact.phone) {
+      await this.mergeService.linkVerifiedPhone(msg.platform, msg.externalId, msg.contact.phone);
+    }
   }
 
   // Garante o cadastro completo antes de um comando. Conduz o cadastro e retorna o usuário
@@ -629,6 +643,9 @@ export class BotCore {
     );
     const userLang = langOf(user);
     const name = user.name ? `, ${user.name}` : "";
+
+    // No WhatsApp o número já é verificado → registra/auto-vincula (Fase 6).
+    await this.autoLinkWhatsappPhone(msg.platform, msg.externalId);
 
     if (user.status === "complete") {
       await reply.text(t(userLang, "greeting_returning", { name }));

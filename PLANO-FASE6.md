@@ -67,7 +67,15 @@ Em vez de passar `externalId` como `userId`, passamos `String(user._id)`:
 
 ---
 
-## Parte 2 — Identificadores verificados + vínculo automático
+## Parte 2 — Identificadores verificados + vínculo automático — ✅ CONCLUÍDA
+> Feito: `User.verifiedEmail/verifiedPhone` (+ índices). `MergeService.mergeUsers` (reatribui compras
+> por `_id`, une identidades/prefs, remove o secundário) + `linkVerifiedEmail`/`linkVerifiedPhone`
+> (auto-merge, conta web vence). Triggers: **login WorkOS** (e-mail, em `ensureWorkosUser`),
+> **WhatsApp** (número no 1º contato/`/start`) e **Telegram "compartilhar contato"** (em `handleContact`).
+> `UserRepository` ganhou buscas por identificador verificado (com `excludeId`) e helpers por `_id`.
+> Testes: `MergeService` (merge + link e-mail/telefone + helpers), `AccountService`. 94 testes verdes.
+> Lembretes seguem por `(platform, externalId)` (decisão da Parte 1) — listagem cross-plataforma fica
+> para um follow-up; a entrega do push continua correta.
 
 ### Conceito
 Cada `User` acumula **identificadores verificados**:

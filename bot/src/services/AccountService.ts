@@ -2,7 +2,8 @@ import { inject, injectable } from "inversify";
 import { UserRepository } from "../repositories/UserRepository";
 import { PurchaseRepository } from "../repositories/PurchaseRepository";
 import { ReminderRepository } from "../repositories/ReminderRepository";
-import { IUser, IUserCreate, IBudget } from "../models/User";
+import { MergeService, mergeCategories, mergeBudgets } from "./MergeService";
+import { IUser, IUserCreate } from "../models/User";
 import { logger } from "../infra/logger";
 
 // O usuário logado pelo WorkOS vive na plataforma "web", com externalId = id do WorkOS.
@@ -15,29 +16,36 @@ export class AccountService {
     @inject(UserRepository) private userRepo: UserRepository,
     @inject(PurchaseRepository) private purchaseRepo: PurchaseRepository,
     @inject(ReminderRepository) private reminderRepo: ReminderRepository,
+    @inject(MergeService) private merge: MergeService,
   ) {}
 
-  // Garante o usuário canônico do WorkOS. O perfil (nome/e-mail) pula o onboarding.
+  // Garante o usuário canônico do WorkOS. O perfil (nome/e-mail) pula o onboarding e o e-mail
+  // verificado dispara o auto-vínculo com contas Telegram/WhatsApp do mesmo e-mail.
   async ensureWorkosUser(
     workosUserId: string,
     profile: { name?: string; email?: string },
   ): Promise<IUser> {
     const existing = await this.userRepo.findByIdentity(WEB, workosUserId);
+    const email = profile.email?.toLowerCase();
 
     const patch: Partial<IUserCreate> = {
       status: "complete", // perfil do WorkOS → cadastro já completo
       ...(profile.name ? { name: profile.name } : {}),
-      ...(profile.email ? { email: profile.email.toLowerCase() } : {}),
+      ...(email ? { email, verifiedEmail: email } : {}),
     };
 
-    if (existing) {
-      return (await this.userRepo.updateByIdentity(WEB, workosUserId, patch)) ?? existing;
-    }
+    const user = existing
+      ? ((await this.userRepo.updateByIdentity(WEB, workosUserId, patch)) ?? existing)
+      : await this.userRepo.create({
+          identities: [{ platform: WEB, externalId: workosUserId }],
+          ...patch,
+        } as IUserCreate);
 
-    return await this.userRepo.create({
-      identities: [{ platform: WEB, externalId: workosUserId }],
-      ...patch,
-    } as IUserCreate);
+    // E-mail verificado pelo WorkOS → tenta fundir com outra conta que já o tenha.
+    if (email) {
+      await this.merge.linkVerifiedEmail(WEB, workosUserId, email);
+    }
+    return user;
   }
 
   // Migra os dados da sessão anônima (clientId) para a conta logada (id do WorkOS).
@@ -70,28 +78,4 @@ export class AccountService {
       "Conta anônima absorvida no login",
     );
   }
-}
-
-// Une categorias sem duplicar (case-insensitive), preservando a grafia da conta canônica.
-function mergeCategories(a: string[] = [], b: string[] = []): string[] {
-  const seen = new Set(a.map((c) => c.toLowerCase()));
-  const merged = [...a];
-  for (const c of b) {
-    if (!seen.has(c.toLowerCase())) {
-      seen.add(c.toLowerCase());
-      merged.push(c);
-    }
-  }
-  return merged;
-}
-
-// Une orçamentos por categoria; o da conta canônica vence em caso de conflito.
-function mergeBudgets(a: IBudget[] = [], b: IBudget[] = []): IBudget[] {
-  const byCat = new Map(a.map((x) => [x.category.toLowerCase(), x]));
-  for (const x of b) {
-    if (!byCat.has(x.category.toLowerCase())) {
-      byCat.set(x.category.toLowerCase(), x);
-    }
-  }
-  return [...byCat.values()];
 }

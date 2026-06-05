@@ -2,6 +2,7 @@
 import "reflect-metadata";
 import sinon from "sinon";
 import { AccountService } from "../services/AccountService";
+import { MergeService } from "../services/MergeService";
 import { UserRepository } from "../repositories/UserRepository";
 import { PurchaseRepository } from "../repositories/PurchaseRepository";
 import { ReminderRepository } from "../repositories/ReminderRepository";
@@ -11,16 +12,18 @@ describe("AccountService", () => {
   let userRepo: sinon.SinonStubbedInstance<UserRepository>;
   let purchaseRepo: sinon.SinonStubbedInstance<PurchaseRepository>;
   let reminderRepo: sinon.SinonStubbedInstance<ReminderRepository>;
+  let merge: sinon.SinonStubbedInstance<MergeService>;
   let service: AccountService;
 
   beforeEach(() => {
     userRepo = sinon.createStubInstance(UserRepository);
     purchaseRepo = sinon.createStubInstance(PurchaseRepository);
     reminderRepo = sinon.createStubInstance(ReminderRepository);
-    service = new AccountService(userRepo, purchaseRepo, reminderRepo);
+    merge = sinon.createStubInstance(MergeService);
+    service = new AccountService(userRepo, purchaseRepo, reminderRepo, merge);
   });
 
-  it("cria o usuário do WorkOS já completo, com o perfil", async () => {
+  it("cria o usuário do WorkOS já completo, com o perfil + e-mail verificado e auto-vínculo", async () => {
     userRepo.findByIdentity.resolves(null);
     userRepo.create.resolves({} as any);
 
@@ -30,7 +33,9 @@ describe("AccountService", () => {
     expect(arg.status).toBe("complete");
     expect(arg.name).toBe("Yves");
     expect(arg.email).toBe("a@b.com"); // normalizado
+    expect(arg.verifiedEmail).toBe("a@b.com");
     expect(arg.identities).toEqual([{ platform: "web", externalId: "user_1" }]);
+    expect(merge.linkVerifiedEmail.calledWith("web", "user_1", "a@b.com")).toBe(true);
   });
 
   it("atualiza um usuário existente para completo", async () => {

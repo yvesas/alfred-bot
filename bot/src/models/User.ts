@@ -29,6 +29,9 @@ export interface IUserBase {
   categories?: string[]; // categorias personalizadas; vazio = usa as padrão
   language?: Language; // idioma preferido (default "pt")
   budgets?: IBudget[]; // orçamentos mensais por categoria
+  // Identificadores VERIFICADOS (Fase 6) — chaves de auto-vínculo entre contas.
+  verifiedEmail?: string; // verificado via WorkOS (login/Magic Auth)
+  verifiedPhone?: string; // verificado pela plataforma (WhatsApp; Telegram via "compartilhar contato")
 }
 
 export type IUserCreate = Omit<IUserBase, "_id">;
@@ -68,6 +71,9 @@ const UserSchema = new Schema<IUser>(
     categories: { type: [String], default: [] },
     language: { type: String, enum: ["pt", "en", "es"], default: "pt" },
     budgets: { type: [BudgetSchema], default: [] },
+    // Índices declarados abaixo via schema.index (evita índice duplicado).
+    verifiedEmail: { type: String },
+    verifiedPhone: { type: String },
   },
   {
     timestamps: true,
@@ -79,5 +85,9 @@ UserSchema.index(
   { "identities.platform": 1, "identities.externalId": 1 },
   { unique: true, sparse: true },
 );
+// Busca rápida por identificador verificado (auto-vínculo). Não-único: durante o merge
+// duas contas podem coexistir brevemente com o mesmo valor antes da fusão.
+UserSchema.index({ verifiedEmail: 1 }, { sparse: true });
+UserSchema.index({ verifiedPhone: 1 }, { sparse: true });
 
 export const UserModel = model<IUser>("User", UserSchema);

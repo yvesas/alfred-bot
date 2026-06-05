@@ -33,4 +33,32 @@ export class UserRepository {
   async deleteByIdentity(platform: Platform, externalId: string): Promise<void> {
     await UserModel.deleteOne({ identities: { $elemMatch: { platform, externalId } } }).exec();
   }
+
+  // ---------- Identificadores verificados / por _id (Fase 6) ----------
+
+  // Busca uma conta com o identificador verificado. `excludeId` evita casar consigo mesmo
+  // (procurando o "gêmeo" a fundir).
+  async findByVerifiedEmail(email: string, excludeId?: string): Promise<IUser | null> {
+    const query: Record<string, unknown> = { verifiedEmail: email.toLowerCase() };
+    if (excludeId) query._id = { $ne: excludeId };
+    return await UserModel.findOne(query).exec();
+  }
+
+  async findByVerifiedPhone(phone: string, excludeId?: string): Promise<IUser | null> {
+    const query: Record<string, unknown> = { verifiedPhone: phone };
+    if (excludeId) query._id = { $ne: excludeId };
+    return await UserModel.findOne(query).exec();
+  }
+
+  async findById(id: string): Promise<IUser | null> {
+    return await UserModel.findById(id).exec();
+  }
+
+  async updateById(id: string, patch: Partial<IUserCreate>): Promise<IUser | null> {
+    return await UserModel.findByIdAndUpdate(id, patch, { new: true }).exec();
+  }
+
+  async deleteById(id: string): Promise<void> {
+    await UserModel.deleteOne({ _id: id }).exec();
+  }
 }

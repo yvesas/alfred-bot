@@ -1,5 +1,6 @@
 import { IPurchaseCreate, IStoreInfo } from "../../models/Purchase";
 import { ModelResponse } from "../../services/MessageProcessingService";
+import { isValidAccessKey, parseAccessKey } from "../../utils/fiscalKey";
 import { logger } from "../logger";
 
 export function convertModelResponseToPurchase(input: ModelResponse): IPurchaseCreate {
@@ -23,14 +24,27 @@ export function convertModelResponseToPurchase(input: ModelResponse): IPurchaseC
     input.store = storeInfo;
   }
 
+  // Chave de acesso da NFC-e: só aceita se for válida (DV mód-11). Enriquece a loja com o
+  // CNPJ derivado da chave quando a IA não trouxe um.
+  const fiscalKey =
+    input.accessKey && isValidAccessKey(input.accessKey) ? input.accessKey : undefined;
+  let store = input.store;
+  if (fiscalKey) {
+    const info = parseAccessKey(fiscalKey);
+    if (info && !store?.cnpj) {
+      store = { name: store?.name ?? "", cnpj: info.cnpj };
+    }
+  }
+
   return {
     userId: input.userId ?? "",
     description: input.description ?? "Compra",
     total: input.total ?? 0,
     date: parsedDate,
-    store: input.store,
+    store,
     tax: input.tax,
     items: input.items || [],
+    ...(fiscalKey ? { fiscalKey } : {}),
   };
 }
 

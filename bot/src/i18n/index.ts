@@ -15,6 +15,7 @@ export type MessageKey =
   | "purchase_cancelled"
   | "purchase_saved"
   | "purchase_save_error"
+  | "receipt_already_registered"
   // editar / excluir
   | "delete_invalid"
   | "delete_done"
@@ -115,6 +116,7 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     purchase_saved: "🛒 Compra registrada: {description} - Total de R$ {total}",
     purchase_save_error:
       "❌ Não consegui registrar essa compra. Verifique os valores e tente novamente.",
+    receipt_already_registered: "🧾 Este cupom já foi registrado antes — não dupliquei. 👍",
     delete_invalid: 'Número inválido. Use /compras para ver a lista (ex.: "/excluir 2").',
     delete_done: "🗑️ Excluído: {description} — R$ {total}",
     edit_usage: 'Uso: /editar <nº> <total|descrição> <valor>. Ex.: "/editar 2 total 10".',
@@ -213,6 +215,8 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     purchase_cancelled: "Okay, I cancelled that purchase. 👍",
     purchase_saved: "🛒 Purchase saved: {description} - Total $ {total}",
     purchase_save_error: "❌ I couldn't save that purchase. Check the values and try again.",
+    receipt_already_registered:
+      "🧾 This receipt was already registered — I didn't duplicate it. 👍",
     delete_invalid: 'Invalid number. Use /compras to see the list (e.g., "/excluir 2").',
     delete_done: "🗑️ Deleted: {description} — $ {total}",
     edit_usage: 'Usage: /editar <no.> <total|description> <value>. E.g., "/editar 2 total 10".',
@@ -314,6 +318,7 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     purchase_saved: "🛒 Compra registrada: {description} - Total $ {total}",
     purchase_save_error:
       "❌ No pude registrar esa compra. Revisa los valores e inténtalo de nuevo.",
+    receipt_already_registered: "🧾 Este recibo ya fue registrado antes — no lo dupliqué. 👍",
     delete_invalid: 'Número inválido. Usa /compras para ver la lista (ej.: "/excluir 2").',
     delete_done: "🗑️ Eliminado: {description} — $ {total}",
     edit_usage: 'Uso: /editar <n.º> <total|descripción> <valor>. Ej.: "/editar 2 total 10".',

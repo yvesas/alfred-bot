@@ -7,6 +7,7 @@ import { Replier } from "../core/Replier";
 import { UserService } from "../services/UserService";
 import { OcrService } from "../services/OcrService";
 import { PurchaseService } from "../services/PurchaseService";
+import { QrService } from "../services/QrService";
 import { BudgetService } from "../services/BudgetService";
 import { ReminderService } from "../services/ReminderService";
 import { MergeService } from "../services/MergeService";
@@ -15,6 +16,7 @@ import { AuthService } from "../services/AuthService";
 import { PlanService } from "../services/PlanService";
 import { RateLimiter } from "../services/RateLimiter";
 import { MessageProcessingService } from "../services/MessageProcessingService";
+import { accessKeyCheckDigit } from "../utils/fiscalKey";
 
 function baseMsg(over: Partial<IncomingMessage>): IncomingMessage {
   return { platform: "telegram", externalId: "1", kind: "text", ...over } as IncomingMessage;
@@ -24,6 +26,7 @@ describe("BotCore", () => {
   let userService: sinon.SinonStubbedInstance<UserService>;
   let ocrService: sinon.SinonStubbedInstance<OcrService>;
   let purchaseService: sinon.SinonStubbedInstance<PurchaseService>;
+  let qrService: sinon.SinonStubbedInstance<QrService>;
   let budgetService: sinon.SinonStubbedInstance<BudgetService>;
   let reminderService: sinon.SinonStubbedInstance<ReminderService>;
   let mergeService: sinon.SinonStubbedInstance<MergeService>;
@@ -40,6 +43,7 @@ describe("BotCore", () => {
     userService = sinon.createStubInstance(UserService);
     ocrService = sinon.createStubInstance(OcrService);
     purchaseService = sinon.createStubInstance(PurchaseService);
+    qrService = sinon.createStubInstance(QrService);
     budgetService = sinon.createStubInstance(BudgetService);
     reminderService = sinon.createStubInstance(ReminderService);
     mergeService = sinon.createStubInstance(MergeService);
@@ -52,6 +56,7 @@ describe("BotCore", () => {
       userService,
       ocrService,
       purchaseService,
+      qrService,
       budgetService,
       reminderService,
       mergeService,
@@ -215,6 +220,27 @@ describe("BotCore", () => {
     await core.handle(baseMsg({ kind: "text", text: "sim" }), reply);
 
     expect(replies.some((r) => r.includes("Orçamento de Alimentação estourado"))).toBe(true);
+  });
+
+  it("não duplica um cupom fiscal já registrado (NFC-e)", async () => {
+    const base43 = "35" + "2406" + "12345678000199" + "65" + "001" + "000000123" + "1" + "00000012";
+    const key = base43 + String(accessKeyCheckDigit(base43));
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+    mps.processMessage.resolves({
+      intent: "purchase",
+      userId: "u1",
+      description: "x",
+      total: 5,
+      date: new Date(),
+      items: [],
+      accessKey: key,
+    });
+    purchaseService.findByFiscalKey.resolves({ _id: "existing" } as any);
+
+    await core.handle(baseMsg({ kind: "text", text: "x" }), reply);
+
+    expect(purchaseService.addPurchase.called).toBe(false);
+    expect(replies.some((r) => r.includes("já foi registrado"))).toBe(true);
   });
 
   it("blocks a purchase when the free plan limit is reached", async () => {

@@ -36,10 +36,16 @@ export function getPrompt001(lang: string | null, message: string, categories?: 
         "total": number,
         "category": string
       }
-    ]
+    ],
+    "accessKey": string (opcional — chave de acesso da NFC-e/NF-e: exatamente 44 dígitos)
   }
 
   NÃO inclua o campo "userId" — ele é definido pelo sistema, não por você.
+
+  ## **Chave de acesso (NFC-e)**:
+  Em fotos de cupom fiscal, procure a "Chave de acesso" — uma sequência de **44 dígitos**
+  (geralmente impressa abaixo do QR Code). Se encontrá-la, inclua-a em "accessKey" com apenas os
+  44 dígitos (sem espaços). Se não houver, omita o campo.
 
   ## **Consultas de Gastos (intent "query")**:
   Quando o texto perguntar sobre gastos, retorne apenas { "intent": "query", "period": ..., "groupBy": ... }.

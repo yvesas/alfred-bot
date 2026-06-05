@@ -4,6 +4,7 @@ import { Replier } from "./Replier";
 import { UserService } from "../services/UserService";
 import { OcrService } from "../services/OcrService";
 import { PurchaseService } from "../services/PurchaseService";
+import { QrService } from "../services/QrService";
 import { BudgetService } from "../services/BudgetService";
 import { ReminderService } from "../services/ReminderService";
 import { MergeService } from "../services/MergeService";
@@ -24,6 +25,7 @@ import {
 } from "../infra/converters/purchaseConverter";
 import { IPurchaseCreate } from "../models/Purchase";
 import { IUser, Language, Plan } from "../models/User";
+import { extractAccessKey, isValidAccessKey } from "../utils/fiscalKey";
 import { MessageKey, t } from "../i18n";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
@@ -67,6 +69,7 @@ export class BotCore {
     @inject(UserService) private userService: UserService,
     @inject(OcrService) private ocrService: OcrService,
     @inject(PurchaseService) private purchaseService: PurchaseService,
+    @inject(QrService) private qrService: QrService,
     @inject(BudgetService) private budgetService: BudgetService,
     @inject(ReminderService) private reminderService: ReminderService,
     @inject(MergeService) private mergeService: MergeService,
@@ -223,7 +226,17 @@ export class BotCore {
   }
 
   // OCR_MODE=multimodal: imagem → JSON numa única chamada. Senão: OCR → texto → extração.
+  // Depois, enriquece com a chave de acesso da NFC-e (IA + fallback de QR).
   private async processReceiptImage(
+    platform: Platform,
+    externalId: string,
+    base64Image: string,
+  ): Promise<ModelResponse> {
+    const processed = await this.extractFromImage(platform, externalId, base64Image);
+    return this.enrichFiscalKey(processed, base64Image);
+  }
+
+  private async extractFromImage(
     platform: Platform,
     externalId: string,
     base64Image: string,
@@ -243,6 +256,23 @@ export class BotCore {
 
     const ocrText = await this.ocrService.extractTextFromImage(base64Image);
     return this.messageProcessingService.processMessage(platform, externalId, ocrText);
+  }
+
+  // Resolve a chave de acesso (NFC-e): tenta a que a IA leu no texto; se não vier válida,
+  // decodifica o QR Code da imagem. Mantém apenas chaves com dígito verificador correto.
+  private async enrichFiscalKey(
+    processed: ModelResponse,
+    base64Image: string,
+  ): Promise<ModelResponse> {
+    if (processed.intent !== "purchase") return processed;
+
+    let key = extractAccessKey(processed.accessKey);
+    if (!key || !isValidAccessKey(key)) {
+      const qrText = await this.qrService.decode(base64Image);
+      key = extractAccessKey(qrText);
+    }
+    processed.accessKey = key && isValidAccessKey(key) ? key : undefined;
+    return processed;
   }
 
   // ---------- Roteamento da resposta da IA ----------
@@ -267,14 +297,23 @@ export class BotCore {
       return;
     }
 
+    const purchaseData = convertModelResponseToPurchase(processed);
+    purchaseData.userId = userId; // garante a identidade canônica (Fase 6)
+
+    // Deduplicação de cupom fiscal (NFC-e): não registra o mesmo cupom duas vezes.
+    if (purchaseData.fiscalKey) {
+      const existing = await this.purchaseService.findByFiscalKey(userId, purchaseData.fiscalKey);
+      if (existing) {
+        await reply.text(t(lang, "receipt_already_registered"));
+        return;
+      }
+    }
+
     // Limite do plano free (compras/mês). Pro é ilimitado.
     if (!(await this.planService.canRegister(userId, plan))) {
       await reply.text(t(lang, "plan_limit_reached", { limit: this.planService.freeLimit }));
       return;
     }
-
-    const purchaseData = convertModelResponseToPurchase(processed);
-    purchaseData.userId = userId; // garante a identidade canônica (Fase 6)
 
     const validation = validatePurchaseData(purchaseData);
     if (!validation.ok) {

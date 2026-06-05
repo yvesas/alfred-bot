@@ -27,6 +27,7 @@ export interface ModelResponse {
   store?: IStoreInfo;
   tax?: ITaxInfo;
   items?: IPurchaseItem[];
+  accessKey?: string; // chave de acesso da NFC-e (44 díg), quando a IA/QR a identifica
 }
 
 export interface IMessageProcessor {

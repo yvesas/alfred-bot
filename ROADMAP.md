@@ -41,8 +41,8 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - ✅ **Lembretes** (contas a pagar / gasto recorrente) — `/lembretes` + push (Telegram/WhatsApp/Web)
 - ✅ **Multi-idioma** (A4) — `User.language` + `/idioma`; IA responde no idioma; **todas** as strings fixas no catálogo i18n (pt/en/es) + i18n do front com seletor
 - ✅ **Relatórios mais ricos**: painel web com resumo do mês, comparativo mês a mês (gráfico de barras) e quebra por categoria (`/api/report` + `ReportService`)
-- ⬜ **Exportação** de dados (CSV / PDF)
-- ⬜ **Leitura de QR Code / NFC-e** do cupom fiscal (dados estruturados, sem depender só de OCR)
+- 🟡 **Exportação** de dados (CSV / PDF) — escopo definido: CSV no servidor (web + `/exportar` no chat) + PDF client-side (jsPDF) no painel. **A construir**
+- 🟡 **Leitura de QR Code / NFC-e** — chave de acesso (44 díg) via IA + **fallback `jsQR`**; valida o DV (mód-11), deriva **CNPJ/UF/data** e **deduplica o cupom** (`Purchase.fiscalKey`). **Falta (Fase 2, opcional):** itens completos via API/SEFAZ
 - 🟡 **Gestão de produtos/estoque** — `ProductService`/`ProductRepository` existem, mas **não estão ligados** ao bot
 
 ### Plataforma / negócio (rumo à comercialização)

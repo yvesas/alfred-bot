@@ -93,6 +93,13 @@ describe("PurchaseRepository (mongo em memória)", () => {
     expect(await repo.deleteById("owner", id)).not.toBeNull();
   });
 
+  it("findByFiscalKey acha o cupom do usuário (dedup)", async () => {
+    await repo.create(purchase({ userId: "u1", fiscalKey: "CHAVE-1" }));
+    expect(await repo.findByFiscalKey("u1", "CHAVE-1")).not.toBeNull();
+    expect(await repo.findByFiscalKey("u1", "OUTRA")).toBeNull();
+    expect(await repo.findByFiscalKey("outro", "CHAVE-1")).toBeNull();
+  });
+
   it("reassign e delete por usuário", async () => {
     await repo.create(purchase({ userId: "anon" }));
     await repo.create(purchase({ userId: "anon" }));

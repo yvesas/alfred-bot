@@ -28,6 +28,11 @@ export class PurchaseRepository {
     return await PurchaseModel.countDocuments({ userId }).exec();
   }
 
+  // Cupom já registrado por este usuário? (dedup por chave de acesso da NFC-e)
+  async findByFiscalKey(userId: string, fiscalKey: string): Promise<IPurchase | null> {
+    return await PurchaseModel.findOne({ userId, fiscalKey }).exec();
+  }
+
   // Totais por mês (ano/mês) desde os últimos `months` meses — para o painel/relatórios.
   async getMonthlyTotals(
     userId: string,

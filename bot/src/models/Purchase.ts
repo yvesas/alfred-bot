@@ -45,6 +45,7 @@ export interface IPurchaseBase {
   store?: IStoreInfo;
   tax?: ITaxInfo;
   items: IPurchaseItem[];
+  fiscalKey?: string; // chave de acesso da NFC-e (44 díg) — identidade do cupom (dedup)
 }
 
 export type IPurchaseCreate = Omit<IPurchaseBase, "_id">;
@@ -59,10 +60,18 @@ const PurchaseSchema = new Schema<IPurchase>(
     tax: { type: TaxInfoSchema },
     store: { type: StoreSchema },
     items: { type: [PurchaseItemSchema] },
+    fiscalKey: { type: String },
   },
   {
     timestamps: true,
   },
+);
+
+// Um mesmo cupom (chave de acesso) só pode ser registrado uma vez por usuário (dedup).
+// Partial: a unicidade só vale para documentos que TÊM fiscalKey (compras sem cupom não colidem).
+PurchaseSchema.index(
+  { userId: 1, fiscalKey: 1 },
+  { unique: true, partialFilterExpression: { fiscalKey: { $exists: true } } },
 );
 
 export const PurchaseModel = model<IPurchase>("Purchase", PurchaseSchema);

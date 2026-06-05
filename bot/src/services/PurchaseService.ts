@@ -33,6 +33,11 @@ export class PurchaseService {
     return await this.purchaseRepo.findByUser(userId);
   }
 
+  // Cupom já registrado (dedup por chave de acesso da NFC-e).
+  async findByFiscalKey(userId: string, fiscalKey: string): Promise<IPurchase | null> {
+    return await this.purchaseRepo.findByFiscalKey(userId, fiscalKey);
+  }
+
   // Histórico paginado (mais recentes primeiro). `page` é 1-based.
   async getUserPurchasesPage(userId: string, page = 1, pageSize = 5): Promise<PurchasePage> {
     const total = await this.purchaseRepo.countByUser(userId);

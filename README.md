@@ -1,7 +1,9 @@
 # alfred-bot
 
-Monorepo do **Alfred** — um assistente financeiro pessoal no Telegram que registra compras e gastos a
-partir de texto ou de fotos de cupons fiscais (IA + OCR), com persistência em MongoDB.
+Monorepo do **Alfred** — um assistente financeiro pessoal no **Telegram e WhatsApp** que registra
+compras e gastos a partir de texto ou de fotos de cupons fiscais (IA + OCR), com persistência em MongoDB.
+
+> 📘 **Como usar e testar:** [`GUIA-DE-USO-E-TESTE.md`](./GUIA-DE-USO-E-TESTE.md)
 
 ## Projetos
 
@@ -29,6 +31,7 @@ Configure as variáveis em `bot/.env` (a partir de `bot/.env.sample`).
 
 ## Documentação
 
+- **Guia de uso e teste:** [`GUIA-DE-USO-E-TESTE.md`](./GUIA-DE-USO-E-TESTE.md)
 - Bot: [`bot/README.md`](./bot/README.md)
 - Roadmap: [`bot/ROADMAP.md`](./bot/ROADMAP.md)
 - Análise técnica: [`bot/ANALISE-PROJETO.md`](./bot/ANALISE-PROJETO.md)

@@ -25,7 +25,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 | Lembretes (push recorrente) | ✅ | `/lembretes add <dia> <descrição>`; agendador envia push no Telegram/WhatsApp/Web (contas a pagar) |
 | Escolha do modelo de IA por usuário | ✅ | `/ia gpt` \| `/ia gemini` (Gemini é o padrão) |
 | Persistência em MongoDB | ✅ | Mongoose (User, Purchase, Reminder) |
-| Testes automatizados | 🟡 | 78 testes (services/converters/onboarding/handlers do `BotCore`); cobertura dos repositories ainda baixa |
+| Testes automatizados | ✅ | Bot: **153 testes** (~75% statements) — services, handlers do `BotCore`, **repositories (Mongo em memória)** e **API HTTP (integração)**. Web: **20 testes** (vitest + React Testing Library) — libs, componente e página |
 | CI (GitHub Actions) | ✅ | Roda testes + cobertura (Codecov) em push/PR para `main`/`develop` |
 
 ---
@@ -104,9 +104,12 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - ✅ **Validação programática dos dados extraídos pela IA** antes de persistir (`validatePurchaseData`) — a confirmação de UX continua em "Funcionalidades que desejamos"
 
 ### Testes
-- ⬜ **Cobrir os handlers do `TelegramBot`** (texto, foto, contato, comandos) com testes de integração
-- ⬜ **Testes do fluxo OCR → IA → persistência**
-- ⬜ Aumentar cobertura dos repositories
+- ✅ **Handlers do `BotCore`** cobertos (texto, comandos, confirmação, vínculo, e-mail) com sinon
+- ✅ **Repositories** com **MongoDB em memória** (`mongodb-memory-server`) — queries/aggregations reais
+- ✅ **API HTTP** (`authServer`) com teste de **integração** (sobe o servidor e bate nos endpoints)
+- ✅ **Frontend**: vitest + **React Testing Library** (libs, componente `LoginModal`, página `Dashboard`); `pnpm test:coverage` nos dois projetos
+- ⬜ **Testes do fluxo OCR → IA → persistência** (end-to-end)
+- ⬜ Subir a cobertura do front (páginas Painel/Conta/Landing com API mockada)
 
 ### CI/CD
 - ✅ CI roda **lint + type-check + testes com cobertura** (antes só testes) com `--frozen-lockfile`

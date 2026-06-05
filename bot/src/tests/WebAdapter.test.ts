@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import "reflect-metadata";
 import sinon from "sinon";
 import { WebAdapter, WebOutbound } from "../platforms/web/WebAdapter";
@@ -68,5 +69,31 @@ describe("WebAdapter.processRaw", () => {
     await adapter.processRaw(JSON.stringify({ type: "user_message", text: "oi" }), send);
     expect(out[0].type).toBe("error");
     expect(core.handle.called).toBe(false);
+  });
+
+  it("usa o sub do JWT como externalId quando o token é válido", async () => {
+    auth.verifyJwt.returns({ sub: "wos1" });
+    core.handle.resolves();
+
+    await adapter.processRaw(
+      JSON.stringify({ type: "user_message", clientId: "c1", text: "oi", token: "jwt" }),
+      send,
+    );
+
+    expect(core.handle.firstCall.args[0].externalId).toBe("wos1");
+  });
+
+  it("sendTo entrega a todos os sockets abertos do clientId (push)", async () => {
+    const sent: string[] = [];
+    const sock = { readyState: 1, OPEN: 1, send: (s: string) => sent.push(s) };
+    (adapter as any).clients.set("c1", new Set([sock]));
+
+    const ok = await adapter.sendTo("c1", "🔔 Lembrete");
+    expect(ok).toBe(true);
+    expect(JSON.parse(sent[0])).toEqual({ type: "bot_message", text: "🔔 Lembrete" });
+  });
+
+  it("sendTo retorna false quando ninguém está online", async () => {
+    expect(await adapter.sendTo("desconhecido", "x")).toBe(false);
   });
 });

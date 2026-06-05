@@ -28,4 +28,19 @@ describe("AuthService (JWT)", () => {
     config.jwtSecret = "";
     expect(new AuthService().verifyJwt(token)).toBeNull();
   });
+
+  it("canVerifyEmail reflete a presença de API key + client id", () => {
+    const apiKey = config.workosApiKey;
+    const clientId = config.workosClientId;
+
+    config.workosApiKey = "sk_test";
+    config.workosClientId = "client_x";
+    expect(new AuthService().canVerifyEmail()).toBe(true);
+
+    config.workosApiKey = "";
+    expect(new AuthService().canVerifyEmail()).toBe(false);
+
+    config.workosApiKey = apiKey;
+    config.workosClientId = clientId;
+  });
 });

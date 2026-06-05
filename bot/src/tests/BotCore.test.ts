@@ -58,7 +58,7 @@ describe("BotCore", () => {
     expect(userService.findByIdentity.called).toBe(false);
   });
 
-  it("registers a purchase from a text message of a registered user", async () => {
+  it("asks to confirm a purchase, then saves on 'sim'", async () => {
     userService.findByIdentity.resolves({ status: "complete" } as any);
     mps.processMessage.resolves({
       intent: "purchase",
@@ -70,10 +70,35 @@ describe("BotCore", () => {
     });
     purchaseService.addPurchase.resolves({} as any);
 
+    // 1ª mensagem: pede confirmação, ainda não salva.
     await core.handle(baseMsg({ kind: "text", text: "agua 7" }), reply);
+    expect(purchaseService.addPurchase.called).toBe(false);
+    expect(replies.some((r) => r.includes("Confirmar"))).toBe(true);
 
+    // "sim": salva.
+    replies.length = 0;
+    await core.handle(baseMsg({ kind: "text", text: "sim" }), reply);
     expect(purchaseService.addPurchase.calledOnce).toBe(true);
     expect(replies.some((r) => r.includes("Compra registrada"))).toBe(true);
+  });
+
+  it("cancels a pending purchase on 'não'", async () => {
+    userService.findByIdentity.resolves({ status: "complete" } as any);
+    mps.processMessage.resolves({
+      intent: "purchase",
+      userId: "1",
+      description: "agua",
+      total: 7,
+      date: new Date(),
+      items: [],
+    });
+
+    await core.handle(baseMsg({ kind: "text", text: "agua 7" }), reply);
+    replies.length = 0;
+    await core.handle(baseMsg({ kind: "text", text: "não" }), reply);
+
+    expect(purchaseService.addPurchase.called).toBe(false);
+    expect(replies.some((r) => r.toLowerCase().includes("cancel"))).toBe(true);
   });
 
   it("answers a spending query", async () => {

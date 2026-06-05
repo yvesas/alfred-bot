@@ -15,14 +15,33 @@ import {
   convertModelResponseToPurchase,
   validatePurchaseData,
 } from "../infra/converters/purchaseConverter";
+import { IPurchaseCreate } from "../models/Purchase";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
 import { messagesReceivedTotal } from "../infra/metrics";
+
+// Respostas aceitas na confirmação de compra ("sim/não").
+const AFFIRMATIVE = new Set([
+  "sim",
+  "s",
+  "yes",
+  "y",
+  "confirmar",
+  "confirma",
+  "ok",
+  "isso",
+  "👍",
+  "✅",
+]);
+const NEGATIVE = new Set(["não", "nao", "n", "no", "cancelar", "cancela", "cancelado"]);
 
 // Lógica de conversa do bot, independente de plataforma. Recebe uma IncomingMessage
 // normalizada e um Replier; os adapters cuidam do transporte (Telegram, WhatsApp, ...).
 @injectable()
 export class BotCore {
+  // Compras aguardando confirmação, por usuário (chave "platform:externalId").
+  private readonly pendingPurchases = new Map<string, IPurchaseCreate>();
+
   constructor(
     @inject(UserService) private userService: UserService,
     @inject(OcrService) private ocrService: OcrService,
@@ -84,12 +103,17 @@ export class BotCore {
       return;
     }
 
+    // Se há uma compra aguardando confirmação, interpreta esta mensagem como a resposta.
+    if (await this.resolvePendingConfirmation(reply, platform, externalId, msg.text ?? "")) {
+      return;
+    }
+
     const processed = await this.messageProcessingService.processMessage(
       platform,
       externalId,
       msg.text ?? "",
     );
-    await this.handleProcessed(reply, externalId, processed);
+    await this.handleProcessed(reply, platform, externalId, processed);
   }
 
   private async handleContact(msg: IncomingMessage, reply: Replier): Promise<void> {
@@ -137,7 +161,7 @@ export class BotCore {
     try {
       const base64Image = msg.getImageBase64 ? await msg.getImageBase64() : "";
       const processed = await this.processReceiptImage(platform, externalId, base64Image);
-      await this.handleProcessed(reply, externalId, processed);
+      await this.handleProcessed(reply, platform, externalId, processed);
     } catch (error) {
       logger.error({ err: error }, "Erro ao baixar/processar a imagem");
       await reply.text("Houve um erro ao processar a imagem. Tente novamente.");
@@ -171,11 +195,12 @@ export class BotCore {
 
   private async handleProcessed(
     reply: Replier,
-    userId: string,
+    platform: Platform,
+    externalId: string,
     processed: ModelResponse,
   ): Promise<void> {
     if (processed.intent === "query") {
-      await this.handleSpendingQuery(reply, userId, processed.period, processed.groupBy);
+      await this.handleSpendingQuery(reply, externalId, processed.period, processed.groupBy);
       return;
     }
 
@@ -195,6 +220,56 @@ export class BotCore {
       return;
     }
 
+    // Confirmação antes de salvar: guarda a pendente e pede "sim/não".
+    if (config.confirmPurchase) {
+      this.pendingPurchases.set(this.pendingKey(platform, externalId), purchaseData);
+      await reply.text(
+        `Confirmar esta compra?\n\n🛒 ${purchaseData.description} — R$ ${purchaseData.total.toFixed(2)}\n\nResponda "sim" para salvar ou "não" para cancelar.`,
+      );
+      return;
+    }
+
+    await this.savePurchase(reply, purchaseData);
+  }
+
+  // ---------- Confirmação de compra (A1) ----------
+
+  private pendingKey(platform: Platform, externalId: string): string {
+    return `${platform}:${externalId}`;
+  }
+
+  // Interpreta a mensagem como resposta a uma compra pendente.
+  // Retorna true se consumiu a mensagem (salvou/cancelou); false se não havia pendente
+  // ou se a resposta não foi sim/não (nesse caso, abandona a pendente e segue o fluxo normal).
+  private async resolvePendingConfirmation(
+    reply: Replier,
+    platform: Platform,
+    externalId: string,
+    text: string,
+  ): Promise<boolean> {
+    const key = this.pendingKey(platform, externalId);
+    const pending = this.pendingPurchases.get(key);
+    if (!pending) return false;
+
+    const answer = text.trim().toLowerCase();
+
+    if (AFFIRMATIVE.has(answer)) {
+      this.pendingPurchases.delete(key);
+      await this.savePurchase(reply, pending);
+      return true;
+    }
+    if (NEGATIVE.has(answer)) {
+      this.pendingPurchases.delete(key);
+      await reply.text("Ok, cancelei essa compra. 👍");
+      return true;
+    }
+
+    // Resposta diferente de sim/não: descarta a pendente e processa a mensagem normalmente.
+    this.pendingPurchases.delete(key);
+    return false;
+  }
+
+  private async savePurchase(reply: Replier, purchaseData: IPurchaseCreate): Promise<void> {
     try {
       await this.purchaseService.addPurchase(purchaseData);
       await reply.text(

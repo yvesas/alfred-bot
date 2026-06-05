@@ -44,8 +44,11 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
   - ✅ Fase 1 — `BotCore` + camada de adapter (`IncomingMessage`/`Replier`/`IMessagingAdapter`); `TelegramAdapter` (Telegram intacto); orquestrador por `PLATFORMS`
   - ✅ Fase 2 — identidade multi-plataforma (`User.identities[]` + `findByIdentity`); lookups por `(platform, externalId)`; aditivo, sem migração (compras seguem por id externo; migração canônica adiada para a Fase 4)
   - ✅ Fase 3 — `WhatsAppAdapter` (Baileys, login por QR, sessão persistida); habilitado por `PLATFORMS=telegram,whatsapp`; telefone preenchido automaticamente no WhatsApp
-  - ⬜ Fases 4-5 — vínculo de contas, API oficial (Cloud API)
-- ⬜ **Chat web (React + Tailwind)** — frontend de chat reusando o `BotCore` via `WebAdapter` (WebSocket), sem login. Plano em [../PLANO-WEB-CHAT.md](../PLANO-WEB-CHAT.md)
+  - ⬜ Fases 4-5 — vínculo de contas (= chat web Fase 6), API oficial (Cloud API)
+- 🟡 **Chat web (React + Tailwind)** — frontend de chat reusando o `BotCore` via `WebAdapter` (WebSocket). Plano em [../PLANO-WEB-CHAT.md](../PLANO-WEB-CHAT.md)
+  - ✅ Fases 1-4 — backend `WebAdapter` (WS), frontend (chat UI, dark/light), Docker/CI, polimento. Sem login (id anônimo)
+  - ⬜ Fases 5-6 — login web (e-mail magic-link/OAuth) + vínculo de contas multi-plataforma
+- ⬜ **Evolução de produto (cross-plataforma via `BotCore`)** — confirmar compra, editar/excluir, categorias personalizadas, multi-idioma. Plano em [../PLANO-EVOLUCAO.md](../PLANO-EVOLUCAO.md)
 - ⬜ **Planos e limites de uso** (free/pago)
 - ⬜ **Painel web** para visualizar gastos fora do Telegram
 - ⬜ **Política de privacidade / LGPD** — dados financeiros são sensíveis

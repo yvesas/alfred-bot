@@ -29,6 +29,8 @@ export const config = {
   ocrMode: (process.env.OCR_MODE ?? "ocr").toLowerCase(),
   // Usa || (não ??) para que variáveis presentes porém VAZIAS no .env caiam no default.
   healthPort: Number(process.env.HEALTH_PORT) || 3000,
+  // Pede confirmação ("sim/não") antes de salvar uma compra. Default: ligado.
+  confirmPurchase: (process.env.CONFIRM_PURCHASE ?? "true").toLowerCase() !== "false",
   logLevel: process.env.LOG_LEVEL || (isProd ? "info" : "debug"),
   rateLimit: {
     max: Number(process.env.RATE_LIMIT_MAX) || 20,

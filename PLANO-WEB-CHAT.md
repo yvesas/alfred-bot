@@ -118,7 +118,8 @@ indicador de conexão. Estado mínimo (sem Redux) — `useReducer`/Zustand.
 1. ✅ **Backend WebAdapter** — `Platform "web"`, `WebAdapter` (ws, protocolo JSON, Origin allowlist,
    `maxPayload`), config `WEB_PORT`/`WEB_ALLOWED_ORIGIN`, orquestrador (`PLATFORMS=web`), comandos
    compartilhados (`core/commands.ts`), testes. Telegram/WhatsApp intactos. Identidade **T0 (anônima)**.
-2. **Frontend `web/`** — scaffold Vite+React+Tailwind, `useChatSocket` + `useChat` + `clientId`, UI do chat.
+2. ✅ **Frontend `web/`** — Vite+React+Tailwind; `useChatSocket` (transporte/reconexão) + `useChat`
+   (estado) + `clientId`; UI do chat (ChatPage/MessageList/Bubble/ChatInput com foto/TypingIndicator).
 3. **Integração + Docker** — serviço `web` no compose, `VITE_WS_URL`, segurança WS (Origin, limites), CI do web.
 4. **Polimento** — "digitando…", upload de foto, dark/light, reconexão, estados de erro/empty.
 5. **Login web (T1)** — e-mail magic-link/OTP **ou** OAuth (Google); JWT no handshake do WS;

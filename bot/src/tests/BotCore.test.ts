@@ -14,6 +14,7 @@ import { MergeService } from "../services/MergeService";
 import { LinkTokenService } from "../services/LinkTokenService";
 import { AuthService } from "../services/AuthService";
 import { PlanService } from "../services/PlanService";
+import { ExportService } from "../services/ExportService";
 import { RateLimiter } from "../services/RateLimiter";
 import { MessageProcessingService } from "../services/MessageProcessingService";
 import { accessKeyCheckDigit } from "../utils/fiscalKey";
@@ -33,6 +34,7 @@ describe("BotCore", () => {
   let linkTokens: sinon.SinonStubbedInstance<LinkTokenService>;
   let authService: sinon.SinonStubbedInstance<AuthService>;
   let planService: sinon.SinonStubbedInstance<PlanService>;
+  let exportService: sinon.SinonStubbedInstance<ExportService>;
   let rateLimiter: sinon.SinonStubbedInstance<RateLimiter>;
   let mps: sinon.SinonStubbedInstance<MessageProcessingService>;
   let core: BotCore;
@@ -50,6 +52,7 @@ describe("BotCore", () => {
     linkTokens = sinon.createStubInstance(LinkTokenService);
     authService = sinon.createStubInstance(AuthService);
     planService = sinon.createStubInstance(PlanService);
+    exportService = sinon.createStubInstance(ExportService);
     rateLimiter = sinon.createStubInstance(RateLimiter);
     mps = sinon.createStubInstance(MessageProcessingService);
     core = new BotCore(
@@ -63,6 +66,7 @@ describe("BotCore", () => {
       linkTokens,
       authService,
       planService,
+      exportService,
       rateLimiter,
       mps,
     );
@@ -408,5 +412,24 @@ describe("BotCore", () => {
 
     expect(authService.sendEmailCode.called).toBe(false);
     expect(replies.some((r) => r.toLowerCase().includes("indisponível"))).toBe(true);
+  });
+
+  it("exporta as compras em CSV via /exportar", async () => {
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+    exportService.purchasesCsv.resolves("Data,Descrição\n2026-06-01,agua");
+    const docs: { filename: string; mime: string }[] = [];
+    const replyDoc: Replier = {
+      text: async (m: string) => void replies.push(m),
+      document: async (_content: Buffer, filename: string, mime: string) =>
+        void docs.push({ filename, mime }),
+    };
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "exportar", args: [] } }),
+      replyDoc,
+    );
+
+    expect(exportService.purchasesCsv.calledWith("u1")).toBe(true);
+    expect(docs[0]).toEqual({ filename: "alfred-compras.csv", mime: "text/csv" });
   });
 });

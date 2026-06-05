@@ -15,6 +15,7 @@ export type Outbound =
 export type Inbound =
   | { type: "bot_message"; text: string }
   | { type: "typing"; value: boolean }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | { type: "download"; filename: string; mimeType: string; content: string }; // content em base64
 
 export type ConnectionStatus = "connecting" | "open" | "closed";

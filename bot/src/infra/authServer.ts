@@ -5,6 +5,7 @@ import { AccountService } from "../services/AccountService";
 import { LinkTokenService } from "../services/LinkTokenService";
 import { ReportService } from "../services/ReportService";
 import { PlanService } from "../services/PlanService";
+import { ExportService } from "../services/ExportService";
 import { UserService } from "../services/UserService";
 import { IUser } from "../models/User";
 import { config } from "./config";
@@ -27,6 +28,7 @@ export class AuthServer {
     @inject(LinkTokenService) private linkTokens: LinkTokenService,
     @inject(ReportService) private reports: ReportService,
     @inject(PlanService) private plans: PlanService,
+    @inject(ExportService) private exports: ExportService,
     @inject(UserService) private users: UserService,
   ) {}
 
@@ -67,6 +69,7 @@ export class AuthServer {
     // API autenticada por JWT (Bearer) — usada pelo painel/conta do app web.
     if (url.pathname === "/api/me") return this.apiMe(req, res);
     if (url.pathname === "/api/report") return this.apiReport(req, res);
+    if (url.pathname === "/api/export.csv") return this.apiExportCsv(req, res);
     if (req.method === "DELETE" && url.pathname === "/api/account") {
       return this.apiDeleteAccount(req, res);
     }
@@ -111,6 +114,20 @@ export class AuthServer {
       return;
     }
     json(res, 200, await this.reports.dashboard(String(user._id)));
+  }
+
+  private async apiExportCsv(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    const user = await this.authedUser(req);
+    if (!user) {
+      json(res, 401, { error: "unauthorized" });
+      return;
+    }
+    const csv = await this.exports.purchasesCsv(String(user._id));
+    res.writeHead(200, {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": 'attachment; filename="alfred-compras.csv"',
+    });
+    res.end(`﻿${csv}`); // BOM para o Excel reconhecer UTF-8
   }
 
   private async apiDeleteAccount(

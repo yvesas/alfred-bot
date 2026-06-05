@@ -14,4 +14,5 @@ export const KNOWN_COMMANDS = [
   "vincular",
   "email",
   "codigo",
+  "exportar",
 ];

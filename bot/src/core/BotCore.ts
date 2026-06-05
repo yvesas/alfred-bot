@@ -11,6 +11,7 @@ import { MergeService } from "../services/MergeService";
 import { LinkTokenService } from "../services/LinkTokenService";
 import { AuthService } from "../services/AuthService";
 import { PlanService } from "../services/PlanService";
+import { ExportService } from "../services/ExportService";
 import { RateLimiter } from "../services/RateLimiter";
 import { isValidEmail } from "../utils/validation";
 import {
@@ -76,6 +77,7 @@ export class BotCore {
     @inject(LinkTokenService) private linkTokens: LinkTokenService,
     @inject(AuthService) private authService: AuthService,
     @inject(PlanService) private planService: PlanService,
+    @inject(ExportService) private exportService: ExportService,
     @inject(RateLimiter) private rateLimiter: RateLimiter,
     @inject(MessageProcessingService) private messageProcessingService: MessageProcessingService,
   ) {}
@@ -431,6 +433,8 @@ export class BotCore {
         return this.handleSpendingQuery(reply, userId, lang, "current_month");
       case "compras":
         return this.handleGetPurchases(reply, lang, userId, this.parsePage(args[0]));
+      case "exportar":
+        return this.handleExport(reply, lang, userId);
       case "excluir":
         return this.handleDeletePurchase(reply, lang, userId, args[0]);
       case "editar":
@@ -875,6 +879,22 @@ export class BotCore {
     footer += `\n${t(lang, "purchases_fix_hint")}`;
 
     await reply.text(`${t(lang, "purchases_header")}\n\n${body}${footer}`);
+  }
+
+  // ---------- Exportação (CSV) ----------
+
+  private async handleExport(reply: Replier, lang: Language, userId: string): Promise<void> {
+    if (!reply.document) {
+      await reply.text(t(lang, "export_unavailable"));
+      return;
+    }
+    const csv = await this.exportService.purchasesCsv(userId);
+    if (csv.split("\n").length <= 1) {
+      await reply.text(t(lang, "export_empty"));
+      return;
+    }
+    await reply.document(Buffer.from(csv, "utf8"), "alfred-compras.csv", "text/csv");
+    await reply.text(t(lang, "export_done"));
   }
 
   // ---------- Consulta de gastos ----------

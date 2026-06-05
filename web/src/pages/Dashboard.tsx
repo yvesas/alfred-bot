@@ -2,8 +2,10 @@ import { useEffect, useState, type ReactNode } from "react";
 import { TopNav } from "../components/TopNav";
 import { useI18n } from "../lib/i18n";
 import { useAuth } from "../features/auth/AuthProvider";
-import { fetchReport, type DashboardReport } from "../lib/api";
+import { fetchReport, fetchCsvBlob, type DashboardReport } from "../lib/api";
 import { money, monthLabel } from "../lib/format";
+import { triggerDownload } from "../lib/download";
+import { exportDashboardPdf } from "../lib/pdf";
 
 function Shell({ children }: { children: ReactNode }) {
   return (
@@ -95,13 +97,45 @@ export function Dashboard() {
   }
 
   const { current, last, monthly } = report;
+
+  const onCsv = async () => {
+    const blob = await fetchCsvBlob(token);
+    if (blob) triggerDownload(blob, "alfred-compras.csv");
+  };
+  const onPdf = () =>
+    exportDashboardPdf(report, locale, {
+      title: t("dashboard_title"),
+      thisMonth: t("dashboard_this_month"),
+      lastMonth: t("dashboard_last_month"),
+      monthly: t("dashboard_monthly"),
+      byCategory: t("dashboard_by_category"),
+    });
+
   const diff = current.total - last.total;
   const diffLabel = `${diff >= 0 ? "+" : "−"}${money(Math.abs(diff), locale)}`;
   const categories = Object.entries(current.byCategory).sort(([, a], [, b]) => b - a);
 
   return (
     <Shell>
-      <h1 className="mb-4 text-xl font-semibold">{t("dashboard_title")}</h1>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold">{t("dashboard_title")}</h1>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onCsv}
+            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            {t("export_csv")}
+          </button>
+          <button
+            type="button"
+            onClick={onPdf}
+            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            {t("export_pdf")}
+          </button>
+        </div>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card title={t("dashboard_this_month")}>

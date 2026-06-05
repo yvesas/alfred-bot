@@ -16,7 +16,8 @@ import { logger } from "../../infra/logger";
 export type WebOutbound =
   | { type: "bot_message"; text: string }
   | { type: "typing"; value: boolean }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | { type: "download"; filename: string; mimeType: string; content: string }; // content em base64
 
 // Tamanho máximo do payload (texto + base64 da imagem) — proteção básica.
 const MAX_PAYLOAD_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -139,6 +140,8 @@ export class WebAdapter implements IMessagingAdapter, OutboundSender {
 
     const reply: Replier = {
       text: async (text: string) => send({ type: "bot_message", text }),
+      document: async (content: Buffer, filename: string, mimeType: string) =>
+        send({ type: "download", filename, mimeType, content: content.toString("base64") }),
     };
 
     send({ type: "typing", value: true });

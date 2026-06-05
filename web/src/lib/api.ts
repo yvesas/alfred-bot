@@ -57,3 +57,9 @@ export async function deleteAccount(token: string): Promise<boolean> {
   const res = await fetch(`${AUTH_URL}/api/account`, { method: "DELETE", headers: headers(token) });
   return res.ok;
 }
+
+// Baixa o CSV das compras (servidor). Retorna o Blob para o chamador disparar o download.
+export async function fetchCsvBlob(token: string): Promise<Blob | null> {
+  const res = await fetch(`${AUTH_URL}/api/export.csv`, { headers: headers(token) });
+  return res.ok ? await res.blob() : null;
+}

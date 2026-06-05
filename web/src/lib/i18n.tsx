@@ -66,6 +66,8 @@ type UIKey =
   | "account_delete"
   | "account_delete_confirm"
   | "account_delete_warning"
+  | "export_csv"
+  | "export_pdf"
   | "common_loading";
 
 const STRINGS: Record<Locale, Record<UIKey, string>> = {
@@ -118,6 +120,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     account_delete: "Excluir minha conta",
     account_delete_confirm: "Tem certeza? Isso apaga todos os seus dados e não dá para desfazer.",
     account_delete_warning: "Apaga compras, lembretes e o cadastro.",
+    export_csv: "Exportar CSV",
+    export_pdf: "Exportar PDF",
     common_loading: "Carregando…",
   },
   en: {
@@ -169,6 +173,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     account_delete: "Delete my account",
     account_delete_confirm: "Are you sure? This erases all your data and can't be undone.",
     account_delete_warning: "Erases purchases, reminders and the profile.",
+    export_csv: "Export CSV",
+    export_pdf: "Export PDF",
     common_loading: "Loading…",
   },
   es: {
@@ -220,6 +226,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     account_delete: "Eliminar mi cuenta",
     account_delete_confirm: "¿Seguro? Esto borra todos tus datos y no se puede deshacer.",
     account_delete_warning: "Borra compras, recordatorios y el perfil.",
+    export_csv: "Exportar CSV",
+    export_pdf: "Exportar PDF",
     common_loading: "Cargando…",
   },
 };

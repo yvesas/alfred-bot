@@ -9,6 +9,7 @@ import { AccountService } from "../services/AccountService";
 import { LinkTokenService } from "../services/LinkTokenService";
 import { ReportService } from "../services/ReportService";
 import { PlanService } from "../services/PlanService";
+import { ExportService } from "../services/ExportService";
 import { UserService } from "../services/UserService";
 import { config } from "../infra/config";
 
@@ -18,6 +19,7 @@ describe("AuthServer (integração HTTP)", () => {
   let linkTokens: sinon.SinonStubbedInstance<LinkTokenService>;
   let reports: sinon.SinonStubbedInstance<ReportService>;
   let plans: sinon.SinonStubbedInstance<PlanService>;
+  let exports: sinon.SinonStubbedInstance<ExportService>;
   let users: sinon.SinonStubbedInstance<UserService>;
   let server: http.Server;
   let base: string;
@@ -29,8 +31,9 @@ describe("AuthServer (integração HTTP)", () => {
     linkTokens = sinon.createStubInstance(LinkTokenService);
     reports = sinon.createStubInstance(ReportService);
     plans = sinon.createStubInstance(PlanService);
+    exports = sinon.createStubInstance(ExportService);
     users = sinon.createStubInstance(UserService);
-    authServer = new AuthServer(auth, accounts, linkTokens, reports, plans, users);
+    authServer = new AuthServer(auth, accounts, linkTokens, reports, plans, exports, users);
 
     server = authServer.start(0);
     if (!server.listening) await new Promise((res) => server.once("listening", res));
@@ -111,6 +114,18 @@ describe("AuthServer (integração HTTP)", () => {
     const res = await fetch(`${base}/api/report`, { headers: { Authorization: "Bearer jwt" } });
     expect(res.status).toBe(200);
     expect(reports.dashboard.calledWith("u1")).toBe(true);
+  });
+
+  it("GET /api/export.csv devolve o CSV como anexo", async () => {
+    auth.verifyJwt.returns({ sub: "wos1" });
+    users.findByIdentity.resolves(authedUser());
+    exports.purchasesCsv.resolves("Data,Total\n2026-06-01,10.00");
+
+    const res = await fetch(`${base}/api/export.csv`, { headers: { Authorization: "Bearer jwt" } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/csv");
+    expect(res.headers.get("content-disposition")).toContain("alfred-compras.csv");
+    expect(await res.text()).toContain("Data,Total");
   });
 
   it("DELETE /api/account exclui a conta", async () => {

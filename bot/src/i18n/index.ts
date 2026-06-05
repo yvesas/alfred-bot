@@ -61,6 +61,10 @@ export type MessageKey =
   | "link_invalid"
   // planos / limites
   | "plan_limit_reached"
+  // exportação
+  | "export_done"
+  | "export_empty"
+  | "export_unavailable"
   // verificação de e-mail no chat (Magic Auth)
   | "email_usage"
   | "email_invalid_address"
@@ -164,6 +168,9 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     link_invalid: "❌ Código de vínculo inválido ou expirado. Gere um novo no app web.",
     plan_limit_reached:
       "🚫 Você atingiu o limite do plano grátis ({limit} compras/mês). Faça upgrade para o Pro no painel web para registrar sem limite.",
+    export_done: "📎 Pronto! Exportei suas compras em CSV.",
+    export_empty: "Você ainda não tem compras para exportar.",
+    export_unavailable: "Exportação de arquivo indisponível por aqui.",
     email_usage: "Uso: /email seu@email.com",
     email_invalid_address: "E-mail inválido. Ex.: /email maria@exemplo.com",
     verification_unavailable: "Verificação de e-mail indisponível no momento.",
@@ -265,6 +272,9 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     link_invalid: "❌ Invalid or expired link code. Generate a new one in the web app.",
     plan_limit_reached:
       "🚫 You reached the free plan limit ({limit} purchases/month). Upgrade to Pro in the web dashboard to register without limits.",
+    export_done: "📎 Done! I exported your purchases as CSV.",
+    export_empty: "You don't have purchases to export yet.",
+    export_unavailable: "File export isn't available here.",
     email_usage: "Usage: /email you@email.com",
     email_invalid_address: "Invalid email. E.g., /email maria@example.com",
     verification_unavailable: "Email verification is unavailable right now.",
@@ -365,6 +375,9 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     link_invalid: "❌ Código de vínculo inválido o expirado. Genera uno nuevo en la app web.",
     plan_limit_reached:
       "🚫 Alcanzaste el límite del plan gratis ({limit} compras/mes). Pasa a Pro en el panel web para registrar sin límite.",
+    export_done: "📎 ¡Listo! Exporté tus compras en CSV.",
+    export_empty: "Aún no tienes compras para exportar.",
+    export_unavailable: "La exportación de archivo no está disponible aquí.",
     email_usage: "Uso: /email tu@email.com",
     email_invalid_address: "Correo inválido. Ej.: /email maria@ejemplo.com",
     verification_unavailable: "La verificación de correo no está disponible ahora.",

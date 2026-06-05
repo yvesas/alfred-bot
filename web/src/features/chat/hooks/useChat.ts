@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getClientId } from "../../../lib/clientId";
 import { notifyIfHidden, requestNotificationPermission } from "../../../lib/notify";
+import { downloadBase64 } from "../../../lib/download";
 import { useAuth } from "../../auth/AuthProvider";
 import type { ChatMessage, Inbound, Role } from "../types";
 import { useChatSocket } from "./useChatSocket";
@@ -38,6 +39,9 @@ export function useChat() {
         case "error":
           setTyping(false);
           append("bot", `⚠️ ${msg.message}`);
+          break;
+        case "download":
+          downloadBase64(msg.filename, msg.mimeType, msg.content);
           break;
       }
     },

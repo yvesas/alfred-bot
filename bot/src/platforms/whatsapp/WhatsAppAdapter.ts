@@ -134,6 +134,13 @@ export class WhatsAppAdapter implements IMessagingAdapter, OutboundSender {
       text: async (message: string) => {
         await this.sock?.sendMessage(jid, { text: message });
       },
+      document: async (content: Buffer, filename: string, mimeType: string) => {
+        await this.sock?.sendMessage(jid, {
+          document: content,
+          fileName: filename,
+          mimetype: mimeType,
+        });
+      },
     };
   }
 

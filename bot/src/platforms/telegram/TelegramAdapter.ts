@@ -43,6 +43,7 @@ export class TelegramAdapter implements IMessagingAdapter, OutboundSender {
     this.bot.command("vincular", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "vincular")));
     this.bot.command("email", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "email")));
     this.bot.command("codigo", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "codigo")));
+    this.bot.command("exportar", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "exportar")));
 
     this.bot.on("text", (ctx) => this.dispatch(ctx, this.toText(ctx)));
     this.bot.on("photo", (ctx) => this.dispatch(ctx, this.toPhoto(ctx)));
@@ -68,6 +69,9 @@ export class TelegramAdapter implements IMessagingAdapter, OutboundSender {
       text: async (message, options) => {
         const extra = options?.requestPhone ? this.contactKeyboard() : Markup.removeKeyboard();
         await ctx.reply(message, extra);
+      },
+      document: async (content, filename) => {
+        await ctx.replyWithDocument({ source: content, filename });
       },
     };
   }

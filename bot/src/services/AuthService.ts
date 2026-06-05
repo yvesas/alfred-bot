@@ -54,6 +54,30 @@ export class AuthService {
     return jwt.sign(payload, config.jwtSecret, { expiresIn: "30d" });
   }
 
+  // Magic Auth disponível (e-mail por código) — basta API key + client id, sem redirect/JWT.
+  canVerifyEmail(): boolean {
+    return !!(config.workosApiKey && config.workosClientId);
+  }
+
+  // Envia um código de verificação para o e-mail (WorkOS Magic Auth).
+  async sendEmailCode(email: string): Promise<void> {
+    await this.client().userManagement.createMagicAuth({ email: email.trim().toLowerCase() });
+  }
+
+  // Valida o código do e-mail. true se autenticou; false em qualquer falha.
+  async verifyEmailCode(email: string, code: string): Promise<boolean> {
+    try {
+      await this.client().userManagement.authenticateWithMagicAuth({
+        clientId: config.workosClientId,
+        email: email.trim().toLowerCase(),
+        code: code.trim(),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   verifyJwt(token: string): SessionToken | null {
     if (!config.jwtSecret || !token) return null;
     try {

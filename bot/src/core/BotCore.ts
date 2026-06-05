@@ -8,7 +8,9 @@ import { BudgetService } from "../services/BudgetService";
 import { ReminderService } from "../services/ReminderService";
 import { MergeService } from "../services/MergeService";
 import { LinkTokenService } from "../services/LinkTokenService";
+import { AuthService } from "../services/AuthService";
 import { RateLimiter } from "../services/RateLimiter";
+import { isValidEmail } from "../utils/validation";
 import {
   MessageProcessingService,
   ModelResponse,
@@ -57,6 +59,8 @@ function currency(lang: Language): string {
 export class BotCore {
   // Compras aguardando confirmação, por usuário (chave "platform:externalId").
   private readonly pendingPurchases = new Map<string, IPurchaseCreate>();
+  // E-mails aguardando verificação por código (Magic Auth), por usuário.
+  private readonly pendingEmailVerification = new Map<string, string>();
 
   constructor(
     @inject(UserService) private userService: UserService,
@@ -66,6 +70,7 @@ export class BotCore {
     @inject(ReminderService) private reminderService: ReminderService,
     @inject(MergeService) private mergeService: MergeService,
     @inject(LinkTokenService) private linkTokens: LinkTokenService,
+    @inject(AuthService) private authService: AuthService,
     @inject(RateLimiter) private rateLimiter: RateLimiter,
     @inject(MessageProcessingService) private messageProcessingService: MessageProcessingService,
   ) {}
@@ -388,9 +393,77 @@ export class BotCore {
         return this.handleReminders(reply, platform, externalId, lang, args);
       case "idioma":
         return this.handleSetLanguage(reply, platform, externalId, lang, args[0]);
+      case "email":
+        return this.handleEmail(reply, platform, externalId, lang, args[0]);
+      case "codigo":
+        return this.handleEmailCode(reply, platform, externalId, lang, args[0]);
       case "ia":
         return this.handleSetIAModel(reply, platform, externalId, lang, args[0]);
     }
+  }
+
+  // ---------- Verificação de e-mail no chat (Magic Auth — Parte 4) ----------
+
+  private async handleEmail(
+    reply: Replier,
+    platform: Platform,
+    externalId: string,
+    lang: Language,
+    emailArg?: string,
+  ): Promise<void> {
+    if (!this.authService.canVerifyEmail()) {
+      await reply.text(t(lang, "verification_unavailable"));
+      return;
+    }
+    const email = (emailArg ?? "").trim().toLowerCase();
+    if (!email) {
+      await reply.text(t(lang, "email_usage"));
+      return;
+    }
+    if (!isValidEmail(email)) {
+      await reply.text(t(lang, "email_invalid_address"));
+      return;
+    }
+
+    try {
+      await this.authService.sendEmailCode(email);
+      this.pendingEmailVerification.set(this.pendingKey(platform, externalId), email);
+      await reply.text(t(lang, "email_sent", { email }));
+    } catch (error) {
+      logger.error({ err: error }, "Falha ao enviar código de verificação de e-mail");
+      await reply.text(t(lang, "verification_unavailable"));
+    }
+  }
+
+  private async handleEmailCode(
+    reply: Replier,
+    platform: Platform,
+    externalId: string,
+    lang: Language,
+    codeArg?: string,
+  ): Promise<void> {
+    const key = this.pendingKey(platform, externalId);
+    const email = this.pendingEmailVerification.get(key);
+    if (!email) {
+      await reply.text(t(lang, "code_no_pending"));
+      return;
+    }
+    const code = (codeArg ?? "").trim();
+    if (!code) {
+      await reply.text(t(lang, "code_usage"));
+      return;
+    }
+
+    const ok = await this.authService.verifyEmailCode(email, code);
+    if (!ok) {
+      await reply.text(t(lang, "code_invalid")); // mantém a pendente para nova tentativa
+      return;
+    }
+
+    this.pendingEmailVerification.delete(key);
+    // E-mail verificado → grava e auto-vincula com a conta web do mesmo e-mail.
+    await this.mergeService.linkVerifiedEmail(platform, externalId, email);
+    await reply.text(t(lang, "email_verified"));
   }
 
   // ---------- Editar / excluir compras (A2) ----------

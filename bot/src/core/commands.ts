@@ -12,4 +12,6 @@ export const KNOWN_COMMANDS = [
   "orcamento",
   "lembretes",
   "vincular",
+  "email",
+  "codigo",
 ];

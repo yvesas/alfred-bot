@@ -7,6 +7,10 @@
 > **telefone auto-vincula** onde já é confiável (WhatsApp sempre; Telegram se compartilhar contato);
 > **vínculo cross-plataforma por deep-link** (sem SMS, sem cold-message, sem depender de contato prévio).
 > Última atualização: 05/06/2026.
+>
+> **Status:** Parte 1 (canônica) ✅ · Parte 2 (auto-merge e-mail/telefone) ✅ · Parte 3 (deep-link) ✅ ·
+> Parte 4 (verificação de e-mail no chat) ✅. Pendente (pós-Fase 6): **tela própria de login + OTP**
+> (Magic Auth), reusando o mesmo fluxo do `/email`+`/codigo`.
 
 ## Por que NÃO usamos código por SMS/telefone
 
@@ -94,7 +98,11 @@ Cada `User` acumula **identificadores verificados**:
 
 → **E-mail é o denominador comum** (funciona nas 3); **telefone é bônus** onde já é confiável.
 
-### Fluxo de verificação de e-mail no chat (WorkOS Magic Auth, headless)
+### Fluxo de verificação de e-mail no chat (WorkOS Magic Auth, headless) — ✅ CONCLUÍDA
+> Feito: `AuthService.sendEmailCode`/`verifyEmailCode`/`canVerifyEmail` (Magic Auth). `BotCore`:
+> `/email <endereço>` (envia código, guarda pendente) e `/codigo <código>` (valida → grava
+> `verifiedEmail` via `MergeService.linkVerifiedEmail` → auto-merge com a conta web do mesmo e-mail).
+> Gated: sem WorkOS, responde "indisponível". Mensagens i18n (pt/en/es). 106 testes verdes.
 1. Usuário (Telegram/WhatsApp) manda `/email maria@exemplo.com` (ou no onboarding).
 2. Bot chama `workos.userManagement.createMagicAuth({ email })` → WorkOS envia o código.
 3. Bot: "enviei um código para maria@…; responda `/codigo 123456`". Estado `awaiting_email_code`

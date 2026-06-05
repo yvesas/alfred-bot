@@ -11,6 +11,7 @@ import { BudgetService } from "../services/BudgetService";
 import { ReminderService } from "../services/ReminderService";
 import { MergeService } from "../services/MergeService";
 import { LinkTokenService } from "../services/LinkTokenService";
+import { AuthService } from "../services/AuthService";
 import { RateLimiter } from "../services/RateLimiter";
 import { MessageProcessingService } from "../services/MessageProcessingService";
 
@@ -26,6 +27,7 @@ describe("BotCore", () => {
   let reminderService: sinon.SinonStubbedInstance<ReminderService>;
   let mergeService: sinon.SinonStubbedInstance<MergeService>;
   let linkTokens: sinon.SinonStubbedInstance<LinkTokenService>;
+  let authService: sinon.SinonStubbedInstance<AuthService>;
   let rateLimiter: sinon.SinonStubbedInstance<RateLimiter>;
   let mps: sinon.SinonStubbedInstance<MessageProcessingService>;
   let core: BotCore;
@@ -40,6 +42,7 @@ describe("BotCore", () => {
     reminderService = sinon.createStubInstance(ReminderService);
     mergeService = sinon.createStubInstance(MergeService);
     linkTokens = sinon.createStubInstance(LinkTokenService);
+    authService = sinon.createStubInstance(AuthService);
     rateLimiter = sinon.createStubInstance(RateLimiter);
     mps = sinon.createStubInstance(MessageProcessingService);
     core = new BotCore(
@@ -50,6 +53,7 @@ describe("BotCore", () => {
       reminderService,
       mergeService,
       linkTokens,
+      authService,
       rateLimiter,
       mps,
     );
@@ -292,5 +296,68 @@ describe("BotCore", () => {
 
     expect(mergeService.linkAccounts.calledWith("telegram", "1", "canonId")).toBe(true);
     expect(replies.some((r) => r.includes("vinculada"))).toBe(true);
+  });
+
+  it("sends an email verification code via /email", async () => {
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+    authService.canVerifyEmail.returns(true);
+    authService.sendEmailCode.resolves();
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "email", args: ["maria@example.com"] } }),
+      reply,
+    );
+
+    expect(authService.sendEmailCode.calledWith("maria@example.com")).toBe(true);
+    expect(replies.some((r) => r.includes("maria@example.com"))).toBe(true);
+  });
+
+  it("verifies the email code via /codigo and links the account", async () => {
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+    authService.canVerifyEmail.returns(true);
+    authService.sendEmailCode.resolves();
+    authService.verifyEmailCode.resolves(true);
+    mergeService.linkVerifiedEmail.resolves();
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "email", args: ["maria@example.com"] } }),
+      reply,
+    );
+    replies.length = 0;
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "codigo", args: ["123456"] } }),
+      reply,
+    );
+
+    expect(authService.verifyEmailCode.calledWith("maria@example.com", "123456")).toBe(true);
+    expect(mergeService.linkVerifiedEmail.calledWith("telegram", "1", "maria@example.com")).toBe(
+      true,
+    );
+    expect(replies.some((r) => r.includes("verificado"))).toBe(true);
+  });
+
+  it("rejects /codigo when there is no pending verification", async () => {
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "codigo", args: ["123456"] } }),
+      reply,
+    );
+
+    expect(authService.verifyEmailCode.called).toBe(false);
+    expect(replies.some((r) => r.toLowerCase().includes("pendente"))).toBe(true);
+  });
+
+  it("replies unavailable when email verification is not configured", async () => {
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+    authService.canVerifyEmail.returns(false);
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "email", args: ["maria@example.com"] } }),
+      reply,
+    );
+
+    expect(authService.sendEmailCode.called).toBe(false);
+    expect(replies.some((r) => r.toLowerCase().includes("indisponível"))).toBe(true);
   });
 });

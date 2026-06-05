@@ -58,6 +58,15 @@ export type MessageKey =
   // vínculo (deep-link)
   | "link_success"
   | "link_invalid"
+  // verificação de e-mail no chat (Magic Auth)
+  | "email_usage"
+  | "email_invalid_address"
+  | "verification_unavailable"
+  | "email_sent"
+  | "code_usage"
+  | "code_no_pending"
+  | "email_verified"
+  | "code_invalid"
   // IA
   | "ia_usage"
   | "ia_invalid"
@@ -149,6 +158,14 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     reminder_push: "🔔 Lembrete: {description} (vence dia {day}).",
     link_success: "✅ Conta vinculada! Agora seus gastos somam numa conta só.",
     link_invalid: "❌ Código de vínculo inválido ou expirado. Gere um novo no app web.",
+    email_usage: "Uso: /email seu@email.com",
+    email_invalid_address: "E-mail inválido. Ex.: /email maria@exemplo.com",
+    verification_unavailable: "Verificação de e-mail indisponível no momento.",
+    email_sent: "📧 Enviei um código para {email}. Responda: /codigo 123456",
+    code_usage: "Uso: /codigo 123456",
+    code_no_pending: "Nenhuma verificação pendente. Comece com /email seu@email.com",
+    email_verified: "✅ E-mail verificado! Se você já usava o app web, suas contas foram unidas.",
+    code_invalid: "❌ Código inválido. Tente de novo ou gere um novo com /email.",
     ia_usage: "Use: /ia gpt ou /ia gemini",
     ia_invalid: 'Modelo inválido! Escolha entre "gpt" ou "gemini".',
     ia_set: "🤖 Modelo atualizado para {model}!",
@@ -238,6 +255,15 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     reminder_push: "🔔 Reminder: {description} (due on the {day}th).",
     link_success: "✅ Account linked! Your spending now adds up in a single account.",
     link_invalid: "❌ Invalid or expired link code. Generate a new one in the web app.",
+    email_usage: "Usage: /email you@email.com",
+    email_invalid_address: "Invalid email. E.g., /email maria@example.com",
+    verification_unavailable: "Email verification is unavailable right now.",
+    email_sent: "📧 I sent a code to {email}. Reply: /codigo 123456",
+    code_usage: "Usage: /codigo 123456",
+    code_no_pending: "No pending verification. Start with /email you@email.com",
+    email_verified:
+      "✅ Email verified! If you already used the web app, your accounts were merged.",
+    code_invalid: "❌ Invalid code. Try again or request a new one with /email.",
     ia_usage: "Use: /ia gpt or /ia gemini",
     ia_invalid: 'Invalid model! Choose between "gpt" or "gemini".',
     ia_set: "🤖 Model updated to {model}!",
@@ -326,6 +352,14 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     reminder_push: "🔔 Recordatorio: {description} (vence el día {day}).",
     link_success: "✅ ¡Cuenta vinculada! Ahora tus gastos suman en una sola cuenta.",
     link_invalid: "❌ Código de vínculo inválido o expirado. Genera uno nuevo en la app web.",
+    email_usage: "Uso: /email tu@email.com",
+    email_invalid_address: "Correo inválido. Ej.: /email maria@ejemplo.com",
+    verification_unavailable: "La verificación de correo no está disponible ahora.",
+    email_sent: "📧 Te envié un código a {email}. Responde: /codigo 123456",
+    code_usage: "Uso: /codigo 123456",
+    code_no_pending: "No hay verificación pendiente. Empieza con /email tu@email.com",
+    email_verified: "✅ ¡Correo verificado! Si ya usabas la app web, tus cuentas se unieron.",
+    code_invalid: "❌ Código inválido. Inténtalo de nuevo o pide uno nuevo con /email.",
     ia_usage: "Use: /ia gpt o /ia gemini",
     ia_invalid: '¡Modelo inválido! Elige entre "gpt" o "gemini".',
     ia_set: "🤖 ¡Modelo actualizado a {model}!",

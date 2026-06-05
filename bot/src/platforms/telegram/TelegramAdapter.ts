@@ -41,6 +41,8 @@ export class TelegramAdapter implements IMessagingAdapter, OutboundSender {
     this.bot.command("orcamento", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "orcamento")));
     this.bot.command("lembretes", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "lembretes")));
     this.bot.command("vincular", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "vincular")));
+    this.bot.command("email", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "email")));
+    this.bot.command("codigo", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "codigo")));
 
     this.bot.on("text", (ctx) => this.dispatch(ctx, this.toText(ctx)));
     this.bot.on("photo", (ctx) => this.dispatch(ctx, this.toPhoto(ctx)));

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getClientId } from "../../../lib/clientId";
+import { notifyIfHidden, requestNotificationPermission } from "../../../lib/notify";
 import type { ChatMessage, Inbound, Role } from "../types";
 import { useChatSocket } from "./useChatSocket";
 
@@ -22,6 +23,8 @@ export function useChat() {
         case "bot_message":
           setTyping(false);
           append("bot", msg.text);
+          // Lembretes/mensagens chegam mesmo com a aba em segundo plano: avisa via notificação.
+          notifyIfHidden("Alfred", msg.text);
           break;
         case "typing":
           setTyping(msg.value);
@@ -50,6 +53,8 @@ export function useChat() {
     (text: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
+      // Pede permissão de notificação no 1º gesto do usuário (requisito dos navegadores).
+      requestNotificationPermission();
       append("user", trimmed);
       send({ type: "user_message", clientId, text: trimmed });
     },

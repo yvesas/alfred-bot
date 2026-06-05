@@ -7,6 +7,8 @@ import { Replier } from "../core/Replier";
 import { UserService } from "../services/UserService";
 import { OcrService } from "../services/OcrService";
 import { PurchaseService } from "../services/PurchaseService";
+import { BudgetService } from "../services/BudgetService";
+import { ReminderService } from "../services/ReminderService";
 import { RateLimiter } from "../services/RateLimiter";
 import { MessageProcessingService } from "../services/MessageProcessingService";
 
@@ -18,6 +20,8 @@ describe("BotCore", () => {
   let userService: sinon.SinonStubbedInstance<UserService>;
   let ocrService: sinon.SinonStubbedInstance<OcrService>;
   let purchaseService: sinon.SinonStubbedInstance<PurchaseService>;
+  let budgetService: sinon.SinonStubbedInstance<BudgetService>;
+  let reminderService: sinon.SinonStubbedInstance<ReminderService>;
   let rateLimiter: sinon.SinonStubbedInstance<RateLimiter>;
   let mps: sinon.SinonStubbedInstance<MessageProcessingService>;
   let core: BotCore;
@@ -28,13 +32,24 @@ describe("BotCore", () => {
     userService = sinon.createStubInstance(UserService);
     ocrService = sinon.createStubInstance(OcrService);
     purchaseService = sinon.createStubInstance(PurchaseService);
+    budgetService = sinon.createStubInstance(BudgetService);
+    reminderService = sinon.createStubInstance(ReminderService);
     rateLimiter = sinon.createStubInstance(RateLimiter);
     mps = sinon.createStubInstance(MessageProcessingService);
-    core = new BotCore(userService, ocrService, purchaseService, rateLimiter, mps);
+    core = new BotCore(
+      userService,
+      ocrService,
+      purchaseService,
+      budgetService,
+      reminderService,
+      rateLimiter,
+      mps,
+    );
 
     replies = [];
     reply = { text: async (m: string) => void replies.push(m) };
     rateLimiter.allow.returns(true);
+    budgetService.alertsForPurchase.resolves([]);
   });
 
   it("greets a returning user on /start", async () => {
@@ -161,5 +176,67 @@ describe("BotCore", () => {
 
     expect(userService.setLanguage.calledWith("telegram", "1", "en")).toBe(true);
     expect(replies.some((r) => r.includes("English"))).toBe(true);
+  });
+
+  it("appends a budget alert when saving a purchase over the limit", async () => {
+    userService.findByIdentity.resolves({ status: "complete" } as any);
+    mps.processMessage.resolves({
+      intent: "purchase",
+      userId: "1",
+      description: "mercado",
+      total: 90,
+      date: new Date(),
+      items: [],
+    });
+    purchaseService.addPurchase.resolves({} as any);
+    budgetService.alertsForPurchase.resolves([
+      "🚨 Orçamento de Alimentação estourado: R$ 90,00 de R$ 80,00 (113%).",
+    ]);
+
+    await core.handle(baseMsg({ kind: "text", text: "mercado 90" }), reply);
+    await core.handle(baseMsg({ kind: "text", text: "sim" }), reply);
+
+    expect(replies.some((r) => r.includes("Orçamento de Alimentação estourado"))).toBe(true);
+  });
+
+  it("sets a category budget via /orcamento", async () => {
+    userService.findByIdentity.resolves({ status: "complete" } as any);
+    userService.setBudget.resolves([{ category: "Alimentação", limit: 500 }] as any);
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "orcamento", args: ["Alimentação", "500"] } }),
+      reply,
+    );
+
+    expect(userService.setBudget.calledWith("telegram", "1", "Alimentação", 500)).toBe(true);
+    expect(replies.some((r) => r.includes("Orçamento de Alimentação definido"))).toBe(true);
+  });
+
+  it("creates a reminder via /lembretes add", async () => {
+    userService.findByIdentity.resolves({ status: "complete" } as any);
+    reminderService.add.resolves({ description: "Conta de luz", dayOfMonth: 10 } as any);
+
+    await core.handle(
+      baseMsg({
+        kind: "command",
+        command: { name: "lembretes", args: ["add", "10", "Conta", "de", "luz"] },
+      }),
+      reply,
+    );
+
+    expect(reminderService.add.calledWith("telegram", "1", 10, "Conta de luz")).toBe(true);
+    expect(replies.some((r) => r.includes("Lembrete criado"))).toBe(true);
+  });
+
+  it("lists reminders via /lembretes", async () => {
+    userService.findByIdentity.resolves({ status: "complete" } as any);
+    reminderService.list.resolves([{ description: "Conta de luz", dayOfMonth: 10 } as any]);
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "lembretes", args: [] } }),
+      reply,
+    );
+
+    expect(replies.some((r) => r.includes("dia 10") && r.includes("Conta de luz"))).toBe(true);
   });
 });

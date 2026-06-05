@@ -6,6 +6,7 @@ import { IMessagingAdapter } from "../../core/IMessagingAdapter";
 import { IncomingMessage } from "../../core/IncomingMessage";
 import { Replier } from "../../core/Replier";
 import { BotCore } from "../../core/BotCore";
+import { OutboundRegistry, OutboundSender } from "../../core/OutboundRegistry";
 import { KNOWN_COMMANDS } from "../../core/commands";
 import { config } from "../../infra/config";
 import { logger } from "../../infra/logger";
@@ -22,12 +23,37 @@ const MAX_PAYLOAD_BYTES = 8 * 1024 * 1024; // 8 MB
 // Adapter do chat web via WebSocket (lib `ws`). Normaliza as mensagens do navegador para
 // IncomingMessage (platform "web", externalId = clientId anônimo) e delega ao BotCore.
 @injectable()
-export class WebAdapter implements IMessagingAdapter {
+export class WebAdapter implements IMessagingAdapter, OutboundSender {
   private wss?: WebSocketServer;
 
-  constructor(@inject(BotCore) private core: BotCore) {}
+  // Conexões abertas, indexadas pelo clientId (externalId anônimo). Um cliente pode ter
+  // várias abas/sockets. Usado pelo push (sendTo) — ex.: lembretes.
+  private readonly clients = new Map<string, Set<WebSocket>>();
+  private readonly socketClient = new Map<WebSocket, string>();
+
+  constructor(
+    @inject(BotCore) private core: BotCore,
+    @inject(OutboundRegistry) private outbound: OutboundRegistry,
+  ) {}
+
+  // Push: entrega a todos os sockets abertos do clientId. false se ninguém estiver online
+  // (web push real, com Service Worker, fica para depois — aqui depende da aba aberta).
+  async sendTo(externalId: string, text: string): Promise<boolean> {
+    const sockets = this.clients.get(externalId);
+    if (!sockets || sockets.size === 0) return false;
+
+    let delivered = false;
+    for (const socket of sockets) {
+      if (socket.readyState === socket.OPEN) {
+        this.send(socket, { type: "bot_message", text });
+        delivered = true;
+      }
+    }
+    return delivered;
+  }
 
   async start(): Promise<void> {
+    this.outbound.register("web", this);
     this.wss = new WebSocketServer({
       port: config.webPort,
       maxPayload: MAX_PAYLOAD_BYTES,
@@ -37,6 +63,7 @@ export class WebAdapter implements IMessagingAdapter {
     this.wss.on("connection", (socket) => {
       socket.on("message", (raw) => void this.onMessage(socket, raw));
       socket.on("error", (err) => logger.error({ err }, "Erro no socket web"));
+      socket.on("close", () => this.unbindSocket(socket));
     });
 
     logger.info(`🌐 Web (WebSocket) adapter em :${config.webPort}`);
@@ -44,6 +71,27 @@ export class WebAdapter implements IMessagingAdapter {
 
   async stop(): Promise<void> {
     this.wss?.close();
+  }
+
+  // Associa o socket ao clientId (descoberto na 1ª mensagem) para permitir push depois.
+  private bindSocket(socket: WebSocket, clientId: string): void {
+    if (this.socketClient.get(socket) === clientId) return;
+    this.socketClient.set(socket, clientId);
+    let set = this.clients.get(clientId);
+    if (!set) {
+      set = new Set();
+      this.clients.set(clientId, set);
+    }
+    set.add(socket);
+  }
+
+  private unbindSocket(socket: WebSocket): void {
+    const clientId = this.socketClient.get(socket);
+    if (!clientId) return;
+    this.socketClient.delete(socket);
+    const set = this.clients.get(clientId);
+    set?.delete(socket);
+    if (set && set.size === 0) this.clients.delete(clientId);
   }
 
   // Checa o header Origin contra a allowlist (defesa cross-site).
@@ -57,11 +105,20 @@ export class WebAdapter implements IMessagingAdapter {
   }
 
   private async onMessage(socket: WebSocket, raw: RawData): Promise<void> {
-    await this.processRaw(raw.toString(), (msg) => this.send(socket, msg));
+    await this.processRaw(
+      raw.toString(),
+      (msg) => this.send(socket, msg),
+      (clientId) => this.bindSocket(socket, clientId),
+    );
   }
 
   // Processa uma mensagem crua e emite as respostas via `send` (testável sem socket real).
-  async processRaw(raw: string, send: (msg: WebOutbound) => void): Promise<void> {
+  // `bind` (opcional) recebe o clientId para registrar a conexão para push.
+  async processRaw(
+    raw: string,
+    send: (msg: WebOutbound) => void,
+    bind?: (clientId: string) => void,
+  ): Promise<void> {
     let payload: any;
     try {
       payload = JSON.parse(raw);
@@ -75,6 +132,8 @@ export class WebAdapter implements IMessagingAdapter {
       send({ type: "error", message: "Mensagem inválida." });
       return;
     }
+
+    bind?.(incoming.externalId);
 
     const reply: Replier = {
       text: async (text: string) => send({ type: "bot_message", text }),

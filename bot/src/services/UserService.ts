@@ -1,6 +1,6 @@
 import { inject, injectable } from "inversify";
 import { UserRepository } from "../repositories/UserRepository";
-import { IUser, IUserCreate, UserStatus, Language } from "../models/User";
+import { IUser, IUserCreate, UserStatus, Language, IBudget } from "../models/User";
 import { Platform } from "../core/IncomingMessage";
 import { isValidEmail } from "../utils/validation";
 
@@ -44,6 +44,34 @@ export class UserService {
 
   async setLanguage(platform: Platform, externalId: string, language: Language): Promise<void> {
     await this.userRepo.updateByIdentity(platform, externalId, { language });
+  }
+
+  // ---------- Orçamentos mensais por categoria ----------
+
+  async getBudgets(platform: Platform, externalId: string): Promise<IBudget[]> {
+    const user = await this.userRepo.findByIdentity(platform, externalId);
+    return user?.budgets ?? [];
+  }
+
+  // Define (ou atualiza) o orçamento de uma categoria. Case-insensitive na categoria.
+  async setBudget(
+    platform: Platform,
+    externalId: string,
+    category: string,
+    limit: number,
+  ): Promise<IBudget[]> {
+    const current = await this.getBudgets(platform, externalId);
+    const others = current.filter((b) => b.category.toLowerCase() !== category.toLowerCase());
+    const next = [...others, { category, limit }];
+    await this.userRepo.updateByIdentity(platform, externalId, { budgets: next });
+    return next;
+  }
+
+  async removeBudget(platform: Platform, externalId: string, category: string): Promise<IBudget[]> {
+    const current = await this.getBudgets(platform, externalId);
+    const next = current.filter((b) => b.category.toLowerCase() !== category.toLowerCase());
+    await this.userRepo.updateByIdentity(platform, externalId, { budgets: next });
+    return next;
   }
 
   // Garante que existe um registro para a identidade. Se a plataforma informar o nome,

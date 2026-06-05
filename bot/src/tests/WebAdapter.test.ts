@@ -2,17 +2,20 @@ import "reflect-metadata";
 import sinon from "sinon";
 import { WebAdapter, WebOutbound } from "../platforms/web/WebAdapter";
 import { BotCore } from "../core/BotCore";
+import { OutboundRegistry } from "../core/OutboundRegistry";
 import { IncomingMessage } from "../core/IncomingMessage";
 
 describe("WebAdapter.processRaw", () => {
   let core: sinon.SinonStubbedInstance<BotCore>;
+  let outbound: sinon.SinonStubbedInstance<OutboundRegistry>;
   let adapter: WebAdapter;
   let out: WebOutbound[];
   const send = (m: WebOutbound) => void out.push(m);
 
   beforeEach(() => {
     core = sinon.createStubInstance(BotCore);
-    adapter = new WebAdapter(core);
+    outbound = sinon.createStubInstance(OutboundRegistry);
+    adapter = new WebAdapter(core, outbound);
     out = [];
   });
 

@@ -19,6 +19,15 @@ export class PurchaseRepository {
     return await PurchaseModel.find({ userId }).sort({ date: -1 }).exec();
   }
 
+  // Página de compras (mais recentes primeiro) para o histórico paginado.
+  async findByUserPaged(userId: string, skip: number, limit: number): Promise<IPurchase[]> {
+    return await PurchaseModel.find({ userId }).sort({ date: -1 }).skip(skip).limit(limit).exec();
+  }
+
+  async countByUser(userId: string): Promise<number> {
+    return await PurchaseModel.countDocuments({ userId }).exec();
+  }
+
   // Escopados ao userId: o usuário só altera/exclui as próprias compras.
   async deleteById(userId: string, id: string): Promise<IPurchase | null> {
     return await PurchaseModel.findOneAndDelete({ _id: id, userId }).exec();

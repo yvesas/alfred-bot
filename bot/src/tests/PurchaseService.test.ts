@@ -45,4 +45,18 @@ describe("PurchaseService", () => {
       "Invalid purchase data",
     );
   });
+
+  it("paginates the history (clamps page, computes total pages)", async () => {
+    purchaseRepoMock.countByUser.resolves(12);
+    purchaseRepoMock.findByUserPaged.resolves([{ description: "x" } as IPurchase]);
+
+    const page = await purchaseService.getUserPurchasesPage("123", 99, 5);
+
+    // 12 itens / 5 por página = 3 páginas; pedimos 99 → clampa para 3.
+    expect(page.pages).toBe(3);
+    expect(page.page).toBe(3);
+    expect(page.total).toBe(12);
+    // offset da página 3 = (3-1)*5 = 10.
+    expect(purchaseRepoMock.findByUserPaged.calledWith("123", 10, 5)).toBe(true);
+  });
 });

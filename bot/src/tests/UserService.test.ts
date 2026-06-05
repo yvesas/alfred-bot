@@ -149,4 +149,34 @@ describe("UserService (onboarding)", () => {
 
     expect(userRepoMock.updateByIdentity.calledWith(TG, "123", { language: "en" })).toBe(true);
   });
+
+  it("sets a budget (replaces same category, case-insensitive)", async () => {
+    userRepoMock.findByIdentity.resolves(
+      fakeUser({ budgets: [{ category: "Alimentação", limit: 300 }] }),
+    );
+
+    const result = await userService.setBudget(TG, "123", "alimentação", 500);
+
+    expect(result).toEqual([{ category: "alimentação", limit: 500 }]);
+    expect(
+      userRepoMock.updateByIdentity.calledWith(TG, "123", {
+        budgets: [{ category: "alimentação", limit: 500 }],
+      }),
+    ).toBe(true);
+  });
+
+  it("removes a budget by category", async () => {
+    userRepoMock.findByIdentity.resolves(
+      fakeUser({
+        budgets: [
+          { category: "Alimentação", limit: 500 },
+          { category: "Transporte", limit: 200 },
+        ],
+      }),
+    );
+
+    const result = await userService.removeBudget(TG, "123", "alimentação");
+
+    expect(result).toEqual([{ category: "Transporte", limit: 200 }]);
+  });
 });

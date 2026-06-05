@@ -31,6 +31,9 @@ export const config = {
   healthPort: Number(process.env.HEALTH_PORT) || 3000,
   // Pede confirmação ("sim/não") antes de salvar uma compra. Default: ligado.
   confirmPurchase: (process.env.CONFIRM_PURCHASE ?? "true").toLowerCase() !== "false",
+  // Lembretes (push recorrente). Ligado por padrão; intervalo de verificação em ms.
+  remindersEnabled: (process.env.REMINDERS_ENABLED ?? "true").toLowerCase() !== "false",
+  reminderIntervalMs: Number(process.env.REMINDER_INTERVAL_MS) || 60_000,
   logLevel: process.env.LOG_LEVEL || (isProd ? "info" : "debug"),
   rateLimit: {
     max: Number(process.env.RATE_LIMIT_MAX) || 20,

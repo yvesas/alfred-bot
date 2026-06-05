@@ -1,7 +1,7 @@
 # Roadmap — bot-telegram
 
 > Documento vivo. Reúne **o que já temos**, **o que desejamos**, **bugs conhecidos** e **melhorias**.
-> Atualizado em 02/06/2026. Acompanha a análise técnica em [ANALISE-PROJETO.md](./ANALISE-PROJETO.md).
+> Atualizado em 05/06/2026. Acompanha a análise técnica em [ANALISE-PROJETO.md](./ANALISE-PROJETO.md).
 
 Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 
@@ -17,10 +17,15 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 | Registro de compra por texto | ✅ | Linguagem natural interpretada por IA (Gemini/GPT) |
 | Registro de compra por foto de cupom | ✅ | OCR (Google Vision) + IA |
 | Consulta de gastos | ✅ | Por período (mês atual, mês passado, total) e por categoria/loja; via texto ou `/gastos` |
-| Listagem das últimas compras | ✅ | Comando `/compras` (5 últimas) |
+| Histórico paginado de compras | ✅ | `/compras` (5 por página) + `/compras <página>`; numeração absoluta usada por `/editar`/`/excluir` |
+| Confirmar compra antes de salvar | ✅ | Resumo + "sim/não" (flag `CONFIRM_PURCHASE`); cross-plataforma (A1) |
+| Editar e excluir compras | ✅ | `/editar <nº> <total\|descrição> <valor>` e `/excluir <nº>`, escopados ao usuário (A2) |
+| Categorias personalizadas | ✅ | `/categorias` (listar/add/remover); a IA classifica conforme as do usuário (A3) |
+| Orçamento mensal + alertas | ✅ | `/orcamento <categoria> <valor>`; alerta automático a 80% e ao estourar, na categoria da compra |
+| Lembretes (push recorrente) | ✅ | `/lembretes add <dia> <descrição>`; agendador envia push no Telegram/WhatsApp/Web (contas a pagar) |
 | Escolha do modelo de IA por usuário | ✅ | `/ia gpt` \| `/ia gemini` (Gemini é o padrão) |
-| Persistência em MongoDB | ✅ | Mongoose (User, Purchase) |
-| Testes automatizados | 🟡 | 30 testes; cobre services/converters/onboarding, mas **não** os handlers do bot |
+| Persistência em MongoDB | ✅ | Mongoose (User, Purchase, Reminder) |
+| Testes automatizados | 🟡 | 78 testes (services/converters/onboarding/handlers do `BotCore`); cobertura dos repositories ainda baixa |
 | CI (GitHub Actions) | ✅ | Roda testes + cobertura (Codecov) em push/PR para `main`/`develop` |
 
 ---
@@ -28,14 +33,15 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 ## 2. Funcionalidades que desejamos ⬜
 
 ### Produto / usuário
-- ⬜ **Editar e excluir compras** (corrigir lançamentos errados)
-- ⬜ **Confirmar a compra antes de salvar** (mostrar o que foi entendido e pedir "confirmar")
-- ⬜ **Orçamento mensal + alertas** ("você já gastou 80% do orçamento de Alimentação")
+- ✅ **Editar e excluir compras** (A2) — `/editar`, `/excluir`
+- ✅ **Confirmar a compra antes de salvar** (A1) — resumo + "sim/não"
+- ✅ **Orçamento mensal + alertas** — `/orcamento`; alerta a 80% e ao estourar
+- ✅ **Histórico paginado** em `/compras` — `/compras <página>` (5 por página)
+- ✅ **Categorias personalizadas** pelo usuário (A3) — `/categorias`
+- ✅ **Lembretes** (contas a pagar / gasto recorrente) — `/lembretes` + push (Telegram/WhatsApp/Web)
+- 🟡 **Multi-idioma** (A4) — `User.language` + `/idioma`; a IA responde no idioma. Falta migrar as strings fixas + i18n do front
 - ⬜ **Relatórios mais ricos**: gráfico/resumo mensal, comparativo entre meses
 - ⬜ **Exportação** de dados (CSV / PDF)
-- ⬜ **Histórico paginado** em `/compras` (hoje limita a 5)
-- ⬜ **Categorias personalizadas** pelo usuário
-- ⬜ **Lembretes** (registrar gasto recorrente, contas a pagar)
 - ⬜ **Leitura de QR Code / NFC-e** do cupom fiscal (dados estruturados, sem depender só de OCR)
 - 🟡 **Gestão de produtos/estoque** — `ProductService`/`ProductRepository` existem, mas **não estão ligados** ao bot
 
@@ -48,11 +54,11 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - 🟡 **Chat web (React + Tailwind)** — frontend de chat reusando o `BotCore` via `WebAdapter` (WebSocket). Plano em [../PLANO-WEB-CHAT.md](../PLANO-WEB-CHAT.md)
   - ✅ Fases 1-4 — backend `WebAdapter` (WS), frontend (chat UI, dark/light), Docker/CI, polimento. Sem login (id anônimo)
   - ⬜ Fases 5-6 — login web (e-mail magic-link/OAuth) + vínculo de contas multi-plataforma
-- ⬜ **Evolução de produto (cross-plataforma via `BotCore`)** — confirmar compra, editar/excluir, categorias personalizadas, multi-idioma. Plano em [../PLANO-EVOLUCAO.md](../PLANO-EVOLUCAO.md)
+- 🟡 **Evolução de produto (cross-plataforma via `BotCore`)** — A1 confirmar, A2 editar/excluir, A3 categorias ✅; A4 multi-idioma 🟡. Plano em [../PLANO-EVOLUCAO.md](../PLANO-EVOLUCAO.md)
+- ✅ **Push / mensagens não-solicitadas** — `OutboundRegistry` + `sendTo` nos adapters (Telegram/WhatsApp/Web), base para lembretes e futuros avisos
 - ⬜ **Planos e limites de uso** (free/pago)
 - ⬜ **Painel web** para visualizar gastos fora do Telegram
 - ⬜ **Política de privacidade / LGPD** — dados financeiros são sensíveis
-- ⬜ **Multi-idioma** (o prompt já aceita `lang`, falta expor)
 
 ---
 

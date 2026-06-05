@@ -9,4 +9,6 @@ export const KNOWN_COMMANDS = [
   "editar",
   "categorias",
   "idioma",
+  "orcamento",
+  "lembretes",
 ];

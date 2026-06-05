@@ -12,6 +12,12 @@ export interface IIdentity {
   externalId: string;
 }
 
+// Orçamento mensal por categoria (ex.: { category: "Alimentação", limit: 500 }).
+export interface IBudget {
+  category: string;
+  limit: number;
+}
+
 export interface IUserBase {
   identities: IIdentity[];
   telegramId?: string; // legado (compat com usuários criados antes do identities[])
@@ -22,6 +28,7 @@ export interface IUserBase {
   aiModel?: AiModel;
   categories?: string[]; // categorias personalizadas; vazio = usa as padrão
   language?: Language; // idioma preferido (default "pt")
+  budgets?: IBudget[]; // orçamentos mensais por categoria
 }
 
 export type IUserCreate = Omit<IUserBase, "_id">;
@@ -32,6 +39,14 @@ const IdentitySchema = new Schema<IIdentity>(
   {
     platform: { type: String, required: true },
     externalId: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+const BudgetSchema = new Schema<IBudget>(
+  {
+    category: { type: String, required: true },
+    limit: { type: Number, required: true },
   },
   { _id: false },
 );
@@ -52,6 +67,7 @@ const UserSchema = new Schema<IUser>(
     aiModel: { type: String, enum: ["gemini", "gpt"] },
     categories: { type: [String], default: [] },
     language: { type: String, enum: ["pt", "en", "es"], default: "pt" },
+    budgets: { type: [BudgetSchema], default: [] },
   },
   {
     timestamps: true,

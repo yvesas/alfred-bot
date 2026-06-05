@@ -4,6 +4,8 @@ import { Replier } from "./Replier";
 import { UserService } from "../services/UserService";
 import { OcrService } from "../services/OcrService";
 import { PurchaseService } from "../services/PurchaseService";
+import { BudgetService } from "../services/BudgetService";
+import { ReminderService } from "../services/ReminderService";
 import { RateLimiter } from "../services/RateLimiter";
 import {
   MessageProcessingService,
@@ -48,6 +50,8 @@ export class BotCore {
     @inject(UserService) private userService: UserService,
     @inject(OcrService) private ocrService: OcrService,
     @inject(PurchaseService) private purchaseService: PurchaseService,
+    @inject(BudgetService) private budgetService: BudgetService,
+    @inject(ReminderService) private reminderService: ReminderService,
     @inject(RateLimiter) private rateLimiter: RateLimiter,
     @inject(MessageProcessingService) private messageProcessingService: MessageProcessingService,
   ) {}
@@ -231,7 +235,7 @@ export class BotCore {
       return;
     }
 
-    await this.savePurchase(reply, purchaseData);
+    await this.savePurchase(reply, platform, externalId, purchaseData);
   }
 
   // ---------- Confirmação de compra (A1) ----------
@@ -257,7 +261,7 @@ export class BotCore {
 
     if (AFFIRMATIVE.has(answer)) {
       this.pendingPurchases.delete(key);
-      await this.savePurchase(reply, pending);
+      await this.savePurchase(reply, platform, externalId, pending);
       return true;
     }
     if (NEGATIVE.has(answer)) {
@@ -271,11 +275,21 @@ export class BotCore {
     return false;
   }
 
-  private async savePurchase(reply: Replier, purchaseData: IPurchaseCreate): Promise<void> {
+  private async savePurchase(
+    reply: Replier,
+    platform: Platform,
+    externalId: string,
+    purchaseData: IPurchaseCreate,
+  ): Promise<void> {
     try {
       await this.purchaseService.addPurchase(purchaseData);
+
+      // Alertas de orçamento (se a categoria desta compra tiver limite definido).
+      const alerts = await this.budgetService.alertsForPurchase(platform, externalId, purchaseData);
+      const suffix = alerts.length ? `\n\n${alerts.join("\n")}` : "";
+
       await reply.text(
-        `🛒 Compra registrada: ${purchaseData.description} - Total de R$ ${purchaseData.total.toFixed(2)}`,
+        `🛒 Compra registrada: ${purchaseData.description} - Total de R$ ${purchaseData.total.toFixed(2)}${suffix}`,
       );
     } catch (error) {
       logger.error({ err: error }, "Erro ao registrar compra");
@@ -302,7 +316,7 @@ export class BotCore {
 
       case "compras":
         if (!(await this.requireRegistered(reply, platform, externalId))) return;
-        return this.handleGetPurchases(reply, externalId);
+        return this.handleGetPurchases(reply, externalId, this.parsePage(args[0]));
 
       case "excluir":
         if (!(await this.requireRegistered(reply, platform, externalId))) return;
@@ -316,6 +330,14 @@ export class BotCore {
         if (!(await this.requireRegistered(reply, platform, externalId))) return;
         return this.handleCategories(reply, platform, externalId, args);
 
+      case "orcamento":
+        if (!(await this.requireRegistered(reply, platform, externalId))) return;
+        return this.handleBudgets(reply, platform, externalId, args);
+
+      case "lembretes":
+        if (!(await this.requireRegistered(reply, platform, externalId))) return;
+        return this.handleReminders(reply, platform, externalId, args);
+
       case "idioma":
         if (!(await this.requireRegistered(reply, platform, externalId))) return;
         return this.handleSetLanguage(reply, platform, externalId, args[0]);
@@ -328,12 +350,12 @@ export class BotCore {
 
   // ---------- Editar / excluir compras (A2) ----------
 
-  // Resolve o n-ésimo item (1-based) da lista de últimas compras (mesma ordem de /compras).
+  // Resolve o n-ésimo item (1-based) na ordem de /compras (numeração absoluta, todas as páginas).
   private async nthRecentPurchase(userId: string, nStr: string) {
     const n = Number(nStr);
     if (!Number.isInteger(n) || n < 1) return null;
-    const recent = (await this.purchaseService.getUserPurchases(userId)).slice(0, 5);
-    return recent[n - 1] ?? null;
+    const all = await this.purchaseService.getUserPurchases(userId);
+    return all[n - 1] ?? null;
   }
 
   private async handleDeletePurchase(reply: Replier, userId: string, nStr: string): Promise<void> {
@@ -441,6 +463,120 @@ export class BotCore {
     );
   }
 
+  // ---------- Orçamento mensal (alertas em savePurchase) ----------
+
+  private async handleBudgets(
+    reply: Replier,
+    platform: Platform,
+    externalId: string,
+    args: string[],
+  ): Promise<void> {
+    const sub = (args[0] ?? "").toLowerCase();
+
+    if (sub === "remover" || sub === "remove" || sub === "rm" || sub === "del") {
+      const category = args.slice(1).join(" ").trim();
+      if (!category) {
+        await reply.text("Uso: /orcamento remover <categoria>.");
+        return;
+      }
+      const budgets = await this.userService.removeBudget(platform, externalId, category);
+      const list = budgets.length
+        ? budgets.map((b) => `• ${b.category}: R$ ${b.limit.toFixed(2)}`).join("\n")
+        : "(nenhum)";
+      await reply.text(`🗑️ Orçamento removido.\n💰 Seus orçamentos:\n${list}`);
+      return;
+    }
+
+    // Definir: "/orcamento <categoria...> <valor>". O último token é o limite.
+    if (args.length >= 2) {
+      const limit = Number(args[args.length - 1].replace(",", "."));
+      const category = args.slice(0, -1).join(" ").trim();
+      if (!category || !Number.isFinite(limit) || limit <= 0) {
+        await reply.text('Uso: /orcamento <categoria> <valor>. Ex.: "/orcamento Alimentação 500".');
+        return;
+      }
+      await this.userService.setBudget(platform, externalId, category, limit);
+      await reply.text(
+        `✅ Orçamento de ${category} definido em R$ ${limit.toFixed(2)} por mês. Eu te aviso ao chegar perto.`,
+      );
+      return;
+    }
+
+    // Sem argumentos: lista os orçamentos com o gasto do mês atual.
+    const budgets = await this.userService.getBudgets(platform, externalId);
+    if (budgets.length === 0) {
+      await reply.text(
+        'Você ainda não tem orçamentos. Crie com "/orcamento Alimentação 500" (limite mensal por categoria).',
+      );
+      return;
+    }
+
+    const report = await this.purchaseService.getSpendingReport(externalId, "current_month");
+    const lines = budgets.map((b) => {
+      const spent = Object.entries(report.byCategory)
+        .filter(([k]) => k.toLowerCase() === b.category.toLowerCase())
+        .reduce((sum, [, v]) => sum + v, 0);
+      const pct = b.limit > 0 ? Math.round((spent / b.limit) * 100) : 0;
+      return `• ${b.category}: R$ ${spent.toFixed(2)} de R$ ${b.limit.toFixed(2)} (${pct}%)`;
+    });
+
+    await reply.text(
+      `💰 Orçamentos deste mês:\n${lines.join("\n")}\n\n` +
+        '"/orcamento <categoria> <valor>" para alterar, "/orcamento remover <categoria>".',
+    );
+  }
+
+  // ---------- Lembretes (push recorrente; entrega via ReminderScheduler) ----------
+
+  private async handleReminders(
+    reply: Replier,
+    platform: Platform,
+    externalId: string,
+    args: string[],
+  ): Promise<void> {
+    const sub = (args[0] ?? "").toLowerCase();
+
+    if (sub === "add" || sub === "adicionar") {
+      const day = Number(args[1]);
+      const description = args.slice(2).join(" ").trim();
+      if (!Number.isInteger(day) || day < 1 || day > 28 || !description) {
+        await reply.text(
+          'Uso: /lembretes add <dia 1-28> <descrição>. Ex.: "/lembretes add 10 Conta de luz".',
+        );
+        return;
+      }
+      const reminder = await this.reminderService.add(platform, externalId, day, description);
+      await reply.text(
+        `⏰ Lembrete criado: "${reminder.description}" — todo dia ${reminder.dayOfMonth}. Eu te aviso por aqui.`,
+      );
+      return;
+    }
+
+    if (sub === "remover" || sub === "remove" || sub === "rm" || sub === "del") {
+      const removed = await this.reminderService.removeNth(platform, externalId, args[1] ?? "");
+      if (!removed) {
+        await reply.text("Número inválido. Use /lembretes para ver a lista.");
+        return;
+      }
+      await reply.text(`🗑️ Lembrete removido: "${removed.description}".`);
+      return;
+    }
+
+    // Sem subcomando: lista.
+    const list = await this.reminderService.list(platform, externalId);
+    if (list.length === 0) {
+      await reply.text(
+        'Você não tem lembretes. Crie com "/lembretes add 10 Conta de luz" (dia do mês + descrição).',
+      );
+      return;
+    }
+    const body = list.map((r, i) => `${i + 1}. dia ${r.dayOfMonth} — ${r.description}`).join("\n");
+    await reply.text(
+      `⏰ Seus lembretes:\n\n${body}\n\n` +
+        '"/lembretes add <dia> <descrição>" ou "/lembretes remover <nº>".',
+    );
+  }
+
   private async handleStart(msg: IncomingMessage, reply: Replier): Promise<void> {
     const { user, question } = await this.userService.ensureUser(
       msg.platform,
@@ -479,26 +615,40 @@ export class BotCore {
     await reply.text(response);
   }
 
-  private async handleGetPurchases(reply: Replier, userId: string): Promise<void> {
-    const purchases = await this.purchaseService.getUserPurchases(userId);
+  private parsePage(arg?: string): number {
+    const n = Number(arg);
+    return Number.isInteger(n) && n > 0 ? n : 1;
+  }
 
-    if (purchases.length === 0) {
+  private async handleGetPurchases(reply: Replier, userId: string, page = 1): Promise<void> {
+    const pageSize = 5;
+    const {
+      items,
+      total,
+      pages,
+      page: current,
+    } = await this.purchaseService.getUserPurchasesPage(userId, page, pageSize);
+
+    if (total === 0) {
       await reply.text("Você ainda não tem compras registradas.");
       return;
     }
 
-    const message = purchases
-      .slice(0, 5)
+    const offset = (current - 1) * pageSize;
+    const body = items
       .map(
         (p, i) =>
-          `${i + 1}. ${p.description}: R$ ${p.total.toFixed(2)} em ${p.date.toLocaleDateString()}`,
+          `${offset + i + 1}. ${p.description}: R$ ${p.total.toFixed(2)} em ${p.date.toLocaleDateString()}`,
       )
       .join("\n");
 
-    await reply.text(
-      `📋 Suas últimas compras:\n\n${message}\n\n` +
-        'Para corrigir: "/editar 2 total 10" ou "/excluir 2".',
-    );
+    let footer = `\n\n📄 Página ${current}/${pages} — ${total} compra(s) no total.`;
+    if (current < pages) {
+      footer += `\nVer mais: "/compras ${current + 1}".`;
+    }
+    footer += '\nPara corrigir: "/editar 2 total 10" ou "/excluir 2".';
+
+    await reply.text(`📋 Suas compras:\n\n${body}${footer}`);
   }
 
   // ---------- Consulta de gastos ----------

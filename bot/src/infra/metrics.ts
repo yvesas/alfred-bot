@@ -27,3 +27,10 @@ export const aiErrorsTotal = new Counter({
   help: "Total de erros ao processar mensagens/imagens com a IA",
   registers: [registry],
 });
+
+export const remindersSentTotal = new Counter({
+  name: "alfred_bot_reminders_sent_total",
+  help: "Total de lembretes entregues (push) por plataforma",
+  labelNames: ["platform"] as const,
+  registers: [registry],
+});

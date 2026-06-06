@@ -16,4 +16,6 @@ export const KNOWN_COMMANDS = [
   "codigo",
   "exportar",
   "excluir_conta",
+  "nome",
+  "estoque",
 ];

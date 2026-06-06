@@ -61,4 +61,15 @@ export class UserRepository {
   async deleteById(id: string): Promise<void> {
     await UserModel.deleteOne({ _id: id }).exec();
   }
+
+  // Sessões web ANÔNIMAS inativas (LGPD/retenção): só web, nunca logaram (sem verifiedEmail),
+  // sem identidade Telegram/WhatsApp nem telegramId legado, e sem atividade desde `cutoff`.
+  async findAnonymousInactive(cutoff: Date): Promise<IUser[]> {
+    return await UserModel.find({
+      verifiedEmail: { $exists: false },
+      telegramId: { $exists: false },
+      "identities.platform": { $nin: ["telegram", "whatsapp"] },
+      updatedAt: { $lt: cutoff },
+    }).exec();
+  }
 }

@@ -8,6 +8,7 @@ import { UserService } from "../services/UserService";
 import { OcrService } from "../services/OcrService";
 import { PurchaseService } from "../services/PurchaseService";
 import { QrService } from "../services/QrService";
+import { ProductService } from "../services/ProductService";
 import { BudgetService } from "../services/BudgetService";
 import { ReminderService } from "../services/ReminderService";
 import { MergeService } from "../services/MergeService";
@@ -29,6 +30,7 @@ describe("BotCore", () => {
   let ocrService: sinon.SinonStubbedInstance<OcrService>;
   let purchaseService: sinon.SinonStubbedInstance<PurchaseService>;
   let qrService: sinon.SinonStubbedInstance<QrService>;
+  let productService: sinon.SinonStubbedInstance<ProductService>;
   let budgetService: sinon.SinonStubbedInstance<BudgetService>;
   let reminderService: sinon.SinonStubbedInstance<ReminderService>;
   let mergeService: sinon.SinonStubbedInstance<MergeService>;
@@ -48,6 +50,7 @@ describe("BotCore", () => {
     ocrService = sinon.createStubInstance(OcrService);
     purchaseService = sinon.createStubInstance(PurchaseService);
     qrService = sinon.createStubInstance(QrService);
+    productService = sinon.createStubInstance(ProductService);
     budgetService = sinon.createStubInstance(BudgetService);
     reminderService = sinon.createStubInstance(ReminderService);
     mergeService = sinon.createStubInstance(MergeService);
@@ -63,6 +66,7 @@ describe("BotCore", () => {
       ocrService,
       purchaseService,
       qrService,
+      productService,
       budgetService,
       reminderService,
       mergeService,
@@ -207,6 +211,49 @@ describe("BotCore", () => {
 
     expect(userService.setLanguage.calledWith("telegram", "1", "en")).toBe(true);
     expect(replies.some((r) => r.includes("English"))).toBe(true);
+  });
+
+  it("atualiza o nome via /nome", async () => {
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+    userService.setName.resolves();
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "nome", args: ["João", "Silva"] } }),
+      reply,
+    );
+
+    expect(userService.setName.calledWith("telegram", "1", "João Silva")).toBe(true);
+    expect(replies.some((r) => r.includes("João Silva"))).toBe(true);
+  });
+
+  it("adiciona ao estoque via /estoque add", async () => {
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+    productService.addOrIncrement.resolves({ name: "Leite", quantity: 3 } as any);
+
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "estoque", args: ["add", "2", "Leite"] } }),
+      reply,
+    );
+
+    expect(productService.addOrIncrement.calledWith("u1", "Leite", 2)).toBe(true);
+    expect(replies.some((r) => r.includes("Leite"))).toBe(true);
+  });
+
+  it("lista e remove o estoque", async () => {
+    userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
+    productService.getUserProducts.resolves([{ name: "Leite", quantity: 3 } as any]);
+    productService.removeProduct.resolves({ name: "Leite", quantity: 0 } as any);
+
+    await core.handle(baseMsg({ kind: "command", command: { name: "estoque", args: [] } }), reply);
+    expect(replies.some((r) => r.includes("Leite") && r.includes("3"))).toBe(true);
+
+    replies.length = 0;
+    await core.handle(
+      baseMsg({ kind: "command", command: { name: "estoque", args: ["remover", "Leite"] } }),
+      reply,
+    );
+    expect(productService.removeProduct.calledWith("u1", "Leite")).toBe(true);
+    expect(replies.some((r) => r.includes("Removido"))).toBe(true);
   });
 
   it("appends a budget alert when saving a purchase over the limit", async () => {

@@ -6,6 +6,7 @@ import { WhatsAppAdapter } from "./platforms/whatsapp/WhatsAppAdapter";
 import { WebAdapter } from "./platforms/web/WebAdapter";
 import { IMessagingAdapter } from "./core/IMessagingAdapter";
 import { ReminderScheduler } from "./services/ReminderScheduler";
+import { RetentionScheduler } from "./services/RetentionScheduler";
 import { AuthServer } from "./infra/authServer";
 import { assertRequiredConfig, config, isAuthEnabled } from "./infra/config";
 import { startHealthServer, setAppReady } from "./infra/health";
@@ -49,6 +50,12 @@ async function main() {
     scheduler.start();
   }
 
+  // Retenção (LGPD): purga sessões anônimas inativas. Desligado por padrão.
+  const retentionScheduler = container.get(RetentionScheduler);
+  if (config.retentionEnabled) {
+    retentionScheduler.start();
+  }
+
   // Login web (WorkOS): só sobe quando totalmente configurado.
   const authServer = container.get(AuthServer);
   if (isAuthEnabled()) {
@@ -65,6 +72,7 @@ async function main() {
     logger.info(`🛑 Encerrando (${signal})...`);
     setAppReady(false);
     scheduler.stop();
+    retentionScheduler.stop();
     authServer.stop();
     await Promise.allSettled(adapters.map((a) => a.stop()));
     healthServer.close();

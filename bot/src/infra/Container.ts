@@ -20,6 +20,8 @@ import { GptProcessor } from "../services/GptProcessor";
 import { RateLimiter } from "../services/RateLimiter";
 import { ReminderService } from "../services/ReminderService";
 import { ReminderScheduler } from "../services/ReminderScheduler";
+import { RetentionService } from "../services/RetentionService";
+import { RetentionScheduler } from "../services/RetentionScheduler";
 import { AuthService } from "../services/AuthService";
 import { AccountService } from "../services/AccountService";
 import { MergeService } from "../services/MergeService";
@@ -71,6 +73,8 @@ container.bind<GeminiProcessor>(GeminiProcessor).toSelf();
 container.bind<GptProcessor>(GptProcessor).toSelf();
 container.bind<RateLimiter>(RateLimiter).toSelf().inSingletonScope();
 container.bind<ReminderService>(ReminderService).toSelf();
+container.bind<RetentionService>(RetentionService).toSelf();
+container.bind<RetentionScheduler>(RetentionScheduler).toSelf().inSingletonScope();
 container.bind<AuthService>(AuthService).toSelf().inSingletonScope();
 container.bind<MergeService>(MergeService).toSelf();
 // Singleton: os tokens de vínculo vivem em memória entre o web e os adapters.

@@ -128,6 +128,20 @@ describe("AuthServer (integração HTTP)", () => {
     expect(await res.text()).toContain("Data,Total");
   });
 
+  it("PATCH /api/profile atualiza o nome", async () => {
+    auth.verifyJwt.returns({ sub: "wos1" });
+    users.findByIdentity.resolves(authedUser());
+    users.setNameById.resolves();
+
+    const res = await fetch(`${base}/api/profile`, {
+      method: "PATCH",
+      headers: { Authorization: "Bearer jwt", "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Novo Nome" }),
+    });
+    expect(res.status).toBe(200);
+    expect(users.setNameById.calledWith("u1", "Novo Nome")).toBe(true);
+  });
+
   it("DELETE /api/account exclui a conta", async () => {
     auth.verifyJwt.returns({ sub: "wos1" });
     users.findByIdentity.resolves(authedUser());

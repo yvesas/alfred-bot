@@ -63,3 +63,13 @@ export async function fetchCsvBlob(token: string): Promise<Blob | null> {
   const res = await fetch(`${AUTH_URL}/api/export.csv`, { headers: headers(token) });
   return res.ok ? await res.blob() : null;
 }
+
+// Edição de perfil (nome) — direito de correção (LGPD).
+export async function updateProfile(token: string, name: string): Promise<boolean> {
+  const res = await fetch(`${AUTH_URL}/api/profile`, {
+    method: "PATCH",
+    headers: { ...headers(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return res.ok;
+}

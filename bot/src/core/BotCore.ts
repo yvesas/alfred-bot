@@ -5,6 +5,7 @@ import { UserService } from "../services/UserService";
 import { OcrService } from "../services/OcrService";
 import { PurchaseService } from "../services/PurchaseService";
 import { QrService } from "../services/QrService";
+import { ProductService } from "../services/ProductService";
 import { BudgetService } from "../services/BudgetService";
 import { ReminderService } from "../services/ReminderService";
 import { MergeService } from "../services/MergeService";
@@ -72,6 +73,7 @@ export class BotCore {
     @inject(OcrService) private ocrService: OcrService,
     @inject(PurchaseService) private purchaseService: PurchaseService,
     @inject(QrService) private qrService: QrService,
+    @inject(ProductService) private productService: ProductService,
     @inject(BudgetService) private budgetService: BudgetService,
     @inject(ReminderService) private reminderService: ReminderService,
     @inject(MergeService) private mergeService: MergeService,
@@ -449,8 +451,12 @@ export class BotCore {
         return this.handleBudgets(reply, platform, externalId, userId, lang, args);
       case "lembretes":
         return this.handleReminders(reply, platform, externalId, lang, args);
+      case "estoque":
+        return this.handleStock(reply, lang, userId, args);
       case "idioma":
         return this.handleSetLanguage(reply, platform, externalId, lang, args[0]);
+      case "nome":
+        return this.handleSetName(reply, platform, externalId, lang, args.join(" "));
       case "email":
         return this.handleEmail(reply, platform, externalId, lang, args[0]);
       case "codigo":
@@ -589,6 +595,24 @@ export class BotCore {
     await reply.text(
       t(lang, "edit_done", { description: updated.description, total: updated.total.toFixed(2) }),
     );
+  }
+
+  // ---------- Perfil (edição de nome — LGPD) ----------
+
+  private async handleSetName(
+    reply: Replier,
+    platform: Platform,
+    externalId: string,
+    lang: Language,
+    name: string,
+  ): Promise<void> {
+    const trimmed = name.trim();
+    if (trimmed.length < 2) {
+      await reply.text(t(lang, "name_usage"));
+      return;
+    }
+    await this.userService.setName(platform, externalId, trimmed);
+    await reply.text(t(lang, "name_updated", { name: trimmed }));
   }
 
   // ---------- Idioma (A4) ----------
@@ -786,6 +810,51 @@ export class BotCore {
     await this.userService.ensureUser(platform, externalId, msg.profile, lang);
     const linked = token ? await this.tryLink(platform, externalId, token) : false;
     await reply.text(t(lang, linked ? "link_success" : "link_invalid"));
+  }
+
+  // ---------- Estoque / despensa ----------
+
+  private async handleStock(
+    reply: Replier,
+    lang: Language,
+    userId: string,
+    args: string[],
+  ): Promise<void> {
+    const sub = (args[0] ?? "").toLowerCase();
+
+    if (sub === "add" || sub === "adicionar") {
+      const quantity = Number(args[1]);
+      const name = args.slice(2).join(" ").trim();
+      if (!Number.isInteger(quantity) || quantity <= 0 || !name) {
+        await reply.text(t(lang, "stock_add_usage"));
+        return;
+      }
+      const product = await this.productService.addOrIncrement(userId, name, quantity);
+      await reply.text(t(lang, "stock_added", { name: product.name, quantity: product.quantity }));
+      return;
+    }
+
+    if (sub === "remover" || sub === "remove" || sub === "rm" || sub === "del") {
+      const name = args.slice(1).join(" ").trim();
+      if (!name) {
+        await reply.text(t(lang, "stock_remove_usage"));
+        return;
+      }
+      const removed = await this.productService.removeProduct(userId, name);
+      await reply.text(t(lang, removed ? "stock_removed" : "stock_not_found", { name }));
+      return;
+    }
+
+    // Sem subcomando: lista.
+    const products = await this.productService.getUserProducts(userId);
+    if (products.length === 0) {
+      await reply.text(t(lang, "stock_empty"));
+      return;
+    }
+    const body = products
+      .map((p) => t(lang, "stock_item", { name: p.name, quantity: p.quantity }))
+      .join("\n");
+    await reply.text(`${t(lang, "stock_header")}\n\n${body}\n\n${t(lang, "stock_footer")}`);
   }
 
   private async handleStart(msg: IncomingMessage, reply: Replier): Promise<void> {

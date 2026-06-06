@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { TopNav } from "../components/TopNav";
 import { useI18n } from "../lib/i18n";
 import { useAuth } from "../features/auth/AuthProvider";
-import { fetchMe, deleteAccount, type Me } from "../lib/api";
+import { fetchMe, deleteAccount, updateProfile, type Me } from "../lib/api";
 import { linkUrl } from "../lib/auth";
 
 const WHATSAPP_ENABLED = import.meta.env.VITE_WHATSAPP_ENABLED === "true";
@@ -23,6 +23,7 @@ export function Account() {
   const { t } = useI18n();
   const { token, openLogin, logout } = useAuth();
   const [me, setMe] = useState<Me | null>(null);
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,9 +33,14 @@ export function Account() {
     }
     void fetchMe(token).then((m) => {
       setMe(m);
+      setName(m?.name ?? "");
       setLoading(false);
     });
   }, [token]);
+
+  const onSaveName = async () => {
+    if (token && name.trim().length >= 2) await updateProfile(token, name.trim());
+  };
 
   const onDelete = async () => {
     if (!token) return;
@@ -66,8 +72,22 @@ export function Account() {
 
       <div className="space-y-4">
         <div className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-          <p className="font-medium">{me.name ?? me.email ?? "—"}</p>
-          {me.email && <p className="text-sm text-zinc-500 dark:text-zinc-400">{me.email}</p>}
+          <div className="flex gap-2">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="—"
+              className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand dark:border-zinc-700 dark:bg-zinc-800"
+            />
+            <button
+              type="button"
+              onClick={onSaveName}
+              className="rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+            >
+              {t("save")}
+            </button>
+          </div>
+          {me.email && <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{me.email}</p>}
         </div>
 
         <div className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">

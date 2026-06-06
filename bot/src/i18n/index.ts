@@ -46,6 +46,16 @@ export type MessageKey =
   | "budget_list_footer"
   | "budget_alert_over"
   | "budget_alert_warn"
+  // estoque / despensa
+  | "stock_empty"
+  | "stock_header"
+  | "stock_footer"
+  | "stock_item"
+  | "stock_add_usage"
+  | "stock_added"
+  | "stock_remove_usage"
+  | "stock_removed"
+  | "stock_not_found"
   // lembretes
   | "reminder_add_usage"
   | "reminder_created"
@@ -99,6 +109,8 @@ export type MessageKey =
   | "consent_notice"
   | "account_delete_warn"
   | "account_deleted"
+  | "name_usage"
+  | "name_updated"
   // onboarding (UserService)
   | "onboarding_ask_name"
   | "onboarding_ask_email"
@@ -157,6 +169,15 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     budget_alert_over: "🚨 Orçamento de {category} estourado: R$ {spent} de R$ {limit} ({pct}%).",
     budget_alert_warn:
       "🔔 Você já usou {pct}% do orçamento de {category}: R$ {spent} de R$ {limit}.",
+    stock_empty: 'Seu estoque está vazio. Adicione com "/estoque add 2 Leite".',
+    stock_header: "📦 Seu estoque:",
+    stock_footer: '"/estoque add <qtd> <nome>" ou "/estoque remover <nome>".',
+    stock_item: "• {name}: {quantity}",
+    stock_add_usage: 'Uso: /estoque add <quantidade> <nome>. Ex.: "/estoque add 2 Leite".',
+    stock_added: "✅ Estoque atualizado: {name} ({quantity}).",
+    stock_remove_usage: "Uso: /estoque remover <nome>.",
+    stock_removed: "🗑️ Removido do estoque: {name}.",
+    stock_not_found: "Não encontrei {name} no seu estoque.",
     reminder_add_usage:
       'Uso: /lembretes add <dia 1-28> <descrição>. Ex.: "/lembretes add 10 Conta de luz".',
     reminder_created: '⏰ Lembrete criado: "{description}" — todo dia {day}. Eu te aviso por aqui.',
@@ -206,6 +227,8 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     account_delete_warn:
       "⚠️ Isso apaga TODOS os seus dados (compras, lembretes, cadastro) e não dá para desfazer. Para confirmar, envie: /excluir_conta CONFIRMAR",
     account_deleted: "🗑️ Sua conta e todos os dados foram excluídos. Até logo. 👋",
+    name_usage: "Uso: /nome Seu Nome",
+    name_updated: "✅ Nome atualizado para {name}.",
     onboarding_ask_name: "Para começar, como você se chama? 🙂",
     onboarding_ask_email:
       "Me informe seu e-mail 📧 (ou envie /pular). Se quiser, toque no botão abaixo para compartilhar seu telefone.",
@@ -265,6 +288,15 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     budget_alert_over: "🚨 Budget for {category} exceeded: $ {spent} of $ {limit} ({pct}%).",
     budget_alert_warn:
       "🔔 You've already used {pct}% of the {category} budget: $ {spent} of $ {limit}.",
+    stock_empty: 'Your pantry is empty. Add with "/estoque add 2 Milk".',
+    stock_header: "📦 Your stock:",
+    stock_footer: '"/estoque add <qty> <name>" or "/estoque remover <name>".',
+    stock_item: "• {name}: {quantity}",
+    stock_add_usage: 'Usage: /estoque add <quantity> <name>. E.g., "/estoque add 2 Milk".',
+    stock_added: "✅ Stock updated: {name} ({quantity}).",
+    stock_remove_usage: "Usage: /estoque remover <name>.",
+    stock_removed: "🗑️ Removed from stock: {name}.",
+    stock_not_found: "I couldn't find {name} in your stock.",
     reminder_add_usage:
       'Usage: /lembretes add <day 1-28> <description>. E.g., "/lembretes add 10 Power bill".',
     reminder_created:
@@ -316,6 +348,8 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     account_delete_warn:
       "⚠️ This erases ALL your data (purchases, reminders, profile) and can't be undone. To confirm, send: /excluir_conta CONFIRMAR",
     account_deleted: "🗑️ Your account and all data were deleted. Goodbye. 👋",
+    name_usage: "Usage: /nome Your Name",
+    name_updated: "✅ Name updated to {name}.",
     onboarding_ask_name: "To start, what's your name? 🙂",
     onboarding_ask_email:
       "Please share your email 📧 (or send /pular). If you like, tap the button below to share your phone.",
@@ -373,6 +407,15 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
       '"/orcamento <categoría> <valor>" para cambiar, "/orcamento remover <categoría>".',
     budget_alert_over: "🚨 Presupuesto de {category} superado: $ {spent} de $ {limit} ({pct}%).",
     budget_alert_warn: "🔔 Ya usaste {pct}% del presupuesto de {category}: $ {spent} de $ {limit}.",
+    stock_empty: 'Tu despensa está vacía. Agrega con "/estoque add 2 Leche".',
+    stock_header: "📦 Tu stock:",
+    stock_footer: '"/estoque add <cant> <nombre>" o "/estoque remover <nombre>".',
+    stock_item: "• {name}: {quantity}",
+    stock_add_usage: 'Uso: /estoque add <cantidad> <nombre>. Ej.: "/estoque add 2 Leche".',
+    stock_added: "✅ Stock actualizado: {name} ({quantity}).",
+    stock_remove_usage: "Uso: /estoque remover <nombre>.",
+    stock_removed: "🗑️ Eliminado del stock: {name}.",
+    stock_not_found: "No encontré {name} en tu stock.",
     reminder_add_usage:
       'Uso: /lembretes add <día 1-28> <descripción>. Ej.: "/lembretes add 10 Factura de luz".',
     reminder_created:
@@ -423,6 +466,8 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     account_delete_warn:
       "⚠️ Esto borra TODOS tus datos (compras, recordatorios, perfil) y no se puede deshacer. Para confirmar, envía: /excluir_conta CONFIRMAR",
     account_deleted: "🗑️ Tu cuenta y todos los datos fueron eliminados. Hasta luego. 👋",
+    name_usage: "Uso: /nome Tu Nombre",
+    name_updated: "✅ Nombre actualizado a {name}.",
     onboarding_ask_name: "Para empezar, ¿cómo te llamas? 🙂",
     onboarding_ask_email:
       "Indícame tu correo 📧 (o envía /pular). Si quieres, toca el botón de abajo para compartir tu teléfono.",

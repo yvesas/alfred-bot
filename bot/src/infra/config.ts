@@ -54,6 +54,10 @@ export const config = {
   // LGPD: versão atual da Política de Privacidade (consentimento) e e-mail de contato/DPO.
   privacyPolicyVersion: "2026-06-05",
   privacyContactEmail: process.env.PRIVACY_CONTACT_EMAIL || "privacidade@exemplo.com",
+  // LGPD — retenção: apaga sessões web ANÔNIMAS inativas (nunca logaram). Desligado por padrão.
+  retentionEnabled: (process.env.RETENTION_ENABLED ?? "false").toLowerCase() === "true",
+  anonRetentionDays: Number(process.env.ANON_RETENTION_DAYS) || 90,
+  retentionIntervalMs: Number(process.env.RETENTION_INTERVAL_MS) || 24 * 60 * 60 * 1000,
   logLevel: process.env.LOG_LEVEL || (isProd ? "info" : "debug"),
   rateLimit: {
     max: Number(process.env.RATE_LIMIT_MAX) || 20,

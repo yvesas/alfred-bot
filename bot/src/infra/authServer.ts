@@ -70,6 +70,9 @@ export class AuthServer {
     if (url.pathname === "/api/me") return this.apiMe(req, res);
     if (url.pathname === "/api/report") return this.apiReport(req, res);
     if (url.pathname === "/api/export.csv") return this.apiExportCsv(req, res);
+    if (req.method === "PATCH" && url.pathname === "/api/profile") {
+      return this.apiUpdateProfile(req, res);
+    }
     if (req.method === "DELETE" && url.pathname === "/api/account") {
       return this.apiDeleteAccount(req, res);
     }
@@ -130,6 +133,25 @@ export class AuthServer {
     res.end(`﻿${csv}`); // BOM para o Excel reconhecer UTF-8
   }
 
+  private async apiUpdateProfile(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ): Promise<void> {
+    const user = await this.authedUser(req);
+    if (!user) {
+      json(res, 401, { error: "unauthorized" });
+      return;
+    }
+    const body = await readJson(req);
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (name.length < 2) {
+      json(res, 400, { error: "invalid name" });
+      return;
+    }
+    await this.users.setNameById(String(user._id), name);
+    json(res, 200, { ok: true, name });
+  }
+
   private async apiDeleteAccount(
     req: http.IncomingMessage,
     res: http.ServerResponse,
@@ -146,7 +168,7 @@ export class AuthServer {
   // CORS para as chamadas XHR do app web (telas próprias). Origem da allowlist ou "*".
   private cors(res: http.ServerResponse): void {
     res.setHeader("Access-Control-Allow-Origin", config.webAppUrl || "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   }
 

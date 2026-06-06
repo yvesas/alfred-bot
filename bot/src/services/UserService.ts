@@ -48,6 +48,15 @@ export class UserService {
     await this.userRepo.updateByIdentity(platform, externalId, { language });
   }
 
+  // Edição de perfil (LGPD — direito de correção).
+  async setName(platform: Platform, externalId: string, name: string): Promise<void> {
+    await this.userRepo.updateByIdentity(platform, externalId, { name });
+  }
+
+  async setNameById(id: string, name: string): Promise<void> {
+    await this.userRepo.updateById(id, { name });
+  }
+
   // ---------- Orçamentos mensais por categoria ----------
 
   async getBudgets(platform: Platform, externalId: string): Promise<IBudget[]> {

@@ -70,6 +70,7 @@ type UIKey =
   | "export_pdf"
   | "privacy_policy"
   | "login_consent"
+  | "save"
   | "common_loading";
 
 const STRINGS: Record<Locale, Record<UIKey, string>> = {
@@ -126,6 +127,7 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     export_pdf: "Exportar PDF",
     privacy_policy: "Política de Privacidade",
     login_consent: "Ao entrar, você concorda com a",
+    save: "Salvar",
     common_loading: "Carregando…",
   },
   en: {
@@ -181,6 +183,7 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     export_pdf: "Export PDF",
     privacy_policy: "Privacy Policy",
     login_consent: "By signing in, you agree to our",
+    save: "Save",
     common_loading: "Loading…",
   },
   es: {
@@ -236,6 +239,7 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     export_pdf: "Exportar PDF",
     privacy_policy: "Política de Privacidad",
     login_consent: "Al entrar, aceptas nuestra",
+    save: "Guardar",
     common_loading: "Cargando…",
   },
 };

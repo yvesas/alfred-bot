@@ -43,7 +43,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - ✅ **Relatórios mais ricos**: painel web com resumo do mês, comparativo mês a mês (gráfico de barras) e quebra por categoria (`/api/report` + `ReportService`)
 - ✅ **Exportação** de dados (CSV / PDF) — **CSV** no servidor (`/api/export.csv` + `/exportar` no chat envia o arquivo: Telegram/WhatsApp como documento, Web como download via WS) + **PDF** client-side (jsPDF) no Painel. `Replier.document` cross-plataforma
 - 🟡 **Leitura de QR Code / NFC-e** — chave de acesso (44 díg) via IA + **fallback `jsQR`**; valida o DV (mód-11), deriva **CNPJ/UF/data** e **deduplica o cupom** (`Purchase.fiscalKey`). **Falta (Fase 2, opcional):** itens completos via API/SEFAZ
-- 🟡 **Gestão de produtos/estoque** — `ProductService`/`ProductRepository` existem, mas **não estão ligados** ao bot
+- ✅ **Gestão de produtos/estoque** — `/estoque` (listar, `add <qtd> <nome>`, `remover <nome>`); `ProductService` ligado ao bot (incrementa/cria, remove), chaveado pelo `User._id`. Futuro: auto-popular a partir das compras + validade no chat
 
 ### Plataforma / negócio (rumo à comercialização)
 - 🟡 **Multi-plataforma (Telegram + WhatsApp)** — Plano em [PLANO-MULTIPLATAFORMA.md](./PLANO-MULTIPLATAFORMA.md)
@@ -61,7 +61,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 prioridade alta
 - ✅ **Painel web** (React Router) — landing (`/`) + chat (`/chat`) + **painel** (`/painel`, gastos/relatórios) + **conta** (`/conta`, perfil, contas vinculadas, **excluir conta**)
 - ✅ **Site de apresentação** — landing no app web com descrição do produto e planos, levando ao login
 - ⬜ **Cobrança (Stripe)** — checkout/assinatura para o plano Pro
-- 🟡 **Política de privacidade / LGPD** — **Fase 1 feita:** página `/privacidade` (dados, base legal, processadores/transferência internacional, retenção, direitos), **consentimento** registrado no onboarding/login (`User.consentVersion/consentAt`, base = execução do serviço + consentimento), **`/excluir_conta`** no chat (+ exclusão no web), e logs auditados (sem PII/financeiro). **Falta (Fase 2/3):** retenção/auto-purga, edição de perfil, OCR self-hosted como opção de privacidade, DPO/ROPA
+- 🟡 **Política de privacidade / LGPD** — **Fases 1 e 2 feitas.** Fase 1: página `/privacidade`, **consentimento** (`User.consentVersion/consentAt`), **`/excluir_conta`** (chat) + exclusão (web), logs auditados. Fase 2: **retenção/auto-purga** de sessões anônimas inativas (`RetentionScheduler`, gated por `RETENTION_ENABLED`), **edição de perfil** (`/nome` no chat + `PATCH /api/profile` no web), e **OCR self-hosted** segue como opção configurável (`OCR_PROVIDER=paddle`). **Falta (Fase 3, jurídico):** DPO/ROPA/DPIA
 
 ---
 
@@ -101,7 +101,7 @@ Resumo: dos 7 bugs, **6 resolvidos** (B2–B7). Aberto: só **B1** (operacional 
 
 ### Arquitetura / código
 - ✅ **Injetar `OcrService`, `GeminiProcessor` e `GptProcessor` via DI** (não recriam mais clients a cada mensagem)
-- ⬜ **Decidir o destino do código de produtos e do parser de OCR**: ligar ao bot ou remover (código morto hoje)
+- ✅ **Destino do código de produtos e do parser de OCR**: produtos **ligados** ao bot (`/estoque`); o parser de OCR rígido (`parseReceiptText`) foi **removido** (B6)
 - ✅ **Migrar somatórios de gastos para _aggregation_ do Mongo** (`$facet`)
 - ✅ **Validação programática dos dados extraídos pela IA** antes de persistir (`validatePurchaseData`) — a confirmação de UX continua em "Funcionalidades que desejamos"
 

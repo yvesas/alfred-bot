@@ -3,6 +3,7 @@ import { container } from "./infra/Container";
 import { Database } from "./infra/Database";
 import { TelegramAdapter } from "./platforms/telegram/TelegramAdapter";
 import { WhatsAppAdapter } from "./platforms/whatsapp/WhatsAppAdapter";
+import { WebAdapter } from "./platforms/web/WebAdapter";
 import { IMessagingAdapter } from "./core/IMessagingAdapter";
 import { assertRequiredConfig, config } from "./infra/config";
 import { startHealthServer, setAppReady } from "./infra/health";
@@ -15,6 +16,7 @@ function resolveAdapters(): IMessagingAdapter[] {
 
   if (enabled.includes("telegram")) adapters.push(container.get(TelegramAdapter));
   if (enabled.includes("whatsapp")) adapters.push(container.get(WhatsAppAdapter));
+  if (enabled.includes("web")) adapters.push(container.get(WebAdapter));
 
   return adapters;
 }

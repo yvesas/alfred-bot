@@ -9,7 +9,8 @@ compras e gastos a partir de texto ou de fotos de cupons fiscais (IA + OCR), com
 
 | Pasta | O que é | Stack |
 |---|---|---|
-| [`bot/`](./bot) | O bot do Telegram (aplicação principal) | TypeScript · Telegraf · Mongoose · Gemini/GPT |
+| [`bot/`](./bot) | O bot (Telegram, WhatsApp, Web) — aplicação principal | TypeScript · Telegraf · Baileys · Mongoose · Gemini/GPT |
+| [`web/`](./web) | Frontend de **chat** (web) | React · Vite · Tailwind · WebSocket |
 | [`ocr-service/`](./ocr-service) | Microserviço **opcional** de OCR self-hosted | Python · FastAPI · PaddleOCR |
 
 Cada projeto tem o seu próprio README com instruções de setup e execução.

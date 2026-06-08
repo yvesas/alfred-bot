@@ -55,6 +55,14 @@ jobs:
       - name: Type-check
         run: pnpm typecheck
 
+      # Cacheia o binário do MongoDB baixado pelo mongodb-memory-server (testes de repositório),
+      # evitando o download (~lento) a cada execução.
+      - name: Cache MongoDB binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}
+
       - name: Test with coverage
         run: pnpm test:coverage
 

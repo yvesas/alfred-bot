@@ -13,6 +13,7 @@ import { IMessagingAdapter } from "../../core/IMessagingAdapter";
 import { IncomingMessage } from "../../core/IncomingMessage";
 import { Replier } from "../../core/Replier";
 import { BotCore } from "../../core/BotCore";
+import { OutboundRegistry, OutboundSender } from "../../core/OutboundRegistry";
 import { KNOWN_COMMANDS } from "../../core/commands";
 import { config } from "../../infra/config";
 import { logger } from "../../infra/logger";
@@ -23,13 +24,24 @@ const waLogger = pino({ level: "error" });
 // Adapter do WhatsApp via Baileys (lib gratuita, login por QR). Normaliza eventos para
 // IncomingMessage e delega ao BotCore. Não contém regra de conversa.
 @injectable()
-export class WhatsAppAdapter implements IMessagingAdapter {
+export class WhatsAppAdapter implements IMessagingAdapter, OutboundSender {
   private sock?: WASocket;
   private stopping = false;
 
-  constructor(@inject(BotCore) private core: BotCore) {}
+  constructor(
+    @inject(BotCore) private core: BotCore,
+    @inject(OutboundRegistry) private outbound: OutboundRegistry,
+  ) {}
+
+  // Push: reconstrói o JID a partir do número (externalId) e envia.
+  async sendTo(externalId: string, text: string): Promise<boolean> {
+    if (!this.sock) return false;
+    await this.sock.sendMessage(`${externalId}@s.whatsapp.net`, { text });
+    return true;
+  }
 
   async start(): Promise<void> {
+    this.outbound.register("whatsapp", this);
     await this.connect();
   }
 
@@ -121,6 +133,13 @@ export class WhatsAppAdapter implements IMessagingAdapter {
     return {
       text: async (message: string) => {
         await this.sock?.sendMessage(jid, { text: message });
+      },
+      document: async (content: Buffer, filename: string, mimeType: string) => {
+        await this.sock?.sendMessage(jid, {
+          document: content,
+          fileName: filename,
+          mimetype: mimeType,
+        });
       },
     };
   }

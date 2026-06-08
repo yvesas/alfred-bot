@@ -97,10 +97,11 @@ describe("UserService (onboarding)", () => {
 
     expect(completed).toBe(true);
     expect(
-      userRepoMock.updateByIdentity.calledWith(TG, "123", {
-        email: "yves@example.com",
-        status: "complete",
-      }),
+      userRepoMock.updateByIdentity.calledWith(
+        TG,
+        "123",
+        sinon.match({ email: "yves@example.com", status: "complete" }),
+      ),
     ).toBe(true);
   });
 
@@ -120,6 +121,65 @@ describe("UserService (onboarding)", () => {
     const { completed } = await userService.submitAnswer(TG, "123", "/pular");
 
     expect(completed).toBe(true);
-    expect(userRepoMock.updateByIdentity.calledWith(TG, "123", { status: "complete" })).toBe(true);
+    expect(
+      userRepoMock.updateByIdentity.calledWith(TG, "123", sinon.match({ status: "complete" })),
+    ).toBe(true);
+  });
+
+  it("adds a category (idempotente) e persiste", async () => {
+    userRepoMock.findByIdentity.resolves(fakeUser({ categories: ["Mercado"] }));
+
+    const result = await userService.addCategory(TG, "123", "Farmácia");
+
+    expect(result).toEqual(["Mercado", "Farmácia"]);
+    expect(
+      userRepoMock.updateByIdentity.calledWith(TG, "123", {
+        categories: ["Mercado", "Farmácia"],
+      }),
+    ).toBe(true);
+  });
+
+  it("removes a category (case-insensitive)", async () => {
+    userRepoMock.findByIdentity.resolves(fakeUser({ categories: ["Mercado", "Farmácia"] }));
+
+    const result = await userService.removeCategory(TG, "123", "mercado");
+
+    expect(result).toEqual(["Farmácia"]);
+  });
+
+  it("sets the language", async () => {
+    await userService.setLanguage(TG, "123", "en");
+
+    expect(userRepoMock.updateByIdentity.calledWith(TG, "123", { language: "en" })).toBe(true);
+  });
+
+  it("sets a budget (replaces same category, case-insensitive)", async () => {
+    userRepoMock.findByIdentity.resolves(
+      fakeUser({ budgets: [{ category: "Alimentação", limit: 300 }] }),
+    );
+
+    const result = await userService.setBudget(TG, "123", "alimentação", 500);
+
+    expect(result).toEqual([{ category: "alimentação", limit: 500 }]);
+    expect(
+      userRepoMock.updateByIdentity.calledWith(TG, "123", {
+        budgets: [{ category: "alimentação", limit: 500 }],
+      }),
+    ).toBe(true);
+  });
+
+  it("removes a budget by category", async () => {
+    userRepoMock.findByIdentity.resolves(
+      fakeUser({
+        budgets: [
+          { category: "Alimentação", limit: 500 },
+          { category: "Transporte", limit: 200 },
+        ],
+      }),
+    );
+
+    const result = await userService.removeBudget(TG, "123", "alimentação");
+
+    expect(result).toEqual([{ category: "Transporte", limit: 200 }]);
   });
 });

@@ -23,4 +23,9 @@ export class ProductRepository {
       { new: true },
     );
   }
+
+  // Escopado ao usuário: remove um produto do estoque pelo nome.
+  async deleteByName(userId: string, productName: string): Promise<IProduct | null> {
+    return await ProductModel.findOneAndDelete({ userId, name: productName }).exec();
+  }
 }

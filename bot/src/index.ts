@@ -5,7 +5,10 @@ import { TelegramAdapter } from "./platforms/telegram/TelegramAdapter";
 import { WhatsAppAdapter } from "./platforms/whatsapp/WhatsAppAdapter";
 import { WebAdapter } from "./platforms/web/WebAdapter";
 import { IMessagingAdapter } from "./core/IMessagingAdapter";
-import { assertRequiredConfig, config } from "./infra/config";
+import { ReminderScheduler } from "./services/ReminderScheduler";
+import { RetentionScheduler } from "./services/RetentionScheduler";
+import { AuthServer } from "./infra/authServer";
+import { assertRequiredConfig, config, isAuthEnabled } from "./infra/config";
 import { startHealthServer, setAppReady } from "./infra/health";
 import { logger } from "./infra/logger";
 
@@ -41,6 +44,26 @@ async function main() {
     ),
   );
 
+  // Lembretes: sobe DEPOIS dos adapters (que registram o outbound sender no start()).
+  const scheduler = container.get(ReminderScheduler);
+  if (config.remindersEnabled) {
+    scheduler.start();
+  }
+
+  // Retenção (LGPD): purga sessões anônimas inativas. Desligado por padrão.
+  const retentionScheduler = container.get(RetentionScheduler);
+  if (config.retentionEnabled) {
+    retentionScheduler.start();
+  }
+
+  // Login web (WorkOS): só sobe quando totalmente configurado.
+  const authServer = container.get(AuthServer);
+  if (isAuthEnabled()) {
+    authServer.start();
+  } else if (config.workosApiKey || config.workosClientId) {
+    logger.warn("Login web desabilitado: defina WORKOS_API_KEY, WORKOS_CLIENT_ID e JWT_SECRET.");
+  }
+
   setAppReady(true);
   logger.info("🚀 Bot is ready!");
 
@@ -48,6 +71,9 @@ async function main() {
   const shutdown = async (signal: string) => {
     logger.info(`🛑 Encerrando (${signal})...`);
     setAppReady(false);
+    scheduler.stop();
+    retentionScheduler.stop();
+    authServer.stop();
     await Promise.allSettled(adapters.map((a) => a.stop()));
     healthServer.close();
   };

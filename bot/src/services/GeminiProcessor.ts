@@ -26,9 +26,13 @@ export class GeminiProcessor implements IMessageProcessor {
     });
   }
 
-  async processMessage(message: string): Promise<ModelResponse | null> {
+  async processMessage(
+    message: string,
+    categories?: string[],
+    lang?: string,
+  ): Promise<ModelResponse | null> {
     try {
-      const prompt = getPrompt001(null, message);
+      const prompt = getPrompt001(lang ?? null, message, categories);
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
@@ -41,8 +45,16 @@ export class GeminiProcessor implements IMessageProcessor {
 
   // Fase 3: lê a imagem do cupom e extrai o JSON numa única chamada multimodal
   // (sem o passo intermediário de OCR → texto).
-  async processImage(base64Image: string): Promise<ModelResponse | null> {
-    const prompt = getPrompt001(null, "(o conteúdo da compra está na imagem do cupom acima)");
+  async processImage(
+    base64Image: string,
+    categories?: string[],
+    lang?: string,
+  ): Promise<ModelResponse | null> {
+    const prompt = getPrompt001(
+      lang ?? null,
+      "(o conteúdo da compra está na imagem do cupom acima)",
+      categories,
+    );
 
     const result = await this.model.generateContent({
       contents: [

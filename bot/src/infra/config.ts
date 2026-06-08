@@ -13,11 +13,26 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL ?? "",
   telegramToken: process.env.TELEGRAM_TOKEN ?? "",
 
+  // Deep-links de vínculo (Fase 6). Username do bot do Telegram (sem @) e número do bot no
+  // WhatsApp (só dígitos). Vazios = o respectivo botão de vínculo fica indisponível.
+  telegramBotUsername: (process.env.TELEGRAM_BOT_USERNAME ?? "").replace(/^@/, ""),
+  whatsappBotNumber: (process.env.WHATSAPP_BOT_NUMBER ?? "").replace(/[^\d]/g, ""),
+
   // Por provider (validadas no uso)
   gcpProjectId: process.env.GCP_PROJECT_ID ?? "",
   googleCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   paddleOcrUrl: process.env.PADDLE_OCR_URL ?? "http://ocr:8000",
+
+  // Login web (B1 — WorkOS AuthKit). Opcional: sem chaves, o login fica desligado.
+  workosApiKey: process.env.WORKOS_API_KEY ?? "",
+  workosClientId: process.env.WORKOS_CLIENT_ID ?? "",
+  workosRedirectUri: process.env.WORKOS_REDIRECT_URI ?? "",
+  // URL do app web (para onde o callback redireciona com o token). Ex.: http://localhost:8081
+  webAppUrl: process.env.WEB_APP_URL ?? "",
+  // Segredo para assinar o JWT de sessão emitido pelo bot.
+  jwtSecret: process.env.JWT_SECRET ?? "",
+  authPort: Number(process.env.AUTH_PORT) || 3001,
 
   // Com default
   platforms: (process.env.PLATFORMS ?? "telegram").toLowerCase(),
@@ -29,12 +44,33 @@ export const config = {
   ocrMode: (process.env.OCR_MODE ?? "ocr").toLowerCase(),
   // Usa || (não ??) para que variáveis presentes porém VAZIAS no .env caiam no default.
   healthPort: Number(process.env.HEALTH_PORT) || 3000,
+  // Pede confirmação ("sim/não") antes de salvar uma compra. Default: ligado.
+  confirmPurchase: (process.env.CONFIRM_PURCHASE ?? "true").toLowerCase() !== "false",
+  // Lembretes (push recorrente). Ligado por padrão; intervalo de verificação em ms.
+  remindersEnabled: (process.env.REMINDERS_ENABLED ?? "true").toLowerCase() !== "false",
+  reminderIntervalMs: Number(process.env.REMINDER_INTERVAL_MS) || 60_000,
+  // Plano free: máximo de compras registradas por mês (acima disso, sugere o pro).
+  freeMonthlyPurchaseLimit: Number(process.env.FREE_MONTHLY_PURCHASE_LIMIT) || 50,
+  // LGPD: versão atual da Política de Privacidade (consentimento) e e-mail de contato/DPO.
+  privacyPolicyVersion: "2026-06-05",
+  privacyContactEmail: process.env.PRIVACY_CONTACT_EMAIL || "privacidade@exemplo.com",
+  // LGPD — retenção: apaga sessões web ANÔNIMAS inativas (nunca logaram). Desligado por padrão.
+  retentionEnabled: (process.env.RETENTION_ENABLED ?? "false").toLowerCase() === "true",
+  anonRetentionDays: Number(process.env.ANON_RETENTION_DAYS) || 90,
+  retentionIntervalMs: Number(process.env.RETENTION_INTERVAL_MS) || 24 * 60 * 60 * 1000,
   logLevel: process.env.LOG_LEVEL || (isProd ? "info" : "debug"),
   rateLimit: {
     max: Number(process.env.RATE_LIMIT_MAX) || 20,
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
   },
 };
+
+// Login web habilitado quando dá para autenticar (WorkOS Magic Auth) e assinar a sessão.
+// A redirect URI NÃO é necessária no fluxo de e-mail+OTP (telas próprias); ela só é usada pelo
+// fluxo hospedado/social opcional do AuthKit.
+export function isAuthEnabled(): boolean {
+  return !!(config.workosApiKey && config.workosClientId && config.jwtSecret);
+}
 
 // Valida as variáveis essenciais no startup. Chamada em index.ts antes de subir o bot.
 export function assertRequiredConfig(): void {

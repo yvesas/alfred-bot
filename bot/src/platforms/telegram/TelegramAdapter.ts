@@ -5,24 +5,50 @@ import { IMessagingAdapter } from "../../core/IMessagingAdapter";
 import { IncomingMessage } from "../../core/IncomingMessage";
 import { Replier } from "../../core/Replier";
 import { BotCore } from "../../core/BotCore";
+import { OutboundRegistry, OutboundSender } from "../../core/OutboundRegistry";
 import { config } from "../../infra/config";
 import { logger } from "../../infra/logger";
 
 // Adapter do Telegram (Telegraf): normaliza eventos para IncomingMessage, monta o Replier
 // e delega a lógica ao BotCore. Não contém regra de conversa.
 @injectable()
-export class TelegramAdapter implements IMessagingAdapter {
+export class TelegramAdapter implements IMessagingAdapter, OutboundSender {
   private bot: Telegraf;
 
-  constructor(@inject(BotCore) private core: BotCore) {
+  constructor(
+    @inject(BotCore) private core: BotCore,
+    @inject(OutboundRegistry) private outbound: OutboundRegistry,
+  ) {
     this.bot = new Telegraf(config.telegramToken);
   }
 
+  // Push: o externalId do Telegram é o próprio chat id.
+  async sendTo(externalId: string, text: string): Promise<boolean> {
+    await this.bot.telegram.sendMessage(externalId, text);
+    return true;
+  }
+
   async start(): Promise<void> {
+    this.outbound.register("telegram", this);
     this.bot.start((ctx) => this.dispatch(ctx, this.toCommand(ctx, "start")));
     this.bot.command("compras", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "compras")));
     this.bot.command("gastos", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "gastos")));
     this.bot.command("ia", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "ia")));
+    this.bot.command("excluir", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "excluir")));
+    this.bot.command("editar", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "editar")));
+    this.bot.command("categorias", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "categorias")));
+    this.bot.command("idioma", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "idioma")));
+    this.bot.command("orcamento", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "orcamento")));
+    this.bot.command("lembretes", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "lembretes")));
+    this.bot.command("vincular", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "vincular")));
+    this.bot.command("email", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "email")));
+    this.bot.command("codigo", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "codigo")));
+    this.bot.command("exportar", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "exportar")));
+    this.bot.command("excluir_conta", (ctx) =>
+      this.dispatch(ctx, this.toCommand(ctx, "excluir_conta")),
+    );
+    this.bot.command("nome", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "nome")));
+    this.bot.command("estoque", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "estoque")));
 
     this.bot.on("text", (ctx) => this.dispatch(ctx, this.toText(ctx)));
     this.bot.on("photo", (ctx) => this.dispatch(ctx, this.toPhoto(ctx)));
@@ -48,6 +74,9 @@ export class TelegramAdapter implements IMessagingAdapter {
       text: async (message, options) => {
         const extra = options?.requestPhone ? this.contactKeyboard() : Markup.removeKeyboard();
         await ctx.reply(message, extra);
+      },
+      document: async (content, filename) => {
+        await ctx.replyWithDocument({ source: content, filename });
       },
     };
   }

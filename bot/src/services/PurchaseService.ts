@@ -8,6 +8,14 @@ export interface SpendingReport extends SpendingSummary {
   period: SpendingPeriod;
 }
 
+export interface PurchasePage {
+  items: IPurchase[];
+  total: number;
+  page: number; // 1-based
+  pages: number;
+  pageSize: number;
+}
+
 @injectable()
 export class PurchaseService {
   constructor(@inject(PurchaseRepository) private purchaseRepo: PurchaseRepository) {}
@@ -23,6 +31,36 @@ export class PurchaseService {
 
   async getUserPurchases(userId: string): Promise<IPurchase[]> {
     return await this.purchaseRepo.findByUser(userId);
+  }
+
+  // Cupom já registrado (dedup por chave de acesso da NFC-e).
+  async findByFiscalKey(userId: string, fiscalKey: string): Promise<IPurchase | null> {
+    return await this.purchaseRepo.findByFiscalKey(userId, fiscalKey);
+  }
+
+  // Histórico paginado (mais recentes primeiro). `page` é 1-based.
+  async getUserPurchasesPage(userId: string, page = 1, pageSize = 5): Promise<PurchasePage> {
+    const total = await this.purchaseRepo.countByUser(userId);
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    const current = Math.min(Math.max(1, Math.floor(page)), pages);
+    const items = await this.purchaseRepo.findByUserPaged(
+      userId,
+      (current - 1) * pageSize,
+      pageSize,
+    );
+    return { items, total, page: current, pages, pageSize };
+  }
+
+  async deletePurchase(userId: string, id: string): Promise<IPurchase | null> {
+    return await this.purchaseRepo.deleteById(userId, id);
+  }
+
+  async updatePurchase(
+    userId: string,
+    id: string,
+    patch: Partial<IPurchaseCreate>,
+  ): Promise<IPurchase | null> {
+    return await this.purchaseRepo.updateById(userId, id, patch);
   }
 
   async getTotalSpent(userId: string, month: number, year: number): Promise<number> {

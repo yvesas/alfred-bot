@@ -1,0 +1,73 @@
+import { inject, injectable } from "inversify";
+import { UserService } from "./UserService";
+import { PurchaseService } from "./PurchaseService";
+import { Platform } from "../core/IncomingMessage";
+import { IPurchaseCreate } from "../models/Purchase";
+import { Language } from "../models/User";
+import { t } from "../i18n";
+
+// Limiares de alerta (fração do orçamento mensal).
+const WARN_RATIO = 0.8;
+
+@injectable()
+export class BudgetService {
+  constructor(
+    @inject(UserService) private userService: UserService,
+    @inject(PurchaseService) private purchaseService: PurchaseService,
+  ) {}
+
+  // Alertas de orçamento disparados por uma compra recém-salva. Só avalia as categorias
+  // tocadas pela compra (evita repetir alertas de categorias não relacionadas).
+  async alertsForPurchase(
+    platform: Platform,
+    externalId: string,
+    purchase: IPurchaseCreate,
+    lang: Language = "pt",
+  ): Promise<string[]> {
+    const budgets = await this.userService.getBudgets(platform, externalId);
+    if (budgets.length === 0) return [];
+
+    const touched = new Set(
+      (purchase.items ?? [])
+        .map((i) => i.category?.trim().toLowerCase())
+        .filter((c): c is string => !!c),
+    );
+    // Compra sem categoria nos itens cai em "Outros" (mesma convenção do relatório de gastos).
+    if (touched.size === 0) touched.add("outros");
+
+    const relevant = budgets.filter((b) => touched.has(b.category.toLowerCase()));
+    if (relevant.length === 0) return [];
+
+    // Relatório pela identidade canônica da compra (User._id, Fase 6).
+    const report = await this.purchaseService.getSpendingReport(purchase.userId, "current_month");
+
+    const alerts: string[] = [];
+    for (const b of relevant) {
+      if (b.limit <= 0) continue;
+      const spent = this.spentFor(report.byCategory, b.category);
+      const ratio = spent / b.limit;
+      const pct = Math.round(ratio * 100);
+
+      const params = {
+        category: b.category,
+        spent: spent.toFixed(2),
+        limit: b.limit.toFixed(2),
+        pct,
+      };
+      if (ratio >= 1) {
+        alerts.push(t(lang, "budget_alert_over", params));
+      } else if (ratio >= WARN_RATIO) {
+        alerts.push(t(lang, "budget_alert_warn", params));
+      }
+    }
+    return alerts;
+  }
+
+  // Soma os gastos da categoria no relatório, casando de forma case-insensitive.
+  private spentFor(byCategory: Record<string, number>, category: string): number {
+    const target = category.toLowerCase();
+    return Object.entries(byCategory)
+      .filter(([k]) => k.toLowerCase() === target)
+      .reduce((sum, [, v]) => sum + v, 0);
+  }
+}

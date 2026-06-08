@@ -3,6 +3,7 @@
 import { convertModelResponseToPurchase } from "../../infra/converters/purchaseConverter";
 import { IPurchaseCreate } from "../../models/Purchase";
 import { ModelResponse } from "../../services/MessageProcessingService";
+import { accessKeyCheckDigit } from "../../utils/fiscalKey";
 
 describe("convertModelResponseToPurchase", () => {
   it("should correctly convert a valid ModelResponse to IPurchaseCreate", () => {
@@ -106,5 +107,26 @@ describe("convertModelResponseToPurchase", () => {
 
     const result = convertModelResponseToPurchase(input);
     expect(result.items).toEqual([]);
+  });
+
+  it("aceita uma chave de acesso válida e deriva o CNPJ da loja", () => {
+    const base43 = "35" + "2406" + "12345678000199" + "65" + "001" + "000000123" + "1" + "00000012";
+    const key = base43 + String(accessKeyCheckDigit(base43));
+    const input: any = { intent: "purchase", userId: "1", total: 10, accessKey: key };
+
+    const result = convertModelResponseToPurchase(input);
+    expect(result.fiscalKey).toBe(key);
+    expect(result.store?.cnpj).toBe("12345678000199"); // derivado da chave
+  });
+
+  it("ignora uma chave de acesso inválida (DV errado)", () => {
+    const input: any = {
+      intent: "purchase",
+      userId: "1",
+      total: 10,
+      accessKey: "0".repeat(43) + "5",
+    };
+    const result = convertModelResponseToPurchase(input);
+    expect(result.fiscalKey).toBeUndefined();
   });
 });

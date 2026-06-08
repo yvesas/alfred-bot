@@ -1,5 +1,12 @@
-# Monorepo: o projeto Node está em bot/. Os hooks rodam a partir da raiz do repo.
-cd bot || exit 1
-# Lint + format apenas nos arquivos staged, depois checagem de tipos do projeto.
-pnpm lint-staged
-pnpm typecheck
+# Monorepo (hooks rodam a partir da raiz do repo). Roda lint+typecheck por projeto,
+# só quando há arquivos staged naquele projeto.
+
+changed() { git diff --cached --name-only --diff-filter=ACMR | grep -q "^$1/"; }
+
+if changed bot; then
+  ( cd bot && pnpm lint-staged && pnpm typecheck ) || exit 1
+fi
+
+if changed web; then
+  ( cd web && pnpm lint-staged && pnpm typecheck ) || exit 1
+fi

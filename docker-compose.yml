@@ -9,7 +9,7 @@
 #            PADDLE_OCR_URL=http://ocr:8000
 #
 #   Observabilidade (Prometheus+Grafana): docker compose --profile monitoring up -d
-#       -> Prometheus scrapeia http://bot:3000/metrics ; Grafana em http://localhost:3001
+#       -> Prometheus scrapeia http://bot:3000/metrics ; Grafana em http://localhost:3002
 
 services:
   bot:
@@ -25,6 +25,10 @@ services:
       # DEV: habilita também o chat web; origens permitidas no WebSocket (front em :8081 e :5173).
       PLATFORMS: telegram,web
       WEB_ALLOWED_ORIGIN: http://localhost:8081,http://localhost:5173
+      # Login web (WorkOS): as chaves vêm do bot/.env (WORKOS_*, JWT_SECRET, WORKOS_REDIRECT_URI).
+      # Para onde o callback redireciona o navegador (origem do front publicada abaixo).
+      AUTH_PORT: 3001
+      WEB_APP_URL: http://localhost:8081
     depends_on:
       mongo:
         condition: service_healthy
@@ -32,6 +36,7 @@ services:
     restart: unless-stopped
     ports:
       - "3100:3100" # WebSocket do chat web (browser conecta em ws://localhost:3100)
+      - "3001:3001" # AuthServer (login/callback do WorkOS) — só usado se o login estiver configurado
     volumes:
       # Sessão do WhatsApp (Baileys) — persiste o login por QR entre reinícios.
       - wa-session:/app/.wa-session
@@ -53,6 +58,10 @@ services:
       args:
         # URL do WebSocket embutida no build (o bot publica :3100 no host).
         VITE_WS_URL: ws://localhost:3100
+        # URL do AuthServer embutida no build (botão "Entrar"). O bot publica :3001 no host.
+        VITE_AUTH_URL: http://localhost:3001
+        # Botão "Vincular WhatsApp" (Fase 6) — "true" quando houver número de bot configurado.
+        VITE_WHATSAPP_ENABLED: "false"
     ports:
       - "8081:80" # chat em http://localhost:8081
     depends_on: [bot]
@@ -101,7 +110,7 @@ services:
     image: grafana/grafana:latest
     profiles: [monitoring]
     ports:
-      - "3001:3000" # UI do Grafana em http://localhost:3001
+      - "3002:3000" # UI do Grafana em http://localhost:3002 (3001 é do AuthServer)
     volumes:
       - grafana-data:/var/lib/grafana
     networks: [app-net]

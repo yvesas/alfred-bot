@@ -24,4 +24,14 @@ export class ProductService {
   ): Promise<IProduct | null> {
     return await this.productRepo.updateQuantity(userId, productName, quantity);
   }
+
+  // Adiciona ao estoque: incrementa se o produto já existe, senão cria.
+  async addOrIncrement(userId: string, name: string, quantity: number): Promise<IProduct> {
+    const updated = await this.productRepo.updateQuantity(userId, name, quantity);
+    return updated ?? (await this.addProduct({ userId, name, quantity }));
+  }
+
+  async removeProduct(userId: string, name: string): Promise<IProduct | null> {
+    return await this.productRepo.deleteByName(userId, name);
+  }
 }

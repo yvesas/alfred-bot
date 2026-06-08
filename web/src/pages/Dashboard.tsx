@@ -17,19 +17,15 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 // Gráfico de barras simples (sem dependência) — total por mês.
-function MonthlyBars({
-  data,
-  locale,
-}: {
-  data: DashboardReport["monthly"];
-  locale: string;
-}) {
+function MonthlyBars({ data, locale }: { data: DashboardReport["monthly"]; locale: string }) {
   const max = Math.max(1, ...data.map((d) => d.total));
   return (
     <div className="flex items-end gap-2" style={{ height: 160 }}>
       {data.map((d) => (
         <div key={`${d.year}-${d.month}`} className="flex flex-1 flex-col items-center gap-1">
-          <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{money(d.total, locale)}</span>
+          <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+            {money(d.total, locale)}
+          </span>
           <div
             className="w-full rounded-t bg-brand/80"
             style={{ height: `${Math.round((d.total / max) * 120)}px` }}
@@ -148,7 +144,9 @@ export function Dashboard() {
           <p className="text-2xl font-semibold">{money(last.total, locale)}</p>
         </Card>
         <Card title={`${t("dashboard_this_month")} vs ${t("dashboard_last_month")}`}>
-          <p className={`text-2xl font-semibold ${diff >= 0 ? "text-red-500" : "text-emerald-500"}`}>
+          <p
+            className={`text-2xl font-semibold ${diff >= 0 ? "text-red-500" : "text-emerald-500"}`}
+          >
             {diffLabel}
           </p>
         </Card>

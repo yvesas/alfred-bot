@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 // i18n da UI do chat web. Espelha os idiomas do bot (pt/en/es). As mensagens do bot
 // já chegam localizadas (o backend usa User.language); aqui cuidamos só dos rótulos da UI.
@@ -106,7 +99,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     plan_free_title: "Grátis",
     plan_pro_title: "Pro",
     plan_free_features: "Registro por texto e foto • Gastos e categorias • Até 50 compras/mês",
-    plan_pro_features: "Tudo do grátis • Compras ilimitadas • Relatórios avançados • Multi-plataforma",
+    plan_pro_features:
+      "Tudo do grátis • Compras ilimitadas • Relatórios avançados • Multi-plataforma",
     plan_current_badge: "Seu plano",
     dashboard_title: "Painel",
     dashboard_this_month: "Este mês",
@@ -162,7 +156,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     plan_free_title: "Free",
     plan_pro_title: "Pro",
     plan_free_features: "Text & photo logging • Spending and categories • Up to 50 purchases/month",
-    plan_pro_features: "Everything in Free • Unlimited purchases • Advanced reports • Multi-platform",
+    plan_pro_features:
+      "Everything in Free • Unlimited purchases • Advanced reports • Multi-platform",
     plan_current_badge: "Your plan",
     dashboard_title: "Dashboard",
     dashboard_this_month: "This month",
@@ -218,7 +213,8 @@ const STRINGS: Record<Locale, Record<UIKey, string>> = {
     plan_free_title: "Gratis",
     plan_pro_title: "Pro",
     plan_free_features: "Registro por texto y foto • Gastos y categorías • Hasta 50 compras/mes",
-    plan_pro_features: "Todo lo del gratis • Compras ilimitadas • Informes avanzados • Multiplataforma",
+    plan_pro_features:
+      "Todo lo del gratis • Compras ilimitadas • Informes avanzados • Multiplataforma",
     plan_current_badge: "Tu plan",
     dashboard_title: "Panel",
     dashboard_this_month: "Este mes",

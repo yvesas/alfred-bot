@@ -6,7 +6,13 @@ import { money, monthLabel } from "./format";
 export function exportDashboardPdf(
   report: DashboardReport,
   locale: string,
-  labels: { title: string; thisMonth: string; lastMonth: string; monthly: string; byCategory: string },
+  labels: {
+    title: string;
+    thisMonth: string;
+    lastMonth: string;
+    monthly: string;
+    byCategory: string;
+  },
 ): void {
   const doc = new jsPDF();
   let y = 20;
@@ -16,7 +22,11 @@ export function exportDashboardPdf(
   y += 10;
 
   doc.setFontSize(11);
-  doc.text(`${labels.thisMonth}: ${money(report.current.total, locale)} (${report.current.count})`, 14, y);
+  doc.text(
+    `${labels.thisMonth}: ${money(report.current.total, locale)} (${report.current.count})`,
+    14,
+    y,
+  );
   y += 6;
   doc.text(`${labels.lastMonth}: ${money(report.last.total, locale)}`, 14, y);
   y += 12;

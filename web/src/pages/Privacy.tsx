@@ -33,7 +33,10 @@ export function Privacy() {
           <ul className="list-disc pl-5">
             <li>Cadastro: nome, e-mail e, opcionalmente, telefone.</li>
             <li>Identificadores das plataformas (Telegram/WhatsApp/Web) que você usa.</li>
-            <li>Dados de compras que você registra: descrição, valor, data, loja, categoria e — quando há cupom — a chave de acesso da NFC-e.</li>
+            <li>
+              Dados de compras que você registra: descrição, valor, data, loja, categoria e — quando
+              há cupom — a chave de acesso da NFC-e.
+            </li>
             <li>Conteúdo das mensagens e fotos de cupom que você envia para processamento.</li>
           </ul>
         </Section>
@@ -42,8 +45,8 @@ export function Privacy() {
           <p>
             Usamos seus dados para <strong>prestar o serviço que você solicita</strong> (registrar e
             consultar seus gastos) — base legal de <em>execução de serviço/contrato</em> — e
-            registramos seu <em>consentimento</em> no cadastro. Não vendemos seus dados nem os usamos
-            para publicidade de terceiros.
+            registramos seu <em>consentimento</em> no cadastro. Não vendemos seus dados nem os
+            usamos para publicidade de terceiros.
           </p>
         </Section>
 
@@ -64,15 +67,15 @@ export function Privacy() {
           <p>
             Alguns desses provedores estão fora do Brasil, o que pode envolver{" "}
             <strong>transferência internacional</strong> de dados, sempre com salvaguardas
-            contratuais. Para máxima privacidade, o operador pode configurar OCR self-hosted para não
-            enviar imagens a terceiros.
+            contratuais. Para máxima privacidade, o operador pode configurar OCR self-hosted para
+            não enviar imagens a terceiros.
           </p>
         </Section>
 
         <Section title="Retenção">
           <p>
-            Mantemos seus dados enquanto sua conta existir. Ao excluir a conta, apagamos suas compras,
-            lembretes e cadastro.
+            Mantemos seus dados enquanto sua conta existir. Ao excluir a conta, apagamos suas
+            compras, lembretes e cadastro.
           </p>
         </Section>
 
@@ -87,8 +90,8 @@ export function Privacy() {
               <strong>Corrigir</strong> lançamentos — <code>/editar</code> e <code>/excluir</code>.
             </li>
             <li>
-              <strong>Excluir</strong> tudo — em <strong>Conta → Excluir minha conta</strong>, ou pelo
-              comando <code>/excluir_conta CONFIRMAR</code> no chat.
+              <strong>Excluir</strong> tudo — em <strong>Conta → Excluir minha conta</strong>, ou
+              pelo comando <code>/excluir_conta CONFIRMAR</code> no chat.
             </li>
           </ul>
         </Section>
@@ -96,7 +99,8 @@ export function Privacy() {
         <Section title="Segurança">
           <p>
             Acesso autenticado (JWT), consultas isoladas por usuário e segredos fora do código.
-            Nenhum método é 100% infalível, mas adotamos práticas adequadas à sensibilidade dos dados.
+            Nenhum método é 100% infalível, mas adotamos práticas adequadas à sensibilidade dos
+            dados.
           </p>
         </Section>
 

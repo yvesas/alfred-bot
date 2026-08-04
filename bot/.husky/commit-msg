@@ -1,0 +1,5 @@
+# Delega ao hook do baseline (claude-base), que barra atribuição de IA e exige
+# Conventional Commits. Fica aqui porque o core.hooksPath deste repo pertence ao
+# husky — trocá-lo desligaria o pre-commit e o pre-push acima.
+# Atualizar: ../claude-base/bin/install . (reescreve .githooks/commit-msg)
+"$(git rev-parse --show-toplevel)/.githooks/commit-msg" "$1"

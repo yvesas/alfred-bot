@@ -1,21 +1,19 @@
-// Comandos que viram kind "command" (o resto é texto). O Telegram registra-os nativamente;
-// os adapters baseados em texto (WhatsApp, Web) usam esta lista para decidir.
-export const KNOWN_COMMANDS = [
+import { moduleCommands } from "../modules/registry";
+
+// Comandos do chassi: conta, identidade e preferências. Não pertencem a módulo nenhum —
+// existiriam igual num assistente que não soubesse o que é uma compra.
+export const CHASSIS_COMMANDS = [
   "start",
-  "compras",
-  "gastos",
   "ia",
-  "excluir",
-  "editar",
-  "categorias",
   "idioma",
-  "orcamento",
-  "lembretes",
+  "nome",
   "vincular",
   "email",
   "codigo",
-  "exportar",
   "excluir_conta",
-  "nome",
-  "estoque",
 ];
+
+// Comandos que viram kind "command" (o resto é texto). O Telegram registra-os
+// nativamente; os adapters baseados em texto (WhatsApp, Web) usam esta lista para
+// decidir. Os de módulo saem do registro — uma lista só, para não divergirem.
+export const KNOWN_COMMANDS = [...CHASSIS_COMMANDS, ...moduleCommands()];

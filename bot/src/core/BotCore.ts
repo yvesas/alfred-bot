@@ -29,6 +29,7 @@ import {
 import { IPurchaseCreate } from "../models/Purchase";
 import { IUser, Language, Plan } from "../models/User";
 import { extractAccessKey, isValidAccessKey } from "../utils/fiscalKey";
+import { moduleForCommand } from "../modules/registry";
 import { MessageKey, t } from "../i18n";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
@@ -431,6 +432,14 @@ export class BotCore {
     if (!user) return;
     const lang = langOf(user);
     const userId = String(user._id); // identidade canônica (Fase 6)
+
+    // Comando de um módulo declarado mas não construído (tarefas, projetos): responde.
+    // Sem isto o `switch` abaixo o ignoraria em silêncio — a pior resposta possível.
+    const owner = name ? moduleForCommand(name) : undefined;
+    if (owner && !owner.implemented) {
+      await reply.text(t(lang, "module_coming_soon", { title: owner.title }));
+      return;
+    }
 
     switch (name) {
       case "gastos":

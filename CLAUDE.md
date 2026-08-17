@@ -21,7 +21,8 @@ testes e Dockerfile. Não há workspace pnpm unificado.
 | Pergunta | Arquivo |
 |---|---|
 | Em que pé está o projeto? | `specs/project/STATE.md` |
-| O que vem depois? | `specs/project/ROADMAP.md` |
+| O que vem depois, no produto? | `specs/project/ROADMAP.md` |
+| O que vem depois, no código? | **`specs/project/PLANO-TECNICO.md`** |
 | Qual a visão e os limites? | `specs/project/PROJECT.md` |
 | Como o sistema é hoje? | `docs/architecture.md` |
 | Por que foi decidido assim? | `docs/adr/` · `docs/decisions.md` |

@@ -1,0 +1,43 @@
+Copyright (c) 2026 YAS Softwares LTDA. Todos os direitos reservados.
+
+SOFTWARE PROPRIETÁRIO — LICENÇA RESTRITA
+
+Este software e a documentação que o acompanha são propriedade exclusiva da
+YAS Softwares LTDA. Não são software livre nem de código aberto.
+
+CONCESSÃO
+
+O acesso é concedido exclusivamente às pessoas expressamente autorizadas pelo
+titular como colaboradoras deste repositório, e apenas para desenvolver,
+testar e operar o próprio produto. Ser colaborador do repositório não transfere
+titularidade, nem concede licença de uso fora dessa finalidade.
+
+É VEDADO, sem autorização prévia e por escrito do titular:
+
+  a) copiar, distribuir, publicar ou disponibilizar o código a terceiros;
+  b) usar o código, no todo ou em parte, em outro produto ou projeto;
+  c) sublicenciar, vender, alugar ou ceder qualquer direito sobre o software;
+  d) fazer engenharia reversa com o fim de recriar o produto;
+  e) remover ou alterar avisos de titularidade.
+
+CONTRIBUIÇÕES
+
+Toda contribuição enviada a este repositório é incorporada ao software e passa
+a ser de titularidade da YAS Softwares LTDA. Quem contribui declara ter os
+direitos necessários para fazê-lo.
+
+DEPENDÊNCIAS DE TERCEIROS
+
+Esta licença cobre apenas o código deste repositório. As dependências mantêm
+as licenças de seus respectivos titulares.
+
+DADOS PESSOAIS
+
+O software processa dados pessoais e financeiros. Quem o opera é responsável
+por cumprir a LGPD (Lei 13.709/2018). Ver SECURITY.md.
+
+AUSÊNCIA DE GARANTIA
+
+O SOFTWARE É FORNECIDO "COMO ESTÁ", SEM GARANTIA DE QUALQUER NATUREZA, EXPRESSA
+OU IMPLÍCITA. EM NENHUMA HIPÓTESE O TITULAR RESPONDERÁ POR QUAISQUER DANOS
+DECORRENTES DO USO DESTE SOFTWARE.

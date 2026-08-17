@@ -1,0 +1,62 @@
+# Varredura de segurança gratuita em repositório PRIVADO.
+#
+# O CodeQL não entra aqui: em repo privado ele exige GitHub Advanced Security,
+# que só vem no plano Team/Enterprise e é cobrado por committer ativo. Quando o
+# repositório virar público — ou o plano subir — vale trocar isto pelo CodeQL
+# (é uma decisão registrada em specs/project/PLANO-TECNICO.md).
+#
+# O que dá para fazer de graça: auditar as dependências. É onde mora a maior
+# parte do risco real num projeto deste tamanho.
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Segunda de manhã: uma CVE publicada no fim de semana aparece antes de virar
+    # semana de trabalho.
+    - cron: "0 9 * * 1"
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [bot, web]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: ${{ matrix.project }}/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # Falha em vulnerabilidade alta ou crítica. Moderada e baixa aparecem no log
+      # sem quebrar o build — senão o gate vira ruído e as pessoas param de olhar.
+      - name: Audit (high e critical quebram)
+        run: pnpm audit --audit-level=high
+
+      - name: Audit completo (informativo)
+        if: always()
+        run: pnpm audit || true

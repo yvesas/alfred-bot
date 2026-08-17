@@ -108,6 +108,10 @@ queimar cota de e-mail do WorkOS) e C7 (CORS e Origin com default `*`).
 
 ## Para retomar
 
+**O trabalho técnico tem plano próprio e vivo:**
+[`PLANO-TECNICO.md`](PLANO-TECNICO.md) — fases, estado de cada etapa e o ritual
+de atualização da documentação.
+
 Leia, nesta ordem: [`PROJECT.md`](PROJECT.md) → [`ROADMAP.md`](ROADMAP.md) →
 [`CONCERNS.md`](../codebase/CONCERNS.md). Para a decisão de arquitetura,
 [`PLANO-ESTRUTURACAO.md`](PLANO-ESTRUTURACAO.md) e os ADRs 0004 e 0005.

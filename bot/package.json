@@ -1,7 +1,7 @@
 {
   "name": "bot-telegram",
   "version": "1.0.0",
-  "description": "Bot de Telegram que registra compras e gastos pessoais a partir de texto ou cupons fiscais, usando IA (Gemini/GPT) e OCR (Google Vision), com persistência em MongoDB.",
+  "description": "Alfred — assistente pessoal no chat com capacidades em módulos (fin, tarefas, projetos), em Telegram, WhatsApp e web.",
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --ext ts --exec ts-node -P tsconfig.json src/index.ts",
@@ -30,8 +30,8 @@
     "gpt",
     "mongodb"
   ],
-  "author": "Yves",
-  "license": "ISC",
+  "author": "YAS Softwares LTDA",
+  "license": "UNLICENSED",
   "packageManager": "pnpm@10.6.5",
   "engines": {
     "node": ">=20"
@@ -78,5 +78,6 @@
     "ts-jest": "^29.2.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
-  }
+  },
+  "private": true
 }

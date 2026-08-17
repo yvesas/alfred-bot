@@ -3,7 +3,7 @@
 Monorepo do **Alfred** — um assistente financeiro pessoal no **Telegram e WhatsApp** que registra
 compras e gastos a partir de texto ou de fotos de cupons fiscais (IA + OCR), com persistência em MongoDB.
 
-> 📘 **Como usar e testar:** [`GUIA-DE-USO-E-TESTE.md`](./GUIA-DE-USO-E-TESTE.md)
+> 📘 **Como usar e testar:** [`docs/runbooks/uso-e-teste.md`](./docs/runbooks/uso-e-teste.md)
 
 ## Projetos
 
@@ -32,8 +32,13 @@ Configure as variáveis em `bot/.env` (a partir de `bot/.env.sample`).
 
 ## Documentação
 
-- **Guia de uso e teste:** [`GUIA-DE-USO-E-TESTE.md`](./GUIA-DE-USO-E-TESTE.md)
-- Bot: [`bot/README.md`](./bot/README.md)
-- Roadmap: [`bot/ROADMAP.md`](./bot/ROADMAP.md)
-- Análise técnica: [`bot/ANALISE-PROJETO.md`](./bot/ANALISE-PROJETO.md)
-- Planos de OCR: [`bot/PLANO-OCR-FASES.md`](./bot/PLANO-OCR-FASES.md) · [`bot/PLANO-PADDLEOCR-DOCKER.md`](./bot/PLANO-PADDLEOCR-DOCKER.md)
+**`docs/` é o sistema como ele é · `specs/` é o plano.**
+
+| | |
+|---|---|
+| Guia de uso e teste | [`docs/runbooks/uso-e-teste.md`](./docs/runbooks/uso-e-teste.md) |
+| Arquitetura | [`docs/architecture.md`](./docs/architecture.md) |
+| Decisões estruturais | [`docs/adr/`](./docs/adr) · [`docs/decisions.md`](./docs/decisions.md) |
+| Estado atual e roadmap | [`specs/project/`](./specs/project) |
+| Mapeamento do código | [`specs/codebase/`](./specs/codebase) — stack, estrutura, convenções, testes, integrações, **riscos** |
+| READMEs dos projetos | [`bot/`](./bot/README.md) · [`web/`](./web/README.md) · [`ocr-service/`](./ocr-service/README.md) |

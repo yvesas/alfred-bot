@@ -163,4 +163,6 @@ pnpm lint            # ESLint
 
 ---
 
-Para a arquitetura e o roadmap, veja `bot/README.md`, `bot/ROADMAP.md` e os planos em `bot/PLANO-*.md`.
+Para a arquitetura, veja [`docs/architecture.md`](../architecture.md); para o
+roadmap e o estado atual, [`specs/project/`](../../specs/project); para os riscos
+conhecidos, [`specs/codebase/CONCERNS.md`](../../specs/codebase/CONCERNS.md).

@@ -3,6 +3,7 @@ import "reflect-metadata";
 import { injectable } from "inversify";
 import { VertexAI } from "@google-cloud/vertexai";
 import { IOcrProvider } from "./IOcrProvider";
+import { OcrError } from "../../utils/errors";
 import { logger } from "../../infra/logger";
 import { config } from "../../infra/config";
 
@@ -15,8 +16,8 @@ export class GeminiOcrProvider implements IOcrProvider {
 
   constructor() {
     const projectId = config.gcpProjectId;
-    const vertexAI = new VertexAI({ project: projectId, location: "us-central1" });
-    this.model = vertexAI.getGenerativeModel({ model: "gemini-2.0-flash-lite-001" });
+    const vertexAI = new VertexAI({ project: projectId, location: config.geminiLocation });
+    this.model = vertexAI.getGenerativeModel({ model: config.geminiVisionModel });
   }
 
   async extractTextFromImage(base64Image: string): Promise<string> {
@@ -37,8 +38,8 @@ export class GeminiOcrProvider implements IOcrProvider {
 
       return result.response.candidates[0].content.parts[0].text || "Nenhum texto detectado.";
     } catch (error) {
-      logger.error({ err: error }, "Erro ao processar a imagem (Gemini OCR)");
-      return "Erro ao processar a imagem.";
+      logger.error({ err: error, model: config.geminiVisionModel }, "Falha no OCR (Gemini)");
+      throw new OcrError("Falha ao ler a imagem com o Gemini.", "gemini");
     }
   }
 }

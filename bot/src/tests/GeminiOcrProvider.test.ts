@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import "reflect-metadata";
 import { GeminiOcrProvider } from "../services/ocr/GeminiOcrProvider";
+import { OcrError } from "../utils/errors";
 import sinon from "sinon";
 
 describe("GeminiOcrProvider", () => {
@@ -29,11 +30,19 @@ describe("GeminiOcrProvider", () => {
     expect(modelStub.generateContent.calledOnce).toBe(true);
   });
 
-  it("returns a graceful error message when Gemini fails", async () => {
+  // C12: a falha não pode virar "texto do cupom" — precisa subir como erro tipado,
+  // senão a IA recebe a mensagem de erro como se fosse o conteúdo lido.
+  it("throws OcrError instead of returning the failure as text", async () => {
     modelStub.generateContent.rejects(new Error("vertex error"));
 
-    const text = await provider.extractTextFromImage("base64-img");
+    await expect(provider.extractTextFromImage("base64-img")).rejects.toThrow(OcrError);
+  });
 
-    expect(text).toBe("Erro ao processar a imagem.");
+  // O desligamento de um modelo (2026-06-01, gemini-2.0-flash-lite) chega como erro do
+  // provedor. Tem que estourar, não virar "não entendi". Ver C0.
+  it("throws when the provider rejects the configured model", async () => {
+    modelStub.generateContent.rejects(new Error("404 Publisher Model not found"));
+
+    await expect(provider.extractTextFromImage("base64-img")).rejects.toThrow(OcrError);
   });
 });

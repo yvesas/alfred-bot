@@ -24,6 +24,20 @@ export const config = {
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   paddleOcrUrl: process.env.PADDLE_OCR_URL ?? "http://ocr:8000",
 
+  // ---- Modelos de IA ----
+  // Id de modelo é o fato que envelhece mais rápido neste sistema: fornecedor aposenta
+  // modelo com data marcada. Ficar hardcoded custou caro — o `gemini-2.0-flash-lite-001`
+  // foi desligado no Vertex AI em 2026-06-01 e o bot parou sem ninguém ver. Aqui, trocar
+  // de modelo é variável de ambiente; a próxima aposentadoria não pede deploy.
+  // Ver docs/adr/0003-ia-e-ocr-atras-de-interface.md e C0 em specs/codebase/CONCERNS.md.
+  geminiModel: process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
+  geminiLocation: process.env.GEMINI_LOCATION || "us-central1",
+  // Modelo que lê a imagem do cupom. Separado do de texto de propósito: a extração de
+  // cupom é a chamada cara e pode justificar um modelo diferente da conversa.
+  geminiVisionModel:
+    process.env.GEMINI_VISION_MODEL || process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
+  openaiModel: process.env.OPENAI_MODEL || "gpt-5.6-terra",
+
   // Login web (B1 — WorkOS AuthKit). Opcional: sem chaves, o login fica desligado.
   workosApiKey: process.env.WORKOS_API_KEY ?? "",
   workosClientId: process.env.WORKOS_CLIENT_ID ?? "",

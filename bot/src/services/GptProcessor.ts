@@ -13,7 +13,7 @@ export class GptProcessor implements IMessageProcessor {
   private model: string;
 
   constructor() {
-    this.model = "gpt-4-turbo";
+    this.model = config.openaiModel;
     this.ai = new OpenAI({
       apiKey: config.openaiApiKey,
     });

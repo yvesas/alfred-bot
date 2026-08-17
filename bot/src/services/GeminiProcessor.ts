@@ -17,8 +17,8 @@ export class GeminiProcessor implements IMessageProcessor {
 
   constructor() {
     this.projectId = config.gcpProjectId;
-    this.location = "us-central1";
-    this.modelName = "gemini-2.0-flash-lite-001";
+    this.location = config.geminiLocation;
+    this.modelName = config.geminiModel;
 
     this.vertexAI = new VertexAI({ project: this.projectId, location: this.location });
     this.model = this.vertexAI.getGenerativeModel({

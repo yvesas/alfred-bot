@@ -1,9 +1,14 @@
 # ADR-0005 — Caminho híbrido: consertar agora, migrar para o `yas-harness` depois
 
 **Data:** 2026-08-14
-**Status:** aceito
+**Status:** aceito, **corrigido em parte pelo [ADR-0006](0006-inteligencia-e-second-brain-sao-do-alfred.md)**
 **Decisor:** Yves
 **Contexto completo:** `specs/project/PLANO-ESTRUTURACAO.md`
+
+> ⚠️ **Leia o ADR-0006 junto.** A regra "não construa roteador nem provider aqui"
+> vale para o **gateway** e para a **triagem genérica**. Ela **não** vale para a
+> camada de inteligência do Alfred — RAG, second brain pessoal, memória entre
+> módulos e a escolha de modelo pelo usuário são deste projeto, não do chassi.
 
 ## Contexto
 

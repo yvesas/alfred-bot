@@ -67,9 +67,13 @@ Declarados **não** significa em construção. Ver
 - **Módulo sabe domínio; chassi não sabe.** Se o código não serviria igual num
   assistente que nunca ouviu falar de dinheiro, não é módulo. Ver
   [ADR-0004](../../docs/adr/0004-alfred-modular.md).
-- **Reusar, não reconstruir.** O chassi de agente é o `yas-harness`, compartilhado
-  entre os produtos YAS — não se reconstrói aqui. Ver
+- **Reusar, não reconstruir — o encanamento.** O chassi de agente é o
+  `yas-harness`, compartilhado entre os produtos YAS. Ver
   [ADR-0005](../../docs/adr/0005-caminho-hibrido-harness.md).
+- **A inteligência é nossa.** RAG, second brain pessoal, memória entre módulos e
+  personalização são o diferencial do Alfred e não vão para o chassi — nem na
+  migração. O usuário escolhe o modelo; o que o Alfred sabe sobre ele é do Alfred.
+  Ver [ADR-0006](../../docs/adr/0006-inteligencia-e-second-brain-sao-do-alfred.md).
 - **A regra de conversa mora num lugar só.** Toda plataforma nova é um adapter,
   nunca uma cópia da lógica. Ver [ADR-0001](../../docs/adr/0001-botcore-e-adapters.md).
 - **Fornecedor externo fica atrás de uma interface**, com o domínio ignorando o

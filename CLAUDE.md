@@ -67,8 +67,10 @@ testes de repositório sobem um MongoDB em memória, um por arquivo.
   `bot/src/modules/README.md`.
 - **Id de modelo de IA é configuração, nunca literal no código.** Um modelo
   hardcoded já derrubou o bot por dois meses sem ninguém ver.
-- **Não construa roteador de intenção nem provider novo de modelo aqui.** Isso é
-  do `yas-harness`. Ver `docs/adr/0005-caminho-hibrido-harness.md`.
+- **Gateway de modelo é do chassi; inteligência é do Alfred.** Não construa
+  gateway nem triagem genérica aqui (`yas-harness`, ADR-0005). Mas **RAG, second
+  brain, memória entre módulos e a escolha de modelo pelo usuário são deste
+  projeto** — é o diferencial. Ver ADR-0006.
 - **Hooks de git moram em `bot/.husky/`**, não em `.githooks/` — `core.hooksPath`
   aponta para lá. Mudança de hook precisa ir nos dois.
 - O bot é **CommonJS** (`module: CommonJS`), não ESM: import relativo **sem** a

@@ -8,6 +8,19 @@ O projeto ainda **não foi para produção** e não tem versão publicada.
 
 ## [Não lançado]
 
+### Segurança
+
+- **O `AuthServer` estava aberto.** `POST /auth/email/start` disparava e-mail real
+  pelo WorkOS sem limite nenhum — dava para queimar a cota, usar o Alfred para
+  spammar terceiros e enumerar quem tem conta. Agora há rate limit por IP antes do
+  roteamento, com balde e janela próprios para `/auth/email/*` (5 por 15 min contra
+  60 por minuto), resposta 429 com `Retry-After`, e `x-forwarded-for` só é lido com
+  `TRUST_PROXY=true`. (C6)
+- **Origem passou a ser obrigatória em produção.** `WEB_ALLOWED_ORIGIN` e
+  `WEB_APP_URL` caíam em `*` quando não definidas — o default falhava **aberto**, e
+  esquecer a variável liberava o chat e a API para qualquer site. Com
+  `NODE_ENV=production`, ausência (ou `*` explícito) derruba o startup. (C7)
+
 ### Corrigido
 
 - **A camada de IA estava quebrada há dois meses.** O `gemini-2.0-flash-lite-001`

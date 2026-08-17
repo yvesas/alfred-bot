@@ -109,24 +109,32 @@ reconexão). Quebra ali é silenciosa até um usuário reclamar.
 `toPhoto`, `toIncoming`) com fixtures sintéticas de update — não precisa de rede.
 `WebAdapter.processRaw` já mostra o padrão.
 
-### C6 — Sem rate limit nos endpoints HTTP
+### ~~C6~~ — Sem rate limit nos endpoints HTTP · ✅ **resolvido em 2026-08-17**
 
 **Onde:** `infra/authServer.ts` — o `RateLimiter` só é chamado pelo `BotCore`
 (`handleText`/`handlePhoto`).
 **Risco:** `POST /auth/email/start` dispara e-mail do WorkOS **sem limite**: dá
 para queimar cota, spammar terceiros e enumerar contas. `/api/*` também aceita
 força bruta de JWT sem freio.
-**Correção:** aplicar o `RateLimiter` por IP na entrada do `handle()` do
-`AuthServer`, com janela mais apertada em `/auth/email/*`.
+**✅ Resolvido em 2026-08-17.** O `RateLimiter` ganhou limite por chamada
+(`allow(key, limit)`) e é aplicado por IP na entrada do `handle()`, **antes do
+roteamento** — vale inclusive para rota inexistente, que é o que uma varredura usa.
+`/auth/email/*` tem balde e janela próprios (5 por 15 min contra 60 por min).
+Resposta 429 com `Retry-After` e corpo genérico, que não revela qual limite caiu
+nem se o e-mail existe. `x-forwarded-for` só é lido com `TRUST_PROXY=true`, senão
+o cliente forja o próprio IP. O limiter passou a podar chaves vencidas: com chave
+de IP a cardinalidade é ilimitada. Coberto em `authServerRateLimit.test.ts`.
 
-### C7 — Defaults permissivos de origem (`*`)
+### ~~C7~~ — Defaults permissivos de origem (`*`) · ✅ **resolvido em 2026-08-17**
 
 **Onde:** `infra/config.ts:42` (`webAllowedOrigin: ... || "*"`) e
 `infra/authServer.ts:170` (`Access-Control-Allow-Origin: config.webAppUrl || "*"`)
 **Risco:** esquecer `WEB_ALLOWED_ORIGIN`/`WEB_APP_URL` em produção abre o
 WebSocket e a API para qualquer site. O default falha **aberto**, não fechado.
-**Correção:** exigir origem explícita quando `NODE_ENV=production` — incluir na
-`assertRequiredConfig()`.
+**✅ Resolvido em 2026-08-17.** `assertProductionOrigins()` roda dentro de
+`assertRequiredConfig()`: com `NODE_ENV=production`, `WEB_ALLOWED_ORIGIN` e
+`WEB_APP_URL` ausentes **ou iguais a `"*"`** derrubam o startup com a lista do que
+falta. Fora de produção segue permissivo. Coberto em `productionOrigins.test.ts`.
 
 ### C8 — JWT de 30 dias sem revogação
 

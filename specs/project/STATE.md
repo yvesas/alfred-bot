@@ -3,7 +3,7 @@
 > Reescrito a cada sessão. Decisão que precisa sobreviver a uma reescrita vira
 > ADR em [`docs/adr/`](../../docs/adr/).
 
-**Última sessão:** 2026-08-14
+**Última sessão:** 2026-08-17
 **Branch:** `docs/codebase-mapping`
 
 ---
@@ -14,8 +14,11 @@ O Alfred deixou de ser um bot de finanças e passou a ser um **assistente pessoa
 com capacidades em módulos** — `fin` (implementado), `tarefas` e `projetos`
 (declarados, não construídos). Ver [ADR-0004](../../docs/adr/0004-alfred-modular.md).
 
-Suíte verde: bot **35 suítes / 189 testes**, web 8 arquivos / 21 testes.
-Lint e typecheck limpos.
+Suíte verde: bot **37 suítes / 205 testes** (cobertura 76,4 %), web 8 arquivos /
+21 testes. Lint e typecheck limpos. `./scripts/check.sh` é o gate único.
+
+**Fase 1 do [`PLANO-TECNICO.md`](PLANO-TECNICO.md) concluída** — as duas
+fraquezas exploráveis de fora (C6 e C7) estão fechadas.
 
 **Nunca foi para produção**: sem host, sem CD, sem cobrança.
 
@@ -62,7 +65,12 @@ não pegava porque o checkout é limpo.
 - **ADR-0004** — O Alfred é um assistente pessoal modular. Módulos: fin, tarefas,
   projetos. Declarar antes de mover.
 - **ADR-0005** — Caminho híbrido com o `yas-harness`: consertar aqui, migrar
-  depois. **Roteador de intenção e provider Groq saíram do escopo do Alfred.**
+  depois. Gateway e triagem genérica saem do escopo do Alfred.
+- **ADR-0006** — **A inteligência é do Alfred.** RAG, second brain, memória entre
+  módulos e a escolha de modelo pelo usuário ficam aqui — não vão para o chassi,
+  nem na migração. Corrige o ADR-0005, que tinha traçado a linha larga demais.
+- **LICENSE proprietária** e CodeQL fora (não é gratuito em repo privado) — ver
+  §8 do [`PLANO-TECNICO.md`](PLANO-TECNICO.md).
 
 ---
 
@@ -90,8 +98,9 @@ merece ser dito** — e o limite de quando calar.
 **Antes de qualquer deploy com réplica:** C2 (estado em memória) e C3 (schedulers
 sem lock).
 
-**Independente de tudo:** C6 (sem rate limit em `/auth/email/start` — dá para
-queimar cota de e-mail do WorkOS) e C7 (CORS e Origin com default `*`).
+~~C6 e C7~~ — fechados em 2026-08-17. O próximo trabalho técnico está no
+[`PLANO-TECNICO.md`](PLANO-TECNICO.md): **Fase 2**, cobrir os adapters de Telegram
+e WhatsApp (C5, hoje em 0 %).
 
 ---
 

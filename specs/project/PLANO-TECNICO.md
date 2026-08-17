@@ -58,7 +58,9 @@ atual.
 | 2026-08-14 | Bug do ESLint flat config (lint entrava em `dist/`) | `ce2f41c` |
 | 2026-08-17 | ADR-0006 — inteligência e second brain são do Alfred | `baeb135` |
 | 2026-08-17 | **C18/C21** — catraca de cobertura, `CONTRIBUTING`, `SECURITY`, `CHANGELOG`, `AGENTS`, `scripts/check.sh` | `bbb312f` |
-| 2026-08-17 | Governança: `LICENSE` proprietária, `CODEOWNERS`, Dependabot, template de PR, workflow de auditoria | *(este trabalho)* |
+| 2026-08-17 | Governança: `LICENSE` proprietária, `CODEOWNERS`, Dependabot, template de PR, workflow de auditoria | `97bafcb` |
+| 2026-08-17 | **C6** — rate limit por IP no `AuthServer`, apertado em `/auth/email/*` | *(fase 1)* |
+| 2026-08-17 | **C7** — origem explícita exigida em produção | *(fase 1)* |
 
 ---
 
@@ -66,17 +68,18 @@ atual.
 
 > **▶ ESTADO (2026-08-17)**
 >
-> Branch `docs/codebase-mapping`, ainda sem PR. Suíte em **189 testes / 35 suítes**,
-> cobertura 76,2 %, `./scripts/check.sh` verde nos dois projetos.
+> Branch `docs/codebase-mapping`, ainda sem PR. **Fase 1 concluída.**
+> Suíte em **205 testes / 37 suítes**, cobertura 76,4 %, `./scripts/check.sh` verde
+> nos dois projetos.
 >
-> **Iniciando a Fase 1 — C6 e C7.**
+> **Próximo:** Fase 2 — cobrir os adapters (`C5`), que estão em 0 %.
 
-- [~] **F1.1 — C6** rate limit nos endpoints HTTP
-- [ ] **F1.2 — C7** origem explícita em produção
+- [x] **F1.1 — C6** rate limit nos endpoints HTTP · 2026-08-17
+- [x] **F1.2 — C7** origem explícita em produção · 2026-08-17
 
 ---
 
-## 3. Fase 1 — Fechar o que dá para explorar hoje 🔴
+## 3. Fase 1 — Fechar o que dá para explorar hoje ✅ *(concluída em 2026-08-17)*
 
 São as duas únicas fraquezas exploráveis **sem** acesso ao banco ou à máquina.
 Ambas em `bot/src/infra/authServer.ts` e `bot/src/infra/config.ts`.

@@ -7,6 +7,7 @@ import { ReportService } from "../services/ReportService";
 import { PlanService } from "../services/PlanService";
 import { ExportService } from "../services/ExportService";
 import { UserService } from "../services/UserService";
+import { RateLimiter } from "../services/RateLimiter";
 import { IUser } from "../models/User";
 import { config } from "./config";
 import { logger } from "./logger";
@@ -30,6 +31,7 @@ export class AuthServer {
     @inject(PlanService) private plans: PlanService,
     @inject(ExportService) private exports: ExportService,
     @inject(UserService) private users: UserService,
+    @inject(RateLimiter) private rateLimiter: RateLimiter,
   ) {}
 
   start(port: number = config.authPort): http.Server {
@@ -46,6 +48,24 @@ export class AuthServer {
     this.server?.close();
   }
 
+  // IP do cliente. `x-forwarded-for` só é considerado com proxy declarado
+  // (TRUST_PROXY); senão qualquer um forja o header e escapa do limite.
+  private clientIp(req: http.IncomingMessage): string {
+    if (config.trustProxy) {
+      const forwarded = req.headers["x-forwarded-for"];
+      const first = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+      const ip = first?.split(",")[0]?.trim();
+      if (ip) return ip;
+    }
+    return req.socket.remoteAddress ?? "unknown";
+  }
+
+  // Limite por IP. `/auth/email/*` é bem mais apertado que o resto porque cada
+  // chamada manda um e-mail de verdade pelo WorkOS (C6).
+  private rateLimitFor(pathname: string) {
+    return pathname.startsWith("/auth/email/") ? config.authEmailRateLimit : config.httpRateLimit;
+  }
+
   private async handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     this.cors(res);
     if (req.method === "OPTIONS") {
@@ -55,6 +75,24 @@ export class AuthServer {
     }
 
     const url = new URL(req.url ?? "/", "http://localhost");
+
+    // O rate limit vem antes do roteamento: vale inclusive para rota inexistente,
+    // que é justamente o que uma varredura usa.
+    const limit = this.rateLimitFor(url.pathname);
+    const bucket = `${url.pathname.startsWith("/auth/email/") ? "email" : "http"}:${this.clientIp(req)}`;
+    if (!this.rateLimiter.allow(bucket, limit)) {
+      const retryAfter = this.rateLimiter.retryAfterSeconds(bucket, limit);
+      logger.warn({ path: url.pathname }, "Requisição bloqueada por rate limit");
+      res.writeHead(429, {
+        "Content-Type": "application/json",
+        "Retry-After": String(retryAfter),
+      });
+      // Mensagem genérica de propósito: não revela qual limite foi atingido nem se
+      // o e-mail existe.
+      res.end(JSON.stringify({ error: "too many requests" }));
+      return;
+    }
+
     if (req.method === "POST" && url.pathname === "/auth/email/start") {
       return this.emailStart(req, res);
     }

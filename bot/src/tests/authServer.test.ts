@@ -11,6 +11,7 @@ import { ReportService } from "../services/ReportService";
 import { PlanService } from "../services/PlanService";
 import { ExportService } from "../services/ExportService";
 import { UserService } from "../services/UserService";
+import { RateLimiter } from "../services/RateLimiter";
 import { config } from "../infra/config";
 
 describe("AuthServer (integração HTTP)", () => {
@@ -21,6 +22,7 @@ describe("AuthServer (integração HTTP)", () => {
   let plans: sinon.SinonStubbedInstance<PlanService>;
   let exports: sinon.SinonStubbedInstance<ExportService>;
   let users: sinon.SinonStubbedInstance<UserService>;
+  let rateLimiter: RateLimiter;
   let server: http.Server;
   let base: string;
   let authServer: AuthServer;
@@ -33,7 +35,18 @@ describe("AuthServer (integração HTTP)", () => {
     plans = sinon.createStubInstance(PlanService);
     exports = sinon.createStubInstance(ExportService);
     users = sinon.createStubInstance(UserService);
-    authServer = new AuthServer(auth, accounts, linkTokens, reports, plans, exports, users);
+    // Limiter real: o rate limit é comportamento do servidor, não colaborador a mockar.
+    rateLimiter = new RateLimiter();
+    authServer = new AuthServer(
+      auth,
+      accounts,
+      linkTokens,
+      reports,
+      plans,
+      exports,
+      users,
+      rateLimiter,
+    );
 
     server = authServer.start(0);
     if (!server.listening) await new Promise((res) => server.once("listening", res));

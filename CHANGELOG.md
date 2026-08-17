@@ -1,0 +1,50 @@
+# Changelog
+
+Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
+Este arquivo começa em 2026-08-17; o que veio antes está no histórico do git e
+resumido em [`specs/project/ROADMAP.md`](./specs/project/ROADMAP.md).
+
+O projeto ainda **não foi para produção** e não tem versão publicada.
+
+## [Não lançado]
+
+### Corrigido
+
+- **A camada de IA estava quebrada há dois meses.** O `gemini-2.0-flash-lite-001`
+  — default para texto **e** para leitura de cupom, hardcoded em dois arquivos —
+  foi desligado no Vertex AI em 2026-06-01. O fallback cruzado caía num
+  `gpt-4-turbo` que se aposenta em 2026-10-23, então nenhuma mensagem era
+  processada. Modelo, região e modelo de visão passam a vir de configuração
+  (`GEMINI_MODEL`, `GEMINI_LOCATION`, `GEMINI_VISION_MODEL`, `OPENAI_MODEL`), com
+  default em `gemini-3.1-flash-lite`. (C0, C13)
+- **Falha de OCR virava "texto do cupom".** Os providers devolviam a string
+  `"Erro ao processar a imagem."`, que seguia para o modelo como se fosse o
+  conteúdo lido — o usuário via "não entendi" em vez de "o OCR falhou". Agora
+  lançam `OcrError`. (C12)
+- **`pnpm lint` falhava em qualquer máquina que já tivesse buildado.** No flat
+  config do ESLint, `ignores` dentro de um bloco com `files` não vale como ignore
+  global; o lint entrava em `dist/` e `coverage/`. O CI não pegava porque o
+  checkout é limpo.
+
+### Adicionado
+
+- **Fronteira de módulos.** `bot/src/modules/` declara `fin` (implementado),
+  `tarefas` e `projetos` (declarados). O contrato `ModuleDefinition` espelha o do
+  `yas-harness` para que a migração futura seja mecânica. Comando de módulo não
+  construído responde "ainda não disponível" em vez de ser ignorado em silêncio.
+- **Catraca de cobertura** (`coverageThreshold`) nos valores atuais — a cobertura
+  já havia caído em silêncio antes.
+- **`./scripts/check.sh`** e `pnpm check` por projeto, espelhando o CI.
+- **Documentação que não existia:** `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`,
+  `SECURITY.md`, este changelog, `docs/` (arquitetura, decisões, 6 ADRs, runbook)
+  e `specs/` (mapeamento do código, visão, roadmap, estado).
+
+### Alterado
+
+- **O Alfred deixou de ser um bot de finanças** e passou a ser um assistente
+  pessoal com capacidades em módulos. (ADR-0004)
+- **O catálogo de comandos deriva do registro de módulos**, em vez de uma
+  constante que o adapter do Telegram repetia à mão.
+- `ROADMAP.md` saiu da raiz para `specs/project/`; o guia de uso foi para
+  `docs/runbooks/`. Links quebrados no `README.md` e no `bot/README.md`
+  corrigidos.

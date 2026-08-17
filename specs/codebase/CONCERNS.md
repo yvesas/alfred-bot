@@ -231,13 +231,14 @@ parcialmente o índice composto.
 **Correção:** rodar o `migrateCanonical` em produção, confirmar que não sobrou
 usuário sem `identities[]`, e remover o campo e o `$or`.
 
-### C18 — Sem gate de cobertura
+### ~~C18~~ — Sem gate de cobertura · ✅ **resolvido em 2026-08-17**
 
 **Onde:** `bot/jest.config.cjs` (sem `coverageThreshold`); `.github/workflows/bot.yml`
 só envia ao Codecov.
 **Risco:** cobertura cai sem quebrar nada. Já caiu — o `BotCore` está em 58 %.
-**Correção:** `coverageThreshold` global em ~75 % (o valor atual), para virar
-catraca em vez de meta.
+**✅ Resolvido em 2026-08-17.** `coverageThreshold` global em `bot/jest.config.cjs`,
+nos valores de hoje arredondados para baixo (statements 75, branches 60, functions 74,
+lines 75). Catraca, não meta.
 
 ---
 
@@ -256,10 +257,10 @@ Correção: mockar o `jimp` na suíte ou rodar com `--experimental-vm-modules`.
 imagem nunca foi buildada (paddlepaddle não tem wheel para linux/arm64; em Mac
 ARM exige `--platform linux/amd64`). Está funcional só no papel.
 
-### C21 — `CONTRIBUTING.md` citado e inexistente
+### ~~C21~~ — `CONTRIBUTING.md` citado e inexistente · ✅ **resolvido em 2026-08-17**
 
-O hook `commit-msg` manda "Ver CONTRIBUTING.md" quando rejeita. O arquivo não
-existe. Correção: criar, ou apontar para `.claude/rules/git-flow.md`.
+O hook `commit-msg` manda "Ver CONTRIBUTING.md" quando rejeita. **✅ Criado em
+2026-08-17**, junto com `AGENTS.md`, `SECURITY.md` e `CHANGELOG.md`.
 
 ### C22 — Guard de commit em dois lugares
 

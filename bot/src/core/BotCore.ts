@@ -16,57 +16,24 @@ import { ExportService } from "../services/ExportService";
 import { AccountService } from "../services/AccountService";
 import { RateLimiter } from "../services/RateLimiter";
 import { isValidEmail } from "../utils/validation";
-import {
-  MessageProcessingService,
-  ModelResponse,
-  SpendingGroupBy,
-  SpendingPeriod,
-} from "../services/MessageProcessingService";
-import {
-  convertModelResponseToPurchase,
-  validatePurchaseData,
-} from "../infra/converters/purchaseConverter";
-import { IPurchaseCreate } from "../models/Purchase";
-import { IUser, Language, Plan } from "../models/User";
+import { MessageProcessingService, ModelResponse } from "../services/MessageProcessingService";
+import { IUser, Language } from "../models/User";
 import { extractAccessKey, isValidAccessKey } from "../utils/fiscalKey";
 import { moduleForCommand } from "../modules/registry";
-import { MessageKey, t } from "../i18n";
+import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
+import { langOf, currency } from "./format";
+import { conversationKey } from "./conversationKey";
+import { t } from "../i18n";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
 import { messagesReceivedTotal } from "../infra/metrics";
-
-// Respostas aceitas na confirmação de compra ("sim/não").
-const AFFIRMATIVE = new Set([
-  "sim",
-  "s",
-  "yes",
-  "y",
-  "confirmar",
-  "confirma",
-  "ok",
-  "isso",
-  "👍",
-  "✅",
-]);
-const NEGATIVE = new Set(["não", "nao", "n", "no", "cancelar", "cancela", "cancelado"]);
-
-// Idioma do usuário (default "pt") — usado para localizar as respostas fixas do bot.
-function langOf(user: Pick<IUser, "language"> | null | undefined): Language {
-  return user?.language ?? "pt";
-}
-
-// Símbolo de moeda por idioma (pt usa R$; en/es usam $ neste MVP).
-function currency(lang: Language): string {
-  return lang === "pt" ? "R$" : "$";
-}
 
 // Lógica de conversa do bot, independente de plataforma. Recebe uma IncomingMessage
 // normalizada e um Replier; os adapters cuidam do transporte (Telegram, WhatsApp, ...).
 @injectable()
 export class BotCore {
-  // Compras aguardando confirmação, por usuário (chave "platform:externalId").
-  private readonly pendingPurchases = new Map<string, IPurchaseCreate>();
   // E-mails aguardando verificação por código (Magic Auth), por usuário.
+  // Em memória, como as compras pendentes do PurchaseFlow — reiniciar perde (C2).
   private readonly pendingEmailVerification = new Map<string, string>();
 
   constructor(
@@ -85,6 +52,7 @@ export class BotCore {
     @inject(AccountService) private accountService: AccountService,
     @inject(RateLimiter) private rateLimiter: RateLimiter,
     @inject(MessageProcessingService) private messageProcessingService: MessageProcessingService,
+    @inject(PurchaseFlow) private purchaseFlow: PurchaseFlow,
   ) {}
 
   async handle(msg: IncomingMessage, reply: Replier): Promise<void> {
@@ -160,7 +128,15 @@ export class BotCore {
     }
 
     // Se há uma compra aguardando confirmação, interpreta esta mensagem como a resposta.
-    if (await this.resolvePendingConfirmation(reply, platform, externalId, lang, msg.text ?? "")) {
+    if (
+      await this.purchaseFlow.resolvePendingConfirmation(
+        reply,
+        platform,
+        externalId,
+        lang,
+        msg.text ?? "",
+      )
+    ) {
       return;
     }
 
@@ -171,7 +147,15 @@ export class BotCore {
       externalId,
       msg.text ?? "",
     );
-    await this.handleProcessed(reply, platform, externalId, userId, lang, plan, processed);
+    await this.purchaseFlow.handleProcessed(
+      reply,
+      platform,
+      externalId,
+      userId,
+      lang,
+      plan,
+      processed,
+    );
   }
 
   private async handleContact(msg: IncomingMessage, reply: Replier): Promise<void> {
@@ -225,7 +209,15 @@ export class BotCore {
     try {
       const base64Image = msg.getImageBase64 ? await msg.getImageBase64() : "";
       const processed = await this.processReceiptImage(platform, externalId, base64Image);
-      await this.handleProcessed(reply, platform, externalId, userId, lang, plan, processed);
+      await this.purchaseFlow.handleProcessed(
+        reply,
+        platform,
+        externalId,
+        userId,
+        lang,
+        plan,
+        processed,
+      );
     } catch (error) {
       logger.error({ err: error }, "Erro ao baixar/processar a imagem");
       await reply.text(t(lang, "photo_error"));
@@ -282,136 +274,6 @@ export class BotCore {
     return processed;
   }
 
-  // ---------- Roteamento da resposta da IA ----------
-
-  private async handleProcessed(
-    reply: Replier,
-    platform: Platform,
-    externalId: string,
-    userId: string,
-    lang: Language,
-    plan: Plan,
-    processed: ModelResponse,
-  ): Promise<void> {
-    if (processed.intent === "query") {
-      await this.handleSpendingQuery(reply, userId, lang, processed.period, processed.groupBy);
-      return;
-    }
-
-    if (processed.intent !== "purchase") {
-      // processed.message vem da IA já no idioma do usuário; senão, fallback localizado.
-      await reply.text(processed.message || t(lang, "not_understood"));
-      return;
-    }
-
-    const purchaseData = convertModelResponseToPurchase(processed);
-    purchaseData.userId = userId; // garante a identidade canônica (Fase 6)
-
-    // Deduplicação de cupom fiscal (NFC-e): não registra o mesmo cupom duas vezes.
-    if (purchaseData.fiscalKey) {
-      const existing = await this.purchaseService.findByFiscalKey(userId, purchaseData.fiscalKey);
-      if (existing) {
-        await reply.text(t(lang, "receipt_already_registered"));
-        return;
-      }
-    }
-
-    // Limite do plano free (compras/mês). Pro é ilimitado.
-    if (!(await this.planService.canRegister(userId, plan))) {
-      await reply.text(t(lang, "plan_limit_reached", { limit: this.planService.freeLimit }));
-      return;
-    }
-
-    const validation = validatePurchaseData(purchaseData);
-    if (!validation.ok) {
-      await reply.text(`❌ ${validation.reason}`);
-      return;
-    }
-
-    // Confirmação antes de salvar: guarda a pendente e pede "sim/não".
-    if (config.confirmPurchase) {
-      this.pendingPurchases.set(this.pendingKey(platform, externalId), purchaseData);
-      await reply.text(
-        t(lang, "purchase_confirm", {
-          description: purchaseData.description,
-          total: purchaseData.total.toFixed(2),
-        }),
-      );
-      return;
-    }
-
-    await this.savePurchase(reply, platform, externalId, lang, purchaseData);
-  }
-
-  // ---------- Confirmação de compra (A1) ----------
-
-  private pendingKey(platform: Platform, externalId: string): string {
-    return `${platform}:${externalId}`;
-  }
-
-  // Interpreta a mensagem como resposta a uma compra pendente.
-  // Retorna true se consumiu a mensagem (salvou/cancelou); false se não havia pendente
-  // ou se a resposta não foi sim/não (nesse caso, abandona a pendente e segue o fluxo normal).
-  private async resolvePendingConfirmation(
-    reply: Replier,
-    platform: Platform,
-    externalId: string,
-    lang: Language,
-    text: string,
-  ): Promise<boolean> {
-    const key = this.pendingKey(platform, externalId);
-    const pending = this.pendingPurchases.get(key);
-    if (!pending) return false;
-
-    const answer = text.trim().toLowerCase();
-
-    if (AFFIRMATIVE.has(answer)) {
-      this.pendingPurchases.delete(key);
-      await this.savePurchase(reply, platform, externalId, lang, pending);
-      return true;
-    }
-    if (NEGATIVE.has(answer)) {
-      this.pendingPurchases.delete(key);
-      await reply.text(t(lang, "purchase_cancelled"));
-      return true;
-    }
-
-    // Resposta diferente de sim/não: descarta a pendente e processa a mensagem normalmente.
-    this.pendingPurchases.delete(key);
-    return false;
-  }
-
-  private async savePurchase(
-    reply: Replier,
-    platform: Platform,
-    externalId: string,
-    lang: Language,
-    purchaseData: IPurchaseCreate,
-  ): Promise<void> {
-    try {
-      await this.purchaseService.addPurchase(purchaseData);
-
-      // Alertas de orçamento (se a categoria desta compra tiver limite definido).
-      const alerts = await this.budgetService.alertsForPurchase(
-        platform,
-        externalId,
-        purchaseData,
-        lang,
-      );
-      const suffix = alerts.length ? `\n\n${alerts.join("\n")}` : "";
-
-      await reply.text(
-        t(lang, "purchase_saved", {
-          description: purchaseData.description,
-          total: purchaseData.total.toFixed(2),
-        }) + suffix,
-      );
-    } catch (error) {
-      logger.error({ err: error }, "Erro ao registrar compra");
-      await reply.text(t(lang, "purchase_save_error"));
-    }
-  }
-
   // ---------- Comandos ----------
 
   private async handleCommand(msg: IncomingMessage, reply: Replier): Promise<void> {
@@ -443,7 +305,7 @@ export class BotCore {
 
     switch (name) {
       case "gastos":
-        return this.handleSpendingQuery(reply, userId, lang, "current_month");
+        return this.purchaseFlow.handleSpendingQuery(reply, userId, lang, "current_month");
       case "compras":
         return this.handleGetPurchases(reply, lang, userId, this.parsePage(args[0]));
       case "exportar":
@@ -500,7 +362,7 @@ export class BotCore {
 
     try {
       await this.authService.sendEmailCode(email);
-      this.pendingEmailVerification.set(this.pendingKey(platform, externalId), email);
+      this.pendingEmailVerification.set(conversationKey(platform, externalId), email);
       await reply.text(t(lang, "email_sent", { email }));
     } catch (error) {
       logger.error({ err: error }, "Falha ao enviar código de verificação de e-mail");
@@ -515,7 +377,7 @@ export class BotCore {
     lang: Language,
     codeArg?: string,
   ): Promise<void> {
-    const key = this.pendingKey(platform, externalId);
+    const key = conversationKey(platform, externalId);
     const email = this.pendingEmailVerification.get(key);
     if (!email) {
       await reply.text(t(lang, "code_no_pending"));
@@ -993,59 +855,5 @@ export class BotCore {
     }
     await reply.document(Buffer.from(csv, "utf8"), "alfred-compras.csv", "text/csv");
     await reply.text(t(lang, "export_done"));
-  }
-
-  // ---------- Consulta de gastos ----------
-
-  private async handleSpendingQuery(
-    reply: Replier,
-    userId: string,
-    lang: Language,
-    period: SpendingPeriod = "current_month",
-    groupBy?: SpendingGroupBy,
-  ): Promise<void> {
-    const report = await this.purchaseService.getSpendingReport(userId, period);
-    const periodLabel = this.periodLabel(report.period, lang);
-
-    if (report.count === 0) {
-      await reply.text(t(lang, "spending_empty", { period: periodLabel }));
-      return;
-    }
-
-    let message = t(lang, "spending_report", {
-      period: periodLabel,
-      total: report.total.toFixed(2),
-      count: report.count,
-    });
-
-    if (groupBy === "category") {
-      message += this.formatBreakdown(t(lang, "breakdown_category"), report.byCategory, lang);
-    } else if (groupBy === "store") {
-      message += this.formatBreakdown(t(lang, "breakdown_store"), report.byStore, lang);
-    }
-
-    await reply.text(message);
-  }
-
-  private periodLabel(period: SpendingPeriod, lang: Language): string {
-    const key: MessageKey =
-      period === "last_month"
-        ? "period_last_month"
-        : period === "all"
-          ? "period_all"
-          : "period_current_month";
-    return t(lang, key);
-  }
-
-  private formatBreakdown(title: string, data: Record<string, number>, lang: Language): string {
-    const cur = currency(lang);
-    const lines = Object.entries(data)
-      .sort(([, a], [, b]) => b - a)
-      .map(([key, value]) => `• ${key}: ${cur} ${value.toFixed(2)}`);
-
-    if (lines.length === 0) {
-      return "";
-    }
-    return `\n\n${title}:\n${lines.join("\n")}`;
   }
 }

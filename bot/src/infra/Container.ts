@@ -32,6 +32,7 @@ import { ExportService } from "../services/ExportService";
 import { AuthServer } from "./authServer";
 import { OutboundRegistry } from "../core/OutboundRegistry";
 import { BotCore } from "../core/BotCore";
+import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
 import { TelegramAdapter } from "../platforms/telegram/TelegramAdapter";
 import { WhatsAppAdapter } from "../platforms/whatsapp/WhatsAppAdapter";
 import { WebAdapter } from "../platforms/web/WebAdapter";
@@ -89,6 +90,8 @@ container.bind<MessageProcessingService>(MessageProcessingService).toSelf();
 // e o ReminderScheduler (que resolve o sender pela plataforma).
 container.bind<OutboundRegistry>(OutboundRegistry).toSelf().inSingletonScope();
 container.bind<ReminderScheduler>(ReminderScheduler).toSelf().inSingletonScope();
+// Singleton: guarda as compras aguardando confirmação entre uma mensagem e a próxima.
+container.bind<PurchaseFlow>(PurchaseFlow).toSelf().inSingletonScope();
 container.bind<BotCore>(BotCore).toSelf().inSingletonScope();
 
 container.bind(TelegramAdapter).toSelf().inSingletonScope();

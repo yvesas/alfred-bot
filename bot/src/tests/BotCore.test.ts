@@ -19,6 +19,7 @@ import { ExportService } from "../services/ExportService";
 import { AccountService } from "../services/AccountService";
 import { RateLimiter } from "../services/RateLimiter";
 import { MessageProcessingService } from "../services/MessageProcessingService";
+import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
 import { accessKeyCheckDigit } from "../utils/fiscalKey";
 
 function baseMsg(over: Partial<IncomingMessage>): IncomingMessage {
@@ -41,6 +42,7 @@ describe("BotCore", () => {
   let accountService: sinon.SinonStubbedInstance<AccountService>;
   let rateLimiter: sinon.SinonStubbedInstance<RateLimiter>;
   let mps: sinon.SinonStubbedInstance<MessageProcessingService>;
+  let purchaseFlow: PurchaseFlow;
   let core: BotCore;
   let replies: string[];
   let reply: Replier;
@@ -61,6 +63,9 @@ describe("BotCore", () => {
     accountService = sinon.createStubInstance(AccountService);
     rateLimiter = sinon.createStubInstance(RateLimiter);
     mps = sinon.createStubInstance(MessageProcessingService);
+    // Fluxo de compra real: o BotCore delega a ele, e os testes de compra exercitam
+    // o caminho inteiro — trocá-lo por stub esconderia justamente o que se quer provar.
+    purchaseFlow = new PurchaseFlow(purchaseService, budgetService, planService);
     core = new BotCore(
       userService,
       ocrService,
@@ -77,6 +82,7 @@ describe("BotCore", () => {
       accountService,
       rateLimiter,
       mps,
+      purchaseFlow,
     );
 
     replies = [];

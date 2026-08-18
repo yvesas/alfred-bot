@@ -41,6 +41,12 @@ O projeto ainda **não foi para produção** e não tem versão publicada.
 
 ### Adicionado
 
+- **Tradução dos adapters coberta a 100 %.** Telegram e WhatsApp estavam em 0 %, e é
+  ali que mora o footgun de cada plataforma. A tradução saiu para
+  `platforms/<canal>/translate.ts` — sem dependência de SDK, porque o Baileys é ESM
+  puro e o Jest do projeto é CommonJS, o que tornava o arquivo intestável. 38 casos
+  de fixture sintética. (C5)
+
 - **Fronteira de módulos.** `bot/src/modules/` declara `fin` (implementado),
   `tarefas` e `projetos` (declarados). O contrato `ModuleDefinition` espelha o do
   `yas-harness` para que a migração futura seja mecânica. Comando de módulo não

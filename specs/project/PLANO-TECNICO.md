@@ -10,6 +10,25 @@ o rumo do produto, de [`ROADMAP.md`](ROADMAP.md); as decisões, de
 
 ---
 
+## As fases, num quadro
+
+| Fase | O quê | Risco | Estado |
+|---|---|---|---|
+| **1** | Rate limit no HTTP · origem explícita em produção | `C6` `C7` | ✅ **2026-08-17** |
+| **2** | [Cobrir os adapters de Telegram e WhatsApp](#4-fase-2--cobrir-os-adapters-c5) | `C5` | ✅ **2026-08-18** |
+| **3** | [Quebrar o `BotCore`](#5-fase-3--quebrar-o-botcore-c4) — 1042 linhas, 58 % de cobertura | `C4` | 🔨 próxima |
+| **4** | [Rodar com mais de uma instância](#6-fase-4--deixar-rodar-com-mais-de-uma-instância-c2-c3) | `C2` `C3` | ⬜ |
+
+**Por que os adapters vêm antes de quebrar o `BotCore`.** A Fase 3 é refactor sem
+mudança de comportamento, e **a suíte é o contrato que prova isso**. Fazer a Fase 3
+com os adapters em 0 % é refatorar sem rede: se a tradução
+`Telegram → IncomingMessage` quebrar, ninguém descobre até um usuário reclamar.
+
+Fora das fases: **rotacionar a chave do GCP** (`C1`) não espera fila — é ação sua e
+independe de tudo aqui.
+
+---
+
 ## 0. Como usar este documento
 
 | Símbolo | Significado |
@@ -60,22 +79,28 @@ atual.
 | 2026-08-17 | **C18/C21** — catraca de cobertura, `CONTRIBUTING`, `SECURITY`, `CHANGELOG`, `AGENTS`, `scripts/check.sh` | `bbb312f` |
 | 2026-08-17 | Governança: `LICENSE` proprietária, `CODEOWNERS`, Dependabot, template de PR, workflow de auditoria | `97bafcb` |
 | 2026-08-17 | **C6** — rate limit por IP no `AuthServer`, apertado em `/auth/email/*` | *(fase 1)* |
-| 2026-08-17 | **C7** — origem explícita exigida em produção | *(fase 1)* |
+| 2026-08-17 | **C7** — origem explícita exigida em produção | `e2ad618` |
+| 2026-08-18 | **C5** — tradução dos adapters extraída para `translate.ts` e coberta a 100 % | *(fase 2)* |
 
 ---
 
 ## 2. Em andamento
 
-> **▶ ESTADO (2026-08-17)**
+> **▶ ESTADO (2026-08-18)**
 >
-> Branch `docs/codebase-mapping`, ainda sem PR. **Fase 1 concluída.**
-> Suíte em **205 testes / 37 suítes**, cobertura 76,4 %, `./scripts/check.sh` verde
+> Branch `docs/codebase-mapping`, ainda sem PR. **Fases 1 e 2 concluídas.**
+> Suíte em **243 testes / 39 suítes**, cobertura 76,9 %, `./scripts/check.sh` verde
 > nos dois projetos.
 >
-> **Próximo:** Fase 2 — cobrir os adapters (`C5`), que estão em 0 %.
+> **Próximo:** Fase 3 — quebrar o `BotCore` (`C4`). Agora com rede: a tradução dos
+> três canais está coberta, então o refactor tem contrato para provar que não mudou
+> comportamento.
 
 - [x] **F1.1 — C6** rate limit nos endpoints HTTP · 2026-08-17
 - [x] **F1.2 — C7** origem explícita em produção · 2026-08-17
+- [x] **F2.1** tradução do Telegram coberta · 2026-08-18
+- [x] **F2.2** tradução do WhatsApp coberta · 2026-08-18
+- [x] **F2.3** catraca de cobertura subida para 76/61/76/77 · 2026-08-18
 
 ---
 
@@ -128,21 +153,23 @@ variáveis, e que aceita em desenvolvimento; o compose sobe sem alteração.
 
 ---
 
-## 4. Fase 2 — Cobrir os adapters `C5`
+## 4. Fase 2 — Cobrir os adapters `C5` ✅ *(concluída em 2026-08-18)*
 
-Telegram e WhatsApp têm **0 % de cobertura** — e é ali que mora o footgun de cada
-plataforma: foto em várias resoluções, contato de terceiro, JID de grupo,
-reconexão. Quebra ali é silenciosa até um usuário reclamar.
+Telegram e WhatsApp estavam em **0 % de cobertura** — e é ali que mora o footgun de
+cada plataforma: foto em várias resoluções, contato de terceiro, JID de grupo.
+Quebra ali é silenciosa até um usuário reclamar.
 
-- [ ] **F2.1** — testar as funções de tradução do `TelegramAdapter` (`toText`,
-      `toCommand`, `toPhoto`, `handleContact`) com fixtures sintéticas de update
-- [ ] **F2.2** — testar `WhatsAppAdapter.toIncoming`: texto em `conversation` **e**
-      em `extendedTextMessage`, imagem, comando conhecido e desconhecido, e o
-      descarte de grupo/status/própria
-- [ ] **F2.3** — subir a catraca de cobertura para o novo patamar
+- [x] **F2.1** — tradução do `TelegramAdapter` coberta
+- [x] **F2.2** — tradução do `WhatsAppAdapter` coberta
+- [x] **F2.3** — catraca subida para 76/61/76/77
 
-Não precisa de rede: as funções são puras. `WebAdapter.processRaw` já mostra o
-padrão. **Testes:** unit · **Gate:** `./scripts/check.sh bot`
+**O que apareceu ao fazer:** o Baileys é ESM puro e o Jest do projeto é CommonJS —
+qualquer arquivo que importasse o SDK era **intestável**. Os 0 % não eram desleixo,
+eram bloqueio. A tradução saiu para `platforms/<canal>/translate.ts`, sem SDK
+nenhum; os dois módulos ficaram em **100 %**. O Telegram foi junto, por simetria.
+
+**Fica de fora, e é honesto dizer:** o ciclo de vida dos adapters — conexão,
+reconexão, QR, download de mídia — continua sem teste. Depende de SDK e de rede.
 
 ---
 

@@ -98,16 +98,32 @@ um handler por arquivo, como já se faz com `KNOWN_COMMANDS`) e separar o fluxo 
 compra (`handleProcessed` → `savePurchase` → confirmação) numa `PurchaseFlow`.
 Fazer **antes** de mexer em UX de conversa, não depois.
 
-### C5 — Adapters do Telegram e do WhatsApp sem nenhum teste
+### ~~C5~~ — Adapters do Telegram e do WhatsApp sem nenhum teste · ✅ **resolvido em 2026-08-18**
 
 **Onde:** `platforms/telegram/`, `platforms/whatsapp/` — não aparecem no relatório
 de cobertura (0 %); só o `WebAdapter` tem suíte.
 **Risco:** a normalização `SDK → IncomingMessage` é onde mora o footgun de cada
 plataforma (foto em várias resoluções, contato de terceiro, JID de grupo,
 reconexão). Quebra ali é silenciosa até um usuário reclamar.
-**Correção:** testar as funções puras de tradução (`toText`, `toCommand`,
-`toPhoto`, `toIncoming`) com fixtures sintéticas de update — não precisa de rede.
-`WebAdapter.processRaw` já mostra o padrão.
+**✅ Resolvido em 2026-08-18.** A tradução saiu de dentro dos adapters para
+`platforms/<canal>/translate.ts` — módulos que **não importam SDK nenhum** — e está
+em **100 %** de cobertura nos dois canais, com 38 casos de fixture sintética.
+
+**Por que a extração era necessária, e não só arrumação:** o Baileys é ESM puro e o
+Jest deste projeto é CommonJS, então qualquer arquivo que o importasse era
+*intestável*. Não era desleixo que mantinha o WhatsApp em 0 % — era um bloqueio
+real. O Telegram foi extraído junto, por simetria e para não repetir o problema se
+o Telegraf mudar.
+
+**O que os testes pegam:** foto em várias resoluções (a miniatura é ilegível para o
+OCR), contato de terceiro (viraria `verifiedPhone` de quem não é), texto do WhatsApp
+que chega em `conversation` **ou** em `extendedTextMessage` (ler só um perde
+resposta, citação e link com preview), e o descarte de grupo/status/mensagem própria
+— sem o qual o bot responderia a si mesmo.
+
+**Ressalva:** o que está coberto é a **tradução**. O ciclo de vida dos adapters
+(conexão, reconexão, QR, download de mídia) continua sem teste — depende de SDK e de
+rede, e não cabe em teste unitário.
 
 ### ~~C6~~ — Sem rate limit nos endpoints HTTP · ✅ **resolvido em 2026-08-17**
 

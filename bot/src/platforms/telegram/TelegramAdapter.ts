@@ -6,6 +6,14 @@ import { IncomingMessage } from "../../core/IncomingMessage";
 import { Replier } from "../../core/Replier";
 import { BotCore } from "../../core/BotCore";
 import { OutboundRegistry, OutboundSender } from "../../core/OutboundRegistry";
+import {
+  toTelegramText,
+  toTelegramCommand,
+  toTelegramPhoto,
+  toTelegramContact,
+  isOwnContact,
+  bestResolution,
+} from "./translate";
 import { config } from "../../infra/config";
 import { logger } from "../../infra/logger";
 
@@ -87,39 +95,16 @@ export class TelegramAdapter implements IMessagingAdapter, OutboundSender {
       .oneTime();
   }
 
-  private profileFrom(ctx: Context) {
-    return { firstName: ctx.from?.first_name, lastName: ctx.from?.last_name };
-  }
-
   private toText(ctx: Context): IncomingMessage {
-    return {
-      platform: "telegram",
-      externalId: String(ctx.from?.id),
-      kind: "text",
-      text: (ctx.message as Message.TextMessage).text,
-      profile: this.profileFrom(ctx),
-    };
+    return toTelegramText(ctx.from, (ctx.message as Message.TextMessage).text);
   }
 
   private toCommand(ctx: Context, name: string): IncomingMessage {
-    const text = (ctx.message as Message.TextMessage)?.text ?? "";
-    const args = text.split(" ").slice(1);
-    return {
-      platform: "telegram",
-      externalId: String(ctx.from?.id),
-      kind: "command",
-      command: { name, args },
-      profile: this.profileFrom(ctx),
-    };
+    return toTelegramCommand(ctx.from, name, (ctx.message as Message.TextMessage)?.text ?? "");
   }
 
   private toPhoto(ctx: Context): IncomingMessage {
-    return {
-      platform: "telegram",
-      externalId: String(ctx.from?.id),
-      kind: "photo",
-      getImageBase64: () => this.downloadPhoto(ctx),
-    };
+    return toTelegramPhoto(ctx.from, () => this.downloadPhoto(ctx));
   }
 
   private async downloadPhoto(ctx: Context): Promise<string> {
@@ -127,7 +112,7 @@ export class TelegramAdapter implements IMessagingAdapter, OutboundSender {
     if (!message || !("photo" in message)) {
       throw new Error("Mensagem sem foto");
     }
-    const photo = message.photo[message.photo.length - 1]; // melhor resolução
+    const photo = bestResolution(message.photo);
     const file = await ctx.telegram.getFile(photo.file_id);
     const fileUrl = `https://api.telegram.org/file/bot${config.telegramToken}/${file.file_path}`;
     const response = await fetch(fileUrl);
@@ -140,16 +125,11 @@ export class TelegramAdapter implements IMessagingAdapter, OutboundSender {
     const userId = String(ctx.from?.id);
 
     // Só aceitamos o contato do próprio usuário (checagem específica do Telegram).
-    if (contact.user_id && String(contact.user_id) !== userId) {
+    if (!isOwnContact(contact, userId)) {
       await ctx.reply("Por favor, compartilhe o seu próprio contato. 🙂");
       return;
     }
 
-    await this.dispatch(ctx, {
-      platform: "telegram",
-      externalId: userId,
-      kind: "contact",
-      contact: { phone: contact.phone_number, name: contact.first_name },
-    });
+    await this.dispatch(ctx, toTelegramContact(userId, contact));
   }
 }

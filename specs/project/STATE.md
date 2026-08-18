@@ -14,12 +14,13 @@ O Alfred deixou de ser um bot de finanças e passou a ser um **assistente pessoa
 com capacidades em módulos** — `fin` (implementado), `tarefas` e `projetos`
 (declarados, não construídos). Ver [ADR-0004](../../docs/adr/0004-alfred-modular.md).
 
-Suíte verde: bot **40 suítes / 259 testes** (cobertura 78,2 %), web 8 arquivos /
+Suíte verde: bot **42 suítes / 277 testes** (cobertura 78,1 %), web 8 arquivos /
 21 testes. Lint e typecheck limpos. `./scripts/check.sh` é o gate único.
 
 **Fases 1, 2 e 3 concluídas** — ver [`PLANO-TECNICO.md`](PLANO-TECNICO.md).
-O `BotCore` caiu de **1042 para 336 linhas** sem mudar comportamento, e não existe
-mais `switch` de comando. **Próxima: Fase 4** (C2, C3) — rodar com réplica.
+O `BotCore` caiu de **1042 para 336 linhas** e não existe mais `switch` de comando.
+**Fase 4 em andamento:** `C3` fechado (schedulers sob lock de Mongo); `C2` parado
+esperando decisão sua — Redis ou Mongo com TTL index.
 
 **Nunca foi para produção**: sem host, sem CD, sem cobrança.
 
@@ -93,8 +94,7 @@ formulário com IA, e é o que o Caddy vende como produto. A infraestrutura exis
 (`OutboundRegistry` entrega push nas três plataformas); falta **o que decide o que
 merece ser dito** — e o limite de quando calar.
 
-**Antes de qualquer deploy com réplica:** C2 (estado em memória) e C3 (schedulers
-sem lock).
+**Antes de qualquer deploy com réplica:** C2 (estado em memória). ~~C3~~ fechado.
 
 ~~C6, C7~~ (2026-08-17) e ~~C5~~ (2026-08-18) fechados. O próximo trabalho técnico
 está no [`PLANO-TECNICO.md`](PLANO-TECNICO.md): **Fase 3**, quebrar o `BotCore`

@@ -72,14 +72,27 @@ encontrado; o rate limit vale N× o configurado. **Um reinício também perde tu
 qualquer deploy com réplica. Impacto de código pequeno — todos já estão atrás de
 uma classe.
 
-### C3 — Schedulers rodam em toda instância
+### ~~C3~~ — Schedulers rodam em toda instância · ✅ **resolvido em 2026-08-18**
 
 **Onde:** `services/ReminderScheduler.ts:22` · `services/RetentionScheduler.ts:15`
 **Evidência:** `setInterval` no processo, sem lock nem eleição de líder.
 **Risco:** N réplicas = N pushes do mesmo lembrete para o usuário. E o
 `RetentionScheduler` apaga contas — concorrência ali é pior que ruído.
-**Correção:** lock distribuído (`findOneAndUpdate` com `lockedUntil` numa coleção
-de jobs) ou tirar os jobs do processo do bot para um worker único.
+**✅ Resolvido em 2026-08-18.** `JobLockService` + coleção `joblocks`: os dois ciclos
+rodam dentro de `runExclusively`, e só quem ganha a disputa executa.
+
+A exclusão mútua vem de **uma** operação atômica — um `findOneAndUpdate` com upsert
+cujo filtro só casa com lock livre ou vencido. Não existe janela entre ler e escrever
+porque não existe leitura separada; quem perde recebe `E11000` e pula o ciclo. O lock
+**vence sozinho** (`lockedUntil`), então instância que morre no meio do ciclo não
+deixa o job preso, e é devolvido no `finally` — inclusive quando o ciclo lança.
+
+Mora no Mongo de propósito: lock de job é uma linha no banco que já existe, e não
+depende da decisão pendente sobre onde guardar estado de conversa (C2).
+
+**Descoberto ao fazer:** os dois schedulers **não tinham teste nenhum**. Agora têm —
+inclusive um que sobe MongoDB de verdade e prova que, com cinco instâncias disputando
+ao mesmo tempo, exatamente uma vence. Mock não provaria isso: a garantia é do banco.
 
 ---
 

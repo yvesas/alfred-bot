@@ -1,5 +1,6 @@
 import { inject, injectable } from "inversify";
 import { ReminderService } from "./ReminderService";
+import { JobLockService } from "./JobLockService";
 import { OutboundRegistry } from "../core/OutboundRegistry";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
@@ -8,6 +9,9 @@ import { t } from "../i18n";
 
 // Verifica periodicamente lembretes vencidos e dispara o push na plataforma de origem.
 // Background job (não é um adapter): iniciado no index após os adapters subirem.
+// O ciclo roda sob lock — ver JobLockService.
+const REMINDERS_JOB = "reminders";
+
 @injectable()
 export class ReminderScheduler {
   private timer?: NodeJS.Timeout;
@@ -15,6 +19,7 @@ export class ReminderScheduler {
   constructor(
     @inject(ReminderService) private reminders: ReminderService,
     @inject(OutboundRegistry) private outbound: OutboundRegistry,
+    @inject(JobLockService) private locks: JobLockService,
   ) {}
 
   start(): void {
@@ -35,27 +40,35 @@ export class ReminderScheduler {
   // Exposto para testes e para o ciclo do timer.
   async tick(now: Date = new Date()): Promise<void> {
     try {
-      const due = await this.reminders.findDue(now);
-      for (const r of due) {
-        const text = t(r.language ?? "pt", "reminder_push", {
-          description: r.description,
-          day: r.dayOfMonth,
-        });
-        const delivered = await this.outbound.send(r.platform, r.externalId, text);
-        // Reprograma para o próximo mês de qualquer forma (lembrete mensal); se o usuário
-        // estava offline (ex.: web sem aba aberta), apenas registramos.
-        await this.reminders.markNotified(r, now);
-        if (delivered) {
-          remindersSentTotal.inc({ platform: r.platform });
-        } else {
-          logger.warn(
-            { platform: r.platform, externalId: r.externalId },
-            "Lembrete não entregue (usuário offline?)",
-          );
-        }
-      }
+      // Sob lock: com N réplicas, N ticks acordam juntos e o usuário receberia o
+      // mesmo lembrete N vezes (C3).
+      await this.locks.runExclusively(REMINDERS_JOB, config.reminderIntervalMs, () =>
+        this.deliverDue(now),
+      );
     } catch (err) {
       logger.error({ err }, "Erro no ciclo de lembretes");
+    }
+  }
+
+  private async deliverDue(now: Date): Promise<void> {
+    const due = await this.reminders.findDue(now);
+    for (const r of due) {
+      const text = t(r.language ?? "pt", "reminder_push", {
+        description: r.description,
+        day: r.dayOfMonth,
+      });
+      const delivered = await this.outbound.send(r.platform, r.externalId, text);
+      // Reprograma para o próximo mês de qualquer forma (lembrete mensal); se o usuário
+      // estava offline (ex.: web sem aba aberta), apenas registramos.
+      await this.reminders.markNotified(r, now);
+      if (delivered) {
+        remindersSentTotal.inc({ platform: r.platform });
+      } else {
+        logger.warn(
+          { platform: r.platform, externalId: r.externalId },
+          "Lembrete não entregue (usuário offline?)",
+        );
+      }
     }
   }
 }

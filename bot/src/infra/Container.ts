@@ -21,6 +21,7 @@ import { RateLimiter } from "../services/RateLimiter";
 import { ReminderService } from "../services/ReminderService";
 import { ReminderScheduler } from "../services/ReminderScheduler";
 import { RetentionService } from "../services/RetentionService";
+import { JobLockService } from "../services/JobLockService";
 import { RetentionScheduler } from "../services/RetentionScheduler";
 import { AuthService } from "../services/AuthService";
 import { AccountService } from "../services/AccountService";
@@ -77,6 +78,8 @@ container.bind<GptProcessor>(GptProcessor).toSelf();
 container.bind<RateLimiter>(RateLimiter).toSelf().inSingletonScope();
 container.bind<ReminderService>(ReminderService).toSelf();
 container.bind<RetentionService>(RetentionService).toSelf();
+// Singleton: o `owner` do lock identifica ESTA instância; um por processo.
+container.bind<JobLockService>(JobLockService).toSelf().inSingletonScope();
 container.bind<RetentionScheduler>(RetentionScheduler).toSelf().inSingletonScope();
 container.bind<AuthService>(AuthService).toSelf().inSingletonScope();
 container.bind<MergeService>(MergeService).toSelf();

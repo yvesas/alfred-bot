@@ -17,7 +17,7 @@ o rumo do produto, de [`ROADMAP.md`](ROADMAP.md); as decisões, de
 | **1** | Rate limit no HTTP · origem explícita em produção | `C6` `C7` | ✅ **2026-08-17** |
 | **2** | [Cobrir os adapters de Telegram e WhatsApp](#4-fase-2--cobrir-os-adapters-c5) | `C5` | ✅ **2026-08-18** |
 | **3** | [Quebrar o `BotCore`](#5-fase-3--quebrar-o-botcore-c4) — de 1042 para 336 linhas | `C4` | ✅ **2026-08-18** |
-| **4** | [Rodar com mais de uma instância](#6-fase-4--deixar-rodar-com-mais-de-uma-instância-c2-c3) | `C2` `C3` | 🔨 próxima |
+| **4** | [Rodar com mais de uma instância](#6-fase-4--deixar-rodar-com-mais-de-uma-instância-c2-c3) | ~~`C3`~~ `C2` `C8` | 🔨 `C3` feito; `C2` **bloqueado por decisão** |
 
 **Por que os adapters vêm antes de quebrar o `BotCore`.** A Fase 3 é refactor sem
 mudança de comportamento, e **a suíte é o contrato que prova isso**. Fazer a Fase 3
@@ -95,9 +95,12 @@ atual.
 > **Fases 1, 2 e 3 concluídas.** O `BotCore` caiu de **1042 para 336 linhas** — 68 %
 > — sem uma única mudança de comportamento. 259 testes verdes, cobertura 78,2 %.
 >
-> **Próxima:** Fase 4 — rodar com mais de uma instância (`C2`, `C3`). Ela ficou mais
-> perto: o estado que impede a réplica agora está em três classes com dono
-> (`PurchaseFlow`, `PendingEmailStore`, `RateLimiter`), não espalhado no BotCore.
+> **Fase 4 em andamento.** `C3` fechado: os dois schedulers rodam sob lock de Mongo,
+> com 277 testes verdes — inclusive um que prova, com banco de verdade, que cinco
+> instâncias disputando resultam em uma vencedora.
+>
+> **`C2` está bloqueado por decisão sua:** Redis ou coleção Mongo com TTL index?
+> Ver §6.
 
 - [x] **F1.1 — C6** rate limit nos endpoints HTTP · 2026-08-17
 - [x] **F1.2 — C7** origem explícita em produção · 2026-08-17
@@ -219,11 +222,11 @@ precisou mudar, ou o refactor mudou comportamento ou o teste testava a implement
 
 Só bloqueia quando houver deploy com réplica — mas bloqueia **inteiro**.
 
+- [x] **F4.2** — lock nos schedulers · 2026-08-18 (feito primeiro: não dependia da decisão)
 - [ ] **F4.1** — tirar da memória: `pendingPurchases`, `pendingEmailVerification`,
-      `LinkTokenService`, `RateLimiter`. Todos já estão atrás de uma classe.
-- [ ] **F4.2** — lock nos schedulers (`findOneAndUpdate` com `lockedUntil`), senão
-      N réplicas mandam N vezes o mesmo lembrete e a purga de retenção — que
-      **apaga contas** — roda concorrente
+      `LinkTokenService`, `RateLimiter`. Todos já estão atrás de uma classe — o
+      refactor do C4 deixou cada um com dono, então é trocar implementação, não caçar
+      campo. **[!] Espera a decisão abaixo.**
 - [ ] **F4.3** — `C8` JWT revogável (`tokenVersion` no `User`): é o mínimo para
       atender a um pedido de revogação do titular (LGPD)
 

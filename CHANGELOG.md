@@ -10,6 +10,12 @@ O projeto ainda **não foi para produção** e não tem versão publicada.
 
 ### Segurança
 
+- **Os jobs periódicos passaram a rodar sob lock.** Com mais de uma réplica, os dois
+  `setInterval` acordavam juntos: o usuário receberia o mesmo lembrete N vezes, e a
+  purga de retenção — que **apaga contas** — rodaria concorrente consigo mesma. Agora
+  só quem ganha a disputa executa, e o lock vence sozinho se a instância morrer no
+  meio do ciclo. (C3)
+
 - **O `AuthServer` estava aberto.** `POST /auth/email/start` disparava e-mail real
   pelo WorkOS sem limite nenhum — dava para queimar a cota, usar o Alfred para
   spammar terceiros e enumerar quem tem conta. Agora há rate limit por IP antes do

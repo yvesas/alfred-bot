@@ -20,7 +20,7 @@ export class AccountLinking {
    * canônica do web. `false` quando o token não existe, expirou ou já foi usado.
    */
   async tryLink(platform: Platform, externalId: string, token: string): Promise<boolean> {
-    const canonicalUserId = this.linkTokens.consume(token);
+    const canonicalUserId = await this.linkTokens.consume(token);
     if (!canonicalUserId) return false;
     return this.mergeService.linkAccounts(platform, externalId, canonicalUserId);
   }

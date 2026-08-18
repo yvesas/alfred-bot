@@ -1,26 +1,33 @@
-import { injectable } from "inversify";
+import { inject, injectable } from "inversify";
 import { Platform } from "./IncomingMessage";
 import { conversationKey } from "./conversationKey";
+import { ConversationStateStore } from "./ConversationStateStore";
+import { config } from "../infra/config";
 
 // E-mails aguardando o código de verificação (Magic Auth), por conversa.
 //
-// Vive numa classe própria pelo mesmo motivo que as compras pendentes vivem no
-// `PurchaseFlow`: é estado que atravessa duas mensagens, e hoje só existe na memória
-// do processo. Reiniciar perde, e uma segunda réplica não enxerga (C2). Quando isso
-// for para Redis, é esta classe que muda — e mais nada.
+// Vivia num Map do processo; agora vai para o store compartilhado (C2), então a
+// pessoa pode pedir o código numa réplica e mandar o código para outra. A validade
+// acompanha a do código do WorkOS — guardar mais tempo que ele vale seria mentira.
 @injectable()
 export class PendingEmailStore {
-  private readonly pending = new Map<string, string>();
+  constructor(@inject(ConversationStateStore) private store: ConversationStateStore) {}
 
-  set(platform: Platform, externalId: string, email: string): void {
-    this.pending.set(conversationKey(platform, externalId), email);
+  async set(platform: Platform, externalId: string, email: string): Promise<void> {
+    await this.store.put(
+      "email",
+      conversationKey(platform, externalId),
+      email,
+      config.pendingEmailTtlMs,
+    );
   }
 
-  get(platform: Platform, externalId: string): string | undefined {
-    return this.pending.get(conversationKey(platform, externalId));
+  async get(platform: Platform, externalId: string): Promise<string | undefined> {
+    const email = await this.store.get<string>("email", conversationKey(platform, externalId));
+    return email ?? undefined;
   }
 
-  clear(platform: Platform, externalId: string): void {
-    this.pending.delete(conversationKey(platform, externalId));
+  async clear(platform: Platform, externalId: string): Promise<void> {
+    await this.store.remove("email", conversationKey(platform, externalId));
   }
 }

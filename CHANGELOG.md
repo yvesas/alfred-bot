@@ -10,6 +10,11 @@ O projeto ainda **não foi para produção** e não tem versão publicada.
 
 ### Segurança
 
+- **O estado de conversa saiu da memória do processo.** Compra aguardando "sim/não",
+  e-mail aguardando código e token de vínculo vivem numa coleção do Mongo com índice
+  de TTL — então a pergunta pode sair de uma réplica e a resposta chegar noutra, e
+  reiniciar deixou de perder o que estava pendente. O rate limit ficou em memória por
+  ser o mais quente, com o teto dividido por `REPLICAS`. (C2)
 - **Os jobs periódicos passaram a rodar sob lock.** Com mais de uma réplica, os dois
   `setInterval` acordavam juntos: o usuário receberia o mesmo lembrete N vezes, e a
   purga de retenção — que **apaga contas** — rodaria concorrente consigo mesma. Agora

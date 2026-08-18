@@ -22,6 +22,7 @@ import { MessageProcessingService } from "../services/MessageProcessingService";
 import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
 import { AccountLinking } from "../core/AccountLinking";
 import { PendingEmailStore } from "../core/PendingEmailStore";
+import { FakeConversationStore } from "./helpers/fakeConversationStore";
 import { accessKeyCheckDigit } from "../utils/fiscalKey";
 
 function baseMsg(over: Partial<IncomingMessage>): IncomingMessage {
@@ -69,11 +70,14 @@ describe("BotCore", () => {
     mps = sinon.createStubInstance(MessageProcessingService);
     // Fluxo de compra real: o BotCore delega a ele, e os testes de compra exercitam
     // o caminho inteiro — trocá-lo por stub esconderia justamente o que se quer provar.
-    purchaseFlow = new PurchaseFlow(purchaseService, budgetService, planService);
+    // Store em memória: o C2 tirou as pendências do processo, mas o teste unitário
+    // não quer banco. O comportamento real do store é provado à parte.
+    const conversationStore = new FakeConversationStore();
+    purchaseFlow = new PurchaseFlow(purchaseService, budgetService, planService, conversationStore);
     // Reais, como o PurchaseFlow: são estado e colaboração do próprio fluxo, não
     // fronteira externa. Stubá-los esconderia o que os testes de vínculo provam.
     accountLinking = new AccountLinking(mergeService, linkTokens);
-    pendingEmails = new PendingEmailStore();
+    pendingEmails = new PendingEmailStore(conversationStore);
     core = new BotCore(
       userService,
       ocrService,
@@ -427,7 +431,7 @@ describe("BotCore", () => {
 
   it("links an account via /vincular <token>", async () => {
     userService.ensureUser.resolves({ user: { status: "complete" } as any, question: "" });
-    linkTokens.consume.returns("canonId");
+    linkTokens.consume.resolves("canonId");
     mergeService.linkAccounts.resolves(true);
 
     await core.handle(
@@ -442,7 +446,7 @@ describe("BotCore", () => {
 
   it("rejects /vincular with an invalid token", async () => {
     userService.ensureUser.resolves({ user: { status: "complete" } as any, question: "" });
-    linkTokens.consume.returns(null);
+    linkTokens.consume.resolves(null);
 
     await core.handle(
       baseMsg({ kind: "command", command: { name: "vincular", args: ["BAD"] } }),
@@ -458,7 +462,7 @@ describe("BotCore", () => {
       user: { status: "complete", name: "Yves", _id: "u1" } as any,
       question: "",
     });
-    linkTokens.consume.returns("canonId");
+    linkTokens.consume.resolves("canonId");
     mergeService.linkAccounts.resolves(true);
 
     await core.handle(

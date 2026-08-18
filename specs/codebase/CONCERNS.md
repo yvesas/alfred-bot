@@ -59,7 +59,7 @@ verificado. Mas é o `B1` aberto desde o começo do ROADMAP.
 **Correção:** **rotacionar a chave no GCP** (ação sua — o agente não faz), e em
 produção usar Workload Identity ou o Secret Manager em vez de arquivo.
 
-### C2 — Estado crítico só em memória impede mais de uma instância
+### ~~C2~~ — Estado crítico só em memória impede mais de uma instância · ✅ **resolvido em 2026-08-18**
 
 **Onde:** `BotCore.pendingPurchases` e `pendingEmailVerification`
 (`core/BotCore.ts:67,69`) · `LinkTokenService` (memória, TTL 10 min) ·
@@ -68,9 +68,32 @@ produção usar Workload Identity ou o Secret Manager em vez de arquivo.
 **Risco:** com duas réplicas atrás de um balanceador, a confirmação "sim" cai numa
 instância que não tem a compra pendente; o token de vínculo do deep-link não é
 encontrado; o rate limit vale N× o configurado. **Um reinício também perde tudo.**
-**Correção:** mover os quatro para Redis (ou uma coleção com TTL index) antes de
-qualquer deploy com réplica. Impacto de código pequeno — todos já estão atrás de
-uma classe.
+**✅ Resolvido em 2026-08-18 — Mongo, não Redis.** Três dos quatro foram para
+`ConversationStateStore` (coleção `conversationstates`, índice único em `(kind, key)`
+e índice de TTL). Decidido assim porque o host ainda não foi escolhido, e adotar
+Redis agora seria escolher um host que tenha Redis. A troca depois é por classe.
+
+**O quarto — o `RateLimiter` — ficou em memória de propósito.** Ele dispara em toda
+mensagem e toda requisição; ida ao banco a cada uma custaria mais do que o problema
+vale. O preço é que cada réplica tem a própria janela, então o teto é dividido por
+`REPLICAS`, para N instâncias somarem o limite em vez de multiplicá-lo. A aproximação
+só é exata com distribuição uniforme — preferimos barrar cedo a deixar passar N vezes.
+
+**Duas coisas que o trabalho revelou:**
+
+1. **Toda leitura filtra por `expiresAt`.** O varredor de TTL do Mongo roda a cada
+   ~60 s, então um documento vencido continua legível por até um minuto. O índice
+   serve para limpar, não para responder — sem o filtro, um token expirado ainda
+   seria aceito nessa janela.
+2. **A garantia depende do índice existir.** O Mongoose constrói índice de forma
+   assíncrona, e `autoIndex` costuma vir desligado em produção. Sem o índice único, o
+   lock do C3 não tranca e o `put` duplica. Descoberto por um teste que falhava uma
+   vez a cada três; hoje `JobLockService` e `ConversationStateStore` esperam
+   `Model.init()` uma vez antes da primeira escrita.
+
+**TTL escolhido:** compra pendente 1 h, e-mail 15 min (acompanha o código do WorkOS),
+token de vínculo 10 min. Antes não havia TTL nenhum — o Map durava o processo. Todos
+configuráveis.
 
 ### ~~C3~~ — Schedulers rodam em toda instância · ✅ **resolvido em 2026-08-18**
 

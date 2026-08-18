@@ -80,7 +80,7 @@ const email = registered("email", async ({ reply, platform, externalId, lang, ar
 
   try {
     await deps.authService.sendEmailCode(address);
-    deps.pendingEmails.set(platform, externalId, address);
+    await deps.pendingEmails.set(platform, externalId, address);
     await reply.text(t(lang, "email_sent", { email: address }));
   } catch (error) {
     logger.error({ err: error }, "Falha ao enviar código de verificação de e-mail");
@@ -89,7 +89,7 @@ const email = registered("email", async ({ reply, platform, externalId, lang, ar
 });
 
 const codigo = registered("codigo", async ({ reply, platform, externalId, lang, args, deps }) => {
-  const address = deps.pendingEmails.get(platform, externalId);
+  const address = await deps.pendingEmails.get(platform, externalId);
   if (!address) {
     await reply.text(t(lang, "code_no_pending"));
     return;
@@ -106,7 +106,7 @@ const codigo = registered("codigo", async ({ reply, platform, externalId, lang, 
     return;
   }
 
-  deps.pendingEmails.clear(platform, externalId);
+  await deps.pendingEmails.clear(platform, externalId);
   // E-mail verificado → grava e auto-vincula com a conta web do mesmo e-mail.
   await deps.mergeService.linkVerifiedEmail(platform, externalId, address);
   await reply.text(t(lang, "email_verified"));

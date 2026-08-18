@@ -7,11 +7,15 @@ export interface RateLimit {
   windowMs: number;
 }
 
-// Rate limiter de janela deslizante, em memória. Serve tanto ao chat (chave = usuário)
-// quanto ao HTTP (chave = IP), com limites diferentes por chamador.
+// Rate limiter de janela deslizante, em memória.
 //
-// Nota: o estado é por instância — para escalar horizontalmente, migrar para Redis
-// (ver C2 em specs/codebase/CONCERNS.md).
+// É o ÚNICO estado que continuou em memória depois do C2, e por escolha: dispara em
+// toda mensagem e toda requisição, e ida ao banco a cada uma custaria mais do que o
+// problema vale. O preço é que cada réplica tem a própria janela — então o teto é
+// dividido por `REPLICAS`, para N instâncias somarem o limite configurado.
+//
+// A aproximação é real e vale dizer: só é exata se o balanceador distribuir de forma
+// uniforme. Preferimos barrar cedo a deixar passar N vezes.
 @injectable()
 export class RateLimiter {
   private hits = new Map<string, number[]>();
@@ -27,7 +31,7 @@ export class RateLimiter {
     const windowStart = now - limit.windowMs;
     const recent = (this.hits.get(key) ?? []).filter((t) => t > windowStart);
 
-    if (recent.length >= limit.max) {
+    if (recent.length >= perReplica(limit.max)) {
       this.hits.set(key, recent);
       return false;
     }
@@ -54,4 +58,10 @@ export class RateLimiter {
       }
     }
   }
+}
+
+// Teto desta instância. Com uma réplica é o próprio limite; com N, a fração — nunca
+// menos de 1, senão o limitador barraria tudo.
+function perReplica(max: number): number {
+  return Math.max(1, Math.floor(max / config.replicas));
 }

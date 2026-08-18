@@ -170,7 +170,7 @@ describe("AuthServer (integração HTTP)", () => {
 
   it("GET /auth/link/telegram redireciona ao t.me", async () => {
     auth.verifyJwt.returns({ sub: "wos1" });
-    linkTokens.issue.returns("LINKTOK");
+    linkTokens.issue.resolves("LINKTOK");
     config.telegramBotUsername = "AlfredBot";
 
     const res = await fetch(`${base}/auth/link/telegram?token=jwt`, { redirect: "manual" });

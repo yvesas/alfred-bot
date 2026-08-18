@@ -3,6 +3,7 @@ import { Platform } from "../../core/IncomingMessage";
 import { Replier } from "../../core/Replier";
 import { currency } from "../../core/format";
 import { conversationKey } from "../../core/conversationKey";
+import { ConversationStateStore } from "../../core/ConversationStateStore";
 import { PurchaseService } from "../../services/PurchaseService";
 import { BudgetService } from "../../services/BudgetService";
 import { PlanService } from "../../services/PlanService";
@@ -46,14 +47,13 @@ const NEGATIVE = new Set(["não", "nao", "n", "no", "cancelar", "cancela", "canc
 
 @injectable()
 export class PurchaseFlow {
-  // Compras aguardando confirmação, por usuário (chave "platform:externalId").
-  // Em memória: reiniciar perde, e uma segunda réplica não enxerga (C2).
-  private readonly pendingPurchases = new Map<string, IPurchaseCreate>();
-
   constructor(
     @inject(PurchaseService) private purchaseService: PurchaseService,
     @inject(BudgetService) private budgetService: BudgetService,
     @inject(PlanService) private planService: PlanService,
+    // Compras aguardando confirmação. Saíram de um Map do processo para o store
+    // compartilhado (C2): a pergunta pode sair de uma réplica e o "sim" chegar noutra.
+    @inject(ConversationStateStore) private pending: ConversationStateStore,
   ) {}
 
   // ---------- Roteamento da resposta da IA ----------
@@ -104,7 +104,12 @@ export class PurchaseFlow {
 
     // Confirmação antes de salvar: guarda a pendente e pede "sim/não".
     if (config.confirmPurchase) {
-      this.pendingPurchases.set(conversationKey(platform, externalId), purchaseData);
+      await this.pending.put(
+        "purchase",
+        conversationKey(platform, externalId),
+        purchaseData,
+        config.pendingPurchaseTtlMs,
+      );
       await reply.text(
         t(lang, "purchase_confirm", {
           description: purchaseData.description,
@@ -130,24 +135,24 @@ export class PurchaseFlow {
     text: string,
   ): Promise<boolean> {
     const key = conversationKey(platform, externalId);
-    const pending = this.pendingPurchases.get(key);
+    const pending = await this.pending.get<IPurchaseCreate>("purchase", key);
     if (!pending) return false;
 
     const answer = text.trim().toLowerCase();
 
     if (AFFIRMATIVE.has(answer)) {
-      this.pendingPurchases.delete(key);
+      await this.pending.remove("purchase", key);
       await this.savePurchase(reply, platform, externalId, lang, pending);
       return true;
     }
     if (NEGATIVE.has(answer)) {
-      this.pendingPurchases.delete(key);
+      await this.pending.remove("purchase", key);
       await reply.text(t(lang, "purchase_cancelled"));
       return true;
     }
 
     // Resposta diferente de sim/não: descarta a pendente e processa a mensagem normalmente.
-    this.pendingPurchases.delete(key);
+    await this.pending.remove("purchase", key);
     return false;
   }
 

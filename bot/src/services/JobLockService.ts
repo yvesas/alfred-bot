@@ -19,6 +19,17 @@ export class JobLockService {
   /** Identifica esta instância nos logs. Não participa da exclusão mútua. */
   private readonly owner = randomUUID();
 
+  // A exclusão mútua É o índice único em `job`: sem ele, dois upserts concorrentes
+  // passam os dois e o lock não tranca. O Mongoose constrói índice de forma
+  // assíncrona (e `autoIndex` costuma vir desligado em produção), então esperamos
+  // uma vez, na primeira tentativa, em vez de torcer.
+  private indexesReady?: Promise<unknown>;
+
+  private ensureIndexes(): Promise<unknown> {
+    this.indexesReady ??= JobLockModel.init();
+    return this.indexesReady;
+  }
+
   /**
    * Tenta segurar o lock do job por `ttlMs`. `true` se conseguiu — e só quem
    * conseguiu deve rodar o ciclo.
@@ -27,6 +38,7 @@ export class JobLockService {
     const lockedUntil = new Date(now.getTime() + ttlMs);
 
     try {
+      await this.ensureIndexes();
       await JobLockModel.findOneAndUpdate(
         // Só casa se ninguém segura, ou se o lock de quem segurava já venceu.
         { job, lockedUntil: { $lte: now } },

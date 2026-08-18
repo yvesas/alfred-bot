@@ -77,6 +77,16 @@ export const config = {
     max: Number(process.env.RATE_LIMIT_MAX) || 20,
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
   },
+  // Validade do estado que atravessa duas mensagens (C2). Antes viviam num Map e
+  // duravam o processo inteiro; num banco precisam vencer, senão a coleção cresce para
+  // sempre. Uma hora é conversa longa; e-mail acompanha a validade do código.
+  pendingPurchaseTtlMs: Number(process.env.PENDING_PURCHASE_TTL_MS) || 60 * 60_000,
+  pendingEmailTtlMs: Number(process.env.PENDING_EMAIL_TTL_MS) || 15 * 60_000,
+  linkTokenTtlMs: Number(process.env.LINK_TOKEN_TTL_MS) || 10 * 60_000,
+  // Quantas réplicas do bot rodam. O rate limit é o único estado que ficou em memória
+  // — ida ao banco por requisição custaria caro — então o teto é dividido por aqui,
+  // para que N instâncias somem o limite configurado em vez de multiplicá-lo.
+  replicas: Math.max(1, Number(process.env.REPLICAS) || 1),
   // Confiar em `x-forwarded-for` só quando há proxy declarado. Sem isto, o cliente
   // forja o próprio IP e o rate limit vira decoração.
   trustProxy: (process.env.TRUST_PROXY ?? "false").toLowerCase() === "true",

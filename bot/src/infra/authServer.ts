@@ -260,7 +260,11 @@ export class AuthServer {
 
   // Gera um token de vínculo para o usuário logado (JWT em ?token=) e redireciona ao deep-link
   // da plataforma. O usuário inicia o contato com o bot (Start/enviar) carregando o token.
-  private link(url: URL, res: http.ServerResponse, platform: "telegram" | "whatsapp"): void {
+  private async link(
+    url: URL,
+    res: http.ServerResponse,
+    platform: "telegram" | "whatsapp",
+  ): Promise<void> {
     const session = this.auth.verifyJwt(url.searchParams.get("token") ?? "");
     if (!session) {
       res.writeHead(401);
@@ -268,10 +272,8 @@ export class AuthServer {
       return;
     }
 
-    const target =
-      platform === "telegram"
-        ? telegramDeepLink(this.linkTokens.issue(session.sub))
-        : whatsappDeepLink(this.linkTokens.issue(session.sub));
+    const token = await this.linkTokens.issue(session.sub);
+    const target = platform === "telegram" ? telegramDeepLink(token) : whatsappDeepLink(token);
 
     if (!target) {
       res.writeHead(503);

@@ -21,8 +21,10 @@ import { IUser, Language } from "../models/User";
 import { extractAccessKey, isValidAccessKey } from "../utils/fiscalKey";
 import { moduleForCommand } from "../modules/registry";
 import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
-import { langOf, currency } from "./format";
+import { langOf } from "./format";
 import { conversationKey } from "./conversationKey";
+import { CommandDeps } from "./CommandContext";
+import { findCommand } from "./commandRegistry";
 import { t } from "../i18n";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
@@ -303,27 +305,24 @@ export class BotCore {
       return;
     }
 
+    // Comando de módulo: resolvido pelo registro, sem o BotCore saber o que ele faz.
+    const command = name ? findCommand(name) : undefined;
+    if (command?.requiresRegistration) {
+      return command.handle({
+        msg,
+        reply,
+        platform,
+        externalId,
+        args,
+        lang,
+        user,
+        userId,
+        deps: this.commandDeps(),
+      });
+    }
+
+    // Comandos do chassi — conta, identidade e preferências. Saem daqui no passo 3 do C4.
     switch (name) {
-      case "gastos":
-        return this.purchaseFlow.handleSpendingQuery(reply, userId, lang, "current_month");
-      case "compras":
-        return this.handleGetPurchases(reply, lang, userId, this.parsePage(args[0]));
-      case "exportar":
-        return this.handleExport(reply, lang, userId);
-      case "excluir_conta":
-        return this.handleDeleteAccount(reply, lang, user, args[0]);
-      case "excluir":
-        return this.handleDeletePurchase(reply, lang, userId, args[0]);
-      case "editar":
-        return this.handleEditPurchase(reply, lang, userId, args);
-      case "categorias":
-        return this.handleCategories(reply, platform, externalId, lang, args);
-      case "orcamento":
-        return this.handleBudgets(reply, platform, externalId, userId, lang, args);
-      case "lembretes":
-        return this.handleReminders(reply, platform, externalId, lang, args);
-      case "estoque":
-        return this.handleStock(reply, lang, userId, args);
       case "idioma":
         return this.handleSetLanguage(reply, platform, externalId, lang, args[0]);
       case "nome":
@@ -334,7 +333,23 @@ export class BotCore {
         return this.handleEmailCode(reply, platform, externalId, lang, args[0]);
       case "ia":
         return this.handleSetIAModel(reply, platform, externalId, lang, args[0]);
+      case "excluir_conta":
+        return this.handleDeleteAccount(reply, lang, user, args[0]);
     }
+  }
+
+  // Serviços que os comandos de módulo alcançam. O BotCore os injeta e repassa; os
+  // handlers não conhecem o container.
+  private commandDeps(): CommandDeps {
+    return {
+      userService: this.userService,
+      purchaseService: this.purchaseService,
+      productService: this.productService,
+      reminderService: this.reminderService,
+      exportService: this.exportService,
+      accountService: this.accountService,
+      purchaseFlow: this.purchaseFlow,
+    };
   }
 
   // ---------- Verificação de e-mail no chat (Magic Auth — Parte 4) ----------
@@ -401,73 +416,6 @@ export class BotCore {
     await reply.text(t(lang, "email_verified"));
   }
 
-  // ---------- Editar / excluir compras (A2) ----------
-
-  // Resolve o n-ésimo item (1-based) na ordem de /compras (numeração absoluta, todas as páginas).
-  private async nthRecentPurchase(userId: string, nStr: string) {
-    const n = Number(nStr);
-    if (!Number.isInteger(n) || n < 1) return null;
-    const all = await this.purchaseService.getUserPurchases(userId);
-    return all[n - 1] ?? null;
-  }
-
-  private async handleDeletePurchase(
-    reply: Replier,
-    lang: Language,
-    userId: string,
-    nStr: string,
-  ): Promise<void> {
-    const target = await this.nthRecentPurchase(userId, nStr);
-    if (!target) {
-      await reply.text(t(lang, "delete_invalid"));
-      return;
-    }
-    await this.purchaseService.deletePurchase(userId, String(target._id));
-    await reply.text(
-      t(lang, "delete_done", { description: target.description, total: target.total.toFixed(2) }),
-    );
-  }
-
-  private async handleEditPurchase(
-    reply: Replier,
-    lang: Language,
-    userId: string,
-    args: string[],
-  ): Promise<void> {
-    const field = (args[1] ?? "").toLowerCase();
-    const value = args.slice(2).join(" ").trim();
-    const target = await this.nthRecentPurchase(userId, args[0] ?? "");
-
-    if (!target || !field || !value) {
-      await reply.text(t(lang, "edit_usage"));
-      return;
-    }
-
-    const patch: { total?: number; description?: string } = {};
-    if (field === "total" || field === "valor") {
-      const v = Number(value.replace(",", "."));
-      if (!Number.isFinite(v) || v <= 0) {
-        await reply.text(t(lang, "edit_invalid_value"));
-        return;
-      }
-      patch.total = v;
-    } else if (field === "descrição" || field === "descricao" || field === "desc") {
-      patch.description = value;
-    } else {
-      await reply.text(t(lang, "edit_invalid_field"));
-      return;
-    }
-
-    const updated = await this.purchaseService.updatePurchase(userId, String(target._id), patch);
-    if (!updated) {
-      await reply.text(t(lang, "edit_failed"));
-      return;
-    }
-    await reply.text(
-      t(lang, "edit_done", { description: updated.description, total: updated.total.toFixed(2) }),
-    );
-  }
-
   // ---------- Perfil (edição de nome — LGPD) ----------
 
   private async handleSetName(
@@ -504,167 +452,6 @@ export class BotCore {
     await reply.text(t(chosen as Language, "language_set"));
   }
 
-  // ---------- Categorias personalizadas (A3) ----------
-
-  private async handleCategories(
-    reply: Replier,
-    platform: Platform,
-    externalId: string,
-    lang: Language,
-    args: string[],
-  ): Promise<void> {
-    const sub = (args[0] ?? "").toLowerCase();
-    const name = args.slice(1).join(" ").trim();
-
-    if (sub === "add" || sub === "adicionar") {
-      if (!name) {
-        await reply.text(t(lang, "categories_add_usage"));
-        return;
-      }
-      const cats = await this.userService.addCategory(platform, externalId, name);
-      await reply.text(t(lang, "categories_added", { list: cats.join(", ") }));
-      return;
-    }
-
-    if (sub === "remover" || sub === "remove" || sub === "rm" || sub === "del") {
-      if (!name) {
-        await reply.text(t(lang, "categories_remove_usage"));
-        return;
-      }
-      const cats = await this.userService.removeCategory(platform, externalId, name);
-      const list = cats.length ? cats.join(", ") : t(lang, "categories_default_label");
-      await reply.text(t(lang, "categories_removed", { list }));
-      return;
-    }
-
-    // Sem subcomando: lista.
-    const cats = await this.userService.getCategories(platform, externalId);
-    if (cats.length === 0) {
-      await reply.text(t(lang, "categories_default_hint"));
-      return;
-    }
-    await reply.text(t(lang, "categories_list", { list: cats.join(", ") }));
-  }
-
-  // ---------- Orçamento mensal (alertas em savePurchase) ----------
-
-  private async handleBudgets(
-    reply: Replier,
-    platform: Platform,
-    externalId: string,
-    userId: string,
-    lang: Language,
-    args: string[],
-  ): Promise<void> {
-    const sub = (args[0] ?? "").toLowerCase();
-    const cur = currency(lang);
-
-    if (sub === "remover" || sub === "remove" || sub === "rm" || sub === "del") {
-      const category = args.slice(1).join(" ").trim();
-      if (!category) {
-        await reply.text(t(lang, "budget_remove_usage"));
-        return;
-      }
-      const budgets = await this.userService.removeBudget(platform, externalId, category);
-      const list = budgets.length
-        ? budgets.map((b) => `• ${b.category}: ${cur} ${b.limit.toFixed(2)}`).join("\n")
-        : t(lang, "budget_none_label");
-      await reply.text(t(lang, "budget_removed", { list }));
-      return;
-    }
-
-    // Definir: "/orcamento <categoria...> <valor>". O último token é o limite.
-    if (args.length >= 2) {
-      const limit = Number(args[args.length - 1].replace(",", "."));
-      const category = args.slice(0, -1).join(" ").trim();
-      if (!category || !Number.isFinite(limit) || limit <= 0) {
-        await reply.text(t(lang, "budget_set_usage"));
-        return;
-      }
-      await this.userService.setBudget(platform, externalId, category, limit);
-      await reply.text(t(lang, "budget_set", { category, limit: limit.toFixed(2) }));
-      return;
-    }
-
-    // Sem argumentos: lista os orçamentos com o gasto do mês atual.
-    const budgets = await this.userService.getBudgets(platform, externalId);
-    if (budgets.length === 0) {
-      await reply.text(t(lang, "budget_empty"));
-      return;
-    }
-
-    const report = await this.purchaseService.getSpendingReport(userId, "current_month");
-    const lines = budgets.map((b) => {
-      const spent = Object.entries(report.byCategory)
-        .filter(([k]) => k.toLowerCase() === b.category.toLowerCase())
-        .reduce((sum, [, v]) => sum + v, 0);
-      const pct = b.limit > 0 ? Math.round((spent / b.limit) * 100) : 0;
-      return `• ${b.category}: ${cur} ${spent.toFixed(2)} / ${cur} ${b.limit.toFixed(2)} (${pct}%)`;
-    });
-
-    await reply.text(
-      `${t(lang, "budget_list_header")}\n${lines.join("\n")}\n\n${t(lang, "budget_list_footer")}`,
-    );
-  }
-
-  // ---------- Lembretes (push recorrente; entrega via ReminderScheduler) ----------
-
-  private async handleReminders(
-    reply: Replier,
-    platform: Platform,
-    externalId: string,
-    lang: Language,
-    args: string[],
-  ): Promise<void> {
-    const sub = (args[0] ?? "").toLowerCase();
-
-    if (sub === "add" || sub === "adicionar") {
-      const day = Number(args[1]);
-      const description = args.slice(2).join(" ").trim();
-      if (!Number.isInteger(day) || day < 1 || day > 28 || !description) {
-        await reply.text(t(lang, "reminder_add_usage"));
-        return;
-      }
-      const reminder = await this.reminderService.add(platform, externalId, day, description, lang);
-      await reply.text(
-        t(lang, "reminder_created", {
-          description: reminder.description,
-          day: reminder.dayOfMonth,
-        }),
-      );
-      return;
-    }
-
-    if (sub === "remover" || sub === "remove" || sub === "rm" || sub === "del") {
-      const removed = await this.reminderService.removeNth(platform, externalId, args[1] ?? "");
-      if (!removed) {
-        await reply.text(t(lang, "reminder_remove_invalid"));
-        return;
-      }
-      await reply.text(t(lang, "reminder_removed", { description: removed.description }));
-      return;
-    }
-
-    // Sem subcomando: lista.
-    const list = await this.reminderService.list(platform, externalId);
-    if (list.length === 0) {
-      await reply.text(t(lang, "reminder_empty"));
-      return;
-    }
-    const body = list
-      .map((r, i) =>
-        t(lang, "reminder_list_item", {
-          index: i + 1,
-          day: r.dayOfMonth,
-          description: r.description,
-        }),
-      )
-      .join("\n");
-    await reply.text(
-      `${t(lang, "reminder_list_header")}\n\n${body}\n\n${t(lang, "reminder_list_footer")}`,
-    );
-  }
-
   // ---------- Vínculo de contas por deep-link (Fase 6) ----------
 
   // Consome o token de vínculo e funde a identidade atual na conta canônica (web).
@@ -681,51 +468,6 @@ export class BotCore {
     await this.userService.ensureUser(platform, externalId, msg.profile, lang);
     const linked = token ? await this.tryLink(platform, externalId, token) : false;
     await reply.text(t(lang, linked ? "link_success" : "link_invalid"));
-  }
-
-  // ---------- Estoque / despensa ----------
-
-  private async handleStock(
-    reply: Replier,
-    lang: Language,
-    userId: string,
-    args: string[],
-  ): Promise<void> {
-    const sub = (args[0] ?? "").toLowerCase();
-
-    if (sub === "add" || sub === "adicionar") {
-      const quantity = Number(args[1]);
-      const name = args.slice(2).join(" ").trim();
-      if (!Number.isInteger(quantity) || quantity <= 0 || !name) {
-        await reply.text(t(lang, "stock_add_usage"));
-        return;
-      }
-      const product = await this.productService.addOrIncrement(userId, name, quantity);
-      await reply.text(t(lang, "stock_added", { name: product.name, quantity: product.quantity }));
-      return;
-    }
-
-    if (sub === "remover" || sub === "remove" || sub === "rm" || sub === "del") {
-      const name = args.slice(1).join(" ").trim();
-      if (!name) {
-        await reply.text(t(lang, "stock_remove_usage"));
-        return;
-      }
-      const removed = await this.productService.removeProduct(userId, name);
-      await reply.text(t(lang, removed ? "stock_removed" : "stock_not_found", { name }));
-      return;
-    }
-
-    // Sem subcomando: lista.
-    const products = await this.productService.getUserProducts(userId);
-    if (products.length === 0) {
-      await reply.text(t(lang, "stock_empty"));
-      return;
-    }
-    const body = products
-      .map((p) => t(lang, "stock_item", { name: p.name, quantity: p.quantity }))
-      .join("\n");
-    await reply.text(`${t(lang, "stock_header")}\n\n${body}\n\n${t(lang, "stock_footer")}`);
   }
 
   private async handleStart(msg: IncomingMessage, reply: Replier): Promise<void> {
@@ -779,52 +521,6 @@ export class BotCore {
     await reply.text(response);
   }
 
-  private parsePage(arg?: string): number {
-    const n = Number(arg);
-    return Number.isInteger(n) && n > 0 ? n : 1;
-  }
-
-  private async handleGetPurchases(
-    reply: Replier,
-    lang: Language,
-    userId: string,
-    page = 1,
-  ): Promise<void> {
-    const pageSize = 5;
-    const cur = currency(lang);
-    const {
-      items,
-      total,
-      pages,
-      page: current,
-    } = await this.purchaseService.getUserPurchasesPage(userId, page, pageSize);
-
-    if (total === 0) {
-      await reply.text(t(lang, "purchases_empty"));
-      return;
-    }
-
-    const offset = (current - 1) * pageSize;
-    const body = items
-      .map((p, i) =>
-        t(lang, "purchases_item", {
-          index: offset + i + 1,
-          description: p.description,
-          total: `${cur} ${p.total.toFixed(2)}`,
-          date: p.date.toLocaleDateString(),
-        }),
-      )
-      .join("\n");
-
-    let footer = `\n\n${t(lang, "purchases_page_info", { current, pages, total })}`;
-    if (current < pages) {
-      footer += `\n${t(lang, "purchases_more", { next: current + 1 })}`;
-    }
-    footer += `\n${t(lang, "purchases_fix_hint")}`;
-
-    await reply.text(`${t(lang, "purchases_header")}\n\n${body}${footer}`);
-  }
-
   // ---------- Exclusão de conta (LGPD) ----------
 
   private async handleDeleteAccount(
@@ -839,21 +535,5 @@ export class BotCore {
     }
     await this.accountService.deleteAccount(user);
     await reply.text(t(lang, "account_deleted"));
-  }
-
-  // ---------- Exportação (CSV) ----------
-
-  private async handleExport(reply: Replier, lang: Language, userId: string): Promise<void> {
-    if (!reply.document) {
-      await reply.text(t(lang, "export_unavailable"));
-      return;
-    }
-    const csv = await this.exportService.purchasesCsv(userId);
-    if (csv.split("\n").length <= 1) {
-      await reply.text(t(lang, "export_empty"));
-      return;
-    }
-    await reply.document(Buffer.from(csv, "utf8"), "alfred-compras.csv", "text/csv");
-    await reply.text(t(lang, "export_done"));
   }
 }

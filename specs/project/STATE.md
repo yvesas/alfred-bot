@@ -14,12 +14,13 @@ O Alfred deixou de ser um bot de finanças e passou a ser um **assistente pessoa
 com capacidades em módulos** — `fin` (implementado), `tarefas` e `projetos`
 (declarados, não construídos). Ver [ADR-0004](../../docs/adr/0004-alfred-modular.md).
 
-Suíte verde: bot **39 suítes / 243 testes** (cobertura 76,9 %), web 8 arquivos /
+Suíte verde: bot **40 suítes / 252 testes** (cobertura 77,7 %), web 8 arquivos /
 21 testes. Lint e typecheck limpos. `./scripts/check.sh` é o gate único.
 
-**Fases 1 e 2 do [`PLANO-TECNICO.md`](PLANO-TECNICO.md) concluídas** — as duas
-fraquezas exploráveis de fora (C6, C7) e a cobertura dos adapters (C5).
-**Próxima: Fase 3**, quebrar o `BotCore` (C4) — agora com rede.
+**Fases 1 e 2 concluídas; Fase 3 em 2 de 3 passos** — ver
+[`PLANO-TECNICO.md`](PLANO-TECNICO.md). O `BotCore` caiu de **1042 para 539
+linhas** sem mudar comportamento. Falta o passo 3: tirar os 8 comandos do chassi
+do `switch`.
 
 **Nunca foi para produção**: sem host, sem CD, sem cobrança.
 

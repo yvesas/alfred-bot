@@ -85,7 +85,7 @@ de jobs) ou tirar os jobs do processo do bot para um worker único.
 
 ## 🟠 Alto
 
-### C4 — `BotCore` é um god object de 1042 linhas
+### C4 — `BotCore` é um god object de 1042 linhas · 🟡 **539 linhas em 2026-08-18**
 
 **Onde:** `core/BotCore.ts`
 **Evidência:** 15 dependências injetadas no construtor, ~25 handlers privados,
@@ -93,10 +93,18 @@ de jobs) ou tirar os jobs do processo do bot para um worker único.
 todo o bot, justo no arquivo com mais regra.
 **Risco:** conflito em qualquer mudança de UX, teste caro, e a próxima feature de
 conversa (agente/IA conversacional) cai exatamente aqui.
-**Correção:** extrair um registro de comandos (`Map<string, CommandHandler>` com
-um handler por arquivo, como já se faz com `KNOWN_COMMANDS`) e separar o fluxo de
-compra (`handleProcessed` → `savePurchase` → confirmação) numa `PurchaseFlow`.
-Fazer **antes** de mexer em UX de conversa, não depois.
+**🟡 Em andamento — 2026-08-18.** Saíram: o fluxo de compra inteiro
+(`modules/fin/PurchaseFlow.ts` — roteamento da resposta da IA, confirmação,
+gravação, alerta de orçamento, consulta de gastos) e os 9 comandos do módulo fin
+(`modules/fin/commands.ts`), agora resolvidos por um registro
+(`core/commandRegistry.ts`) em vez de um `switch` de 19 casos.
+
+**1042 → 539 linhas, sem mudança de comportamento:** 252 testes verdes, nenhum
+reescrito para acomodar o refactor — que é a prova de que o comportamento ficou.
+
+**Falta:** os 8 comandos do chassi (start, ia, idioma, nome, vincular, email,
+codigo, excluir_conta) ainda são um `switch` de 6 casos mais dois atalhos anônimos.
+É o passo 3 no [`PLANO-TECNICO.md`](../project/PLANO-TECNICO.md).
 
 ### ~~C5~~ — Adapters do Telegram e do WhatsApp sem nenhum teste · ✅ **resolvido em 2026-08-18**
 

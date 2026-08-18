@@ -16,7 +16,7 @@ o rumo do produto, de [`ROADMAP.md`](ROADMAP.md); as decisões, de
 |---|---|---|---|
 | **1** | Rate limit no HTTP · origem explícita em produção | `C6` `C7` | ✅ **2026-08-17** |
 | **2** | [Cobrir os adapters de Telegram e WhatsApp](#4-fase-2--cobrir-os-adapters-c5) | `C5` | ✅ **2026-08-18** |
-| **3** | [Quebrar o `BotCore`](#5-fase-3--quebrar-o-botcore-c4) — 1042 linhas, 58 % de cobertura | `C4` | 🔨 próxima |
+| **3** | [Quebrar o `BotCore`](#5-fase-3--quebrar-o-botcore-c4) — de 1042 para 539 linhas | `C4` | 🔨 2 de 3 passos |
 | **4** | [Rodar com mais de uma instância](#6-fase-4--deixar-rodar-com-mais-de-uma-instância-c2-c3) | `C2` `C3` | ⬜ |
 
 **Por que os adapters vêm antes de quebrar o `BotCore`.** A Fase 3 é refactor sem
@@ -92,15 +92,20 @@ atual.
 > Suíte em **243 testes / 39 suítes**, cobertura 76,9 %, `./scripts/check.sh` verde
 > nos dois projetos.
 >
-> **Próximo:** Fase 3 — quebrar o `BotCore` (`C4`). Agora com rede: a tradução dos
-> três canais está coberta, então o refactor tem contrato para provar que não mudou
-> comportamento.
+> **Fase 3 em andamento — 2 dos 3 passos.** O `BotCore` caiu de **1042 para 539
+> linhas** sem uma única mudança de comportamento: 252 testes verdes, nenhum
+> reescrito para acomodar o refactor.
 
 - [x] **F1.1 — C6** rate limit nos endpoints HTTP · 2026-08-17
 - [x] **F1.2 — C7** origem explícita em produção · 2026-08-17
 - [x] **F2.1** tradução do Telegram coberta · 2026-08-18
 - [x] **F2.2** tradução do WhatsApp coberta · 2026-08-18
-- [x] **F2.3** catraca de cobertura subida para 76/61/76/77 · 2026-08-18
+- [x] **F2.3** catraca subida para 76/61/76/77 · 2026-08-18
+- [x] **F3.1** `PurchaseFlow` extraído para o módulo fin · 2026-08-18
+- [x] **F3.2** contrato de comando + 9 comandos do fin no módulo · 2026-08-18
+- [ ] **F3.3** comandos do chassi (start, ia, idioma, nome, vincular, email,
+      codigo, excluir_conta) saem do `switch` — **o passo que falta**
+- [ ] **F3.4** `BotCore` fica só com: normalizar, resolver usuário, rate limit, despachar
 
 ---
 
@@ -179,14 +184,17 @@ reconexão, QR, download de mídia — continua sem teste. Depende de SDK e de r
 do projeto, no arquivo com mais regra. **Fazer antes da UX de conversa (F3 do
 roadmap), não depois.**
 
-- [ ] **F3.1** — `CommandHandler`: um handler por comando, registrado num `Map`,
-      resolvido pelo registro de módulos que já existe
-- [ ] **F3.2** — mover os handlers do módulo fin para `modules/fin/commands/`
-- [ ] **F3.3** — extrair `PurchaseFlow` (`handleProcessed` → confirmação →
-      `savePurchase` → alerta de orçamento)
-- [ ] **F3.4** — `BotCore` fica só com: normalizar, resolver usuário, rate limit,
-      despachar
-- [ ] **F3.5** — subir a catraca de cobertura
+- [x] **F3.1** — `PurchaseFlow` no módulo fin: `handleProcessed`, confirmação,
+      gravação, alerta de orçamento e consulta de gastos
+- [x] **F3.2** — contrato `CommandDefinition` + registro; os 9 comandos do fin
+      vivem em `modules/fin/commands.ts`
+- [ ] **F3.3** — os 8 comandos do chassi saem do `switch`
+- [ ] **F3.4** — `BotCore` fica só com o chassi
+- [x] **F3.5** — catraca subida para 77/62/77/77
+
+**Onde está:** 1042 → **539 linhas**. Saíram o fluxo de compra inteiro e os comandos
+de domínio. Sobrou o `switch` de 6 casos do chassi, os fluxos de texto/foto/contato
+e o onboarding.
 
 Refactor sem mudança de comportamento: **a suíte atual é o contrato.** Se um teste
 precisou mudar, ou o refactor mudou comportamento ou o teste testava a implementação.

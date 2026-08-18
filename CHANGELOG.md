@@ -60,6 +60,12 @@ O projeto ainda **não foi para produção** e não tem versão publicada.
 
 ### Alterado
 
+- **O `BotCore` deixou de ser um god object.** De 1042 para **539 linhas**: o fluxo
+  de compra virou `modules/fin/PurchaseFlow.ts` e os 9 comandos do fin viraram
+  objetos declarados em `modules/fin/commands.ts`, resolvidos por um registro em vez
+  de um `switch` de 19 casos. Sem mudança de comportamento — 252 testes verdes,
+  nenhum reescrito. (C4)
+
 - **O Alfred deixou de ser um bot de finanças** e passou a ser um assistente
   pessoal com capacidades em módulos. (ADR-0004)
 - **O catálogo de comandos deriva do registro de módulos**, em vez de uma

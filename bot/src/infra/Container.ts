@@ -33,6 +33,8 @@ import { AuthServer } from "./authServer";
 import { OutboundRegistry } from "../core/OutboundRegistry";
 import { BotCore } from "../core/BotCore";
 import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
+import { AccountLinking } from "../core/AccountLinking";
+import { PendingEmailStore } from "../core/PendingEmailStore";
 import { TelegramAdapter } from "../platforms/telegram/TelegramAdapter";
 import { WhatsAppAdapter } from "../platforms/whatsapp/WhatsAppAdapter";
 import { WebAdapter } from "../platforms/web/WebAdapter";
@@ -92,6 +94,9 @@ container.bind<OutboundRegistry>(OutboundRegistry).toSelf().inSingletonScope();
 container.bind<ReminderScheduler>(ReminderScheduler).toSelf().inSingletonScope();
 // Singleton: guarda as compras aguardando confirmação entre uma mensagem e a próxima.
 container.bind<PurchaseFlow>(PurchaseFlow).toSelf().inSingletonScope();
+container.bind<AccountLinking>(AccountLinking).toSelf();
+// Singleton: o e-mail aguardando código vive entre duas mensagens.
+container.bind<PendingEmailStore>(PendingEmailStore).toSelf().inSingletonScope();
 container.bind<BotCore>(BotCore).toSelf().inSingletonScope();
 
 container.bind(TelegramAdapter).toSelf().inSingletonScope();

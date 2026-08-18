@@ -60,11 +60,12 @@ O projeto ainda **não foi para produção** e não tem versão publicada.
 
 ### Alterado
 
-- **O `BotCore` deixou de ser um god object.** De 1042 para **539 linhas**: o fluxo
-  de compra virou `modules/fin/PurchaseFlow.ts` e os 9 comandos do fin viraram
-  objetos declarados em `modules/fin/commands.ts`, resolvidos por um registro em vez
-  de um `switch` de 19 casos. Sem mudança de comportamento — 252 testes verdes,
-  nenhum reescrito. (C4)
+- **O `BotCore` deixou de ser um god object.** De 1042 para **336 linhas**, 68 % a
+  menos. O fluxo de compra virou `modules/fin/PurchaseFlow.ts`; os 17 comandos
+  viraram objetos que se declaram, resolvidos por um registro — **não existe mais
+  `switch` de comando**. Sobrou o chassi: normalizar, rate limit, resolver usuário e
+  despachar. Sem mudança de comportamento — 259 testes verdes, nenhum reescrito para
+  acomodar o refactor. (C4)
 
 - **O Alfred deixou de ser um bot de finanças** e passou a ser um assistente
   pessoal com capacidades em módulos. (ADR-0004)

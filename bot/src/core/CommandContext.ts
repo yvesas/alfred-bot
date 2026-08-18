@@ -7,6 +7,11 @@ import { ProductService } from "../services/ProductService";
 import { ReminderService } from "../services/ReminderService";
 import { ExportService } from "../services/ExportService";
 import { AccountService } from "../services/AccountService";
+import { AuthService } from "../services/AuthService";
+import { MergeService } from "../services/MergeService";
+import { MessageProcessingService } from "../services/MessageProcessingService";
+import { AccountLinking } from "./AccountLinking";
+import { PendingEmailStore } from "./PendingEmailStore";
 import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
 
 // Contrato de um comando.
@@ -26,6 +31,11 @@ export interface CommandDeps {
   reminderService: ReminderService;
   exportService: ExportService;
   accountService: AccountService;
+  authService: AuthService;
+  mergeService: MergeService;
+  messageProcessingService: MessageProcessingService;
+  accountLinking: AccountLinking;
+  pendingEmails: PendingEmailStore;
   purchaseFlow: PurchaseFlow;
 }
 
@@ -64,6 +74,18 @@ export interface AnonymousCommand {
 }
 
 export type CommandDefinition = RegisteredCommand | AnonymousCommand;
+
+/**
+ * Açúcar para o comando que roda ANTES do cadastro. São dois — `/start` e
+ * `/vincular` — e é de propósito: quem chega por deep-link ainda não tem conta, e
+ * exigir cadastro antes de vincular tornaria o vínculo impossível.
+ */
+export function anonymous(
+  name: string,
+  handle: (ctx: CommandContext) => Promise<void>,
+): AnonymousCommand {
+  return { name, requiresRegistration: false, handle };
+}
 
 /** Açúcar para declarar um comando que exige cadastro, sem repetir a flag. */
 export function registered(

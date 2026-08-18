@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { findCommand, registeredCommandNames } from "../core/commandRegistry";
 import { CHASSIS_COMMANDS, KNOWN_COMMANDS } from "../core/commands";
 import { finModule } from "../modules/fin/module";
+import { moduleForCommand } from "../modules/registry";
 import { parsePage } from "../modules/fin/commands";
 
 // C4 — os comandos saíram de um `switch` de 19 casos dentro do BotCore. O registro é o
@@ -20,12 +21,38 @@ describe("registro de comandos", () => {
     expect(findCommand("inventado")).toBeUndefined();
   });
 
-  // O chassi ainda é resolvido por `switch` no BotCore (passo 3 do C4). Enquanto for
-  // assim, ele NÃO pode estar no registro — dois donos para o mesmo comando é bug.
-  it("não reivindica comando do chassi", () => {
+  // Desde o passo 3 do C4 não há mais `switch` de comando: o chassi também se
+  // resolve pelo registro.
+  it("resolve também os comandos do chassi", () => {
     for (const name of CHASSIS_COMMANDS) {
-      expect(findCommand(name)).toBeUndefined();
+      expect(findCommand(name)).toBeDefined();
     }
+  });
+
+  // Quem chega por deep-link ainda não tem conta; exigir cadastro antes tornaria o
+  // vínculo impossível. São só estes dois — qualquer outro anônimo é engano.
+  it("só /start e /vincular rodam antes do cadastro", () => {
+    const anonymous = registeredCommandNames().filter(
+      (n) => findCommand(n)?.requiresRegistration === false,
+    );
+    expect(anonymous.sort()).toEqual(["start", "vincular"]);
+  });
+
+  // O invariante que importa: nenhum comando cai no vazio. Ou ele tem handler, ou o
+  // módulo dono está declarado como não construído — e aí o BotCore responde
+  // "ainda não disponível" antes de procurar handler. `/tarefas` e `/projetos` são
+  // exatamente esse caso.
+  it("todo comando conhecido tem handler ou dono não construído", () => {
+    for (const name of KNOWN_COMMANDS) {
+      const hasHandler = findCommand(name) !== undefined;
+      const ownerNotBuilt = moduleForCommand(name)?.implemented === false;
+      expect(hasHandler || ownerNotBuilt).toBe(true);
+    }
+  });
+
+  it("comando de módulo não construído não tem handler", () => {
+    expect(findCommand("tarefas")).toBeUndefined();
+    expect(findCommand("projetos")).toBeUndefined();
   });
 
   // A razão de o registro existir: uma lista só. Se um comando é declarado no módulo
@@ -43,8 +70,8 @@ describe("registro de comandos", () => {
   });
 
   it("todo comando do fin exige cadastro", () => {
-    for (const name of registeredCommandNames()) {
-      expect(findCommand(name)?.requiresRegistration).toBe(true);
+    for (const command of finModule.commands) {
+      expect(findCommand(command.name)?.requiresRegistration).toBe(true);
     }
   });
 });

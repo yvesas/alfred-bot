@@ -85,7 +85,7 @@ de jobs) ou tirar os jobs do processo do bot para um worker único.
 
 ## 🟠 Alto
 
-### C4 — `BotCore` é um god object de 1042 linhas · 🟡 **539 linhas em 2026-08-18**
+### ~~C4~~ — `BotCore` é um god object de 1042 linhas · ✅ **resolvido em 2026-08-18**
 
 **Onde:** `core/BotCore.ts`
 **Evidência:** 15 dependências injetadas no construtor, ~25 handlers privados,
@@ -93,18 +93,24 @@ de jobs) ou tirar os jobs do processo do bot para um worker único.
 todo o bot, justo no arquivo com mais regra.
 **Risco:** conflito em qualquer mudança de UX, teste caro, e a próxima feature de
 conversa (agente/IA conversacional) cai exatamente aqui.
-**🟡 Em andamento — 2026-08-18.** Saíram: o fluxo de compra inteiro
-(`modules/fin/PurchaseFlow.ts` — roteamento da resposta da IA, confirmação,
-gravação, alerta de orçamento, consulta de gastos) e os 9 comandos do módulo fin
-(`modules/fin/commands.ts`), agora resolvidos por um registro
-(`core/commandRegistry.ts`) em vez de um `switch` de 19 casos.
+**✅ Resolvido em 2026-08-18 — 1042 → 336 linhas (68 % a menos).**
 
-**1042 → 539 linhas, sem mudança de comportamento:** 252 testes verdes, nenhum
-reescrito para acomodar o refactor — que é a prova de que o comportamento ficou.
+| Saiu para | O quê |
+|---|---|
+| `modules/fin/PurchaseFlow.ts` | roteamento da resposta da IA, confirmação, gravação, alerta de orçamento, consulta de gastos |
+| `modules/fin/commands.ts` | os 9 comandos de domínio |
+| `core/chassisCommands.ts` | os 8 comandos de conta, identidade e preferências |
+| `core/commandRegistry.ts` | o despacho — **não existe mais `switch` de comando** |
+| `core/AccountLinking.ts` · `core/PendingEmailStore.ts` | vínculo e e-mail pendente, que eram método e campo privados compartilhados por handlers distantes |
 
-**Falta:** os 8 comandos do chassi (start, ia, idioma, nome, vincular, email,
-codigo, excluir_conta) ainda são um `switch` de 6 casos mais dois atalhos anônimos.
-É o passo 3 no [`PLANO-TECNICO.md`](../project/PLANO-TECNICO.md).
+**Sem mudança de comportamento, e a suíte é a prova:** nenhum teste foi reescrito
+para acomodar o refactor. Os que mudaram foram os que testavam implementação (o
+`RateLimiter` cutucava um campo privado) ou os que ficaram factualmente errados
+(uma asserção afirmava que o chassi *não* estava no registro — depois do passo 3,
+está).
+
+**Um comando novo agora se declara**, e o registro recusa nome com dois donos na
+carga do módulo. O `BotCore` não sabe o que nenhum comando faz.
 
 ### ~~C5~~ — Adapters do Telegram e do WhatsApp sem nenhum teste · ✅ **resolvido em 2026-08-18**
 

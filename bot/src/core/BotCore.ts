@@ -15,16 +15,16 @@ import { PlanService } from "../services/PlanService";
 import { ExportService } from "../services/ExportService";
 import { AccountService } from "../services/AccountService";
 import { RateLimiter } from "../services/RateLimiter";
-import { isValidEmail } from "../utils/validation";
 import { MessageProcessingService, ModelResponse } from "../services/MessageProcessingService";
 import { IUser, Language } from "../models/User";
 import { extractAccessKey, isValidAccessKey } from "../utils/fiscalKey";
 import { moduleForCommand } from "../modules/registry";
 import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
 import { langOf } from "./format";
-import { conversationKey } from "./conversationKey";
 import { CommandDeps } from "./CommandContext";
 import { findCommand } from "./commandRegistry";
+import { AccountLinking } from "./AccountLinking";
+import { PendingEmailStore } from "./PendingEmailStore";
 import { t } from "../i18n";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
@@ -55,6 +55,8 @@ export class BotCore {
     @inject(RateLimiter) private rateLimiter: RateLimiter,
     @inject(MessageProcessingService) private messageProcessingService: MessageProcessingService,
     @inject(PurchaseFlow) private purchaseFlow: PurchaseFlow,
+    @inject(AccountLinking) private accountLinking: AccountLinking,
+    @inject(PendingEmailStore) private pendingEmails: PendingEmailStore,
   ) {}
 
   async handle(msg: IncomingMessage, reply: Replier): Promise<void> {
@@ -76,13 +78,6 @@ export class BotCore {
   private async resolveLang(platform: Platform, externalId: string): Promise<Language> {
     const user = await this.userService.findByIdentity(platform, externalId);
     return langOf(user);
-  }
-
-  // No WhatsApp o externalId É o número verificado pela plataforma → registra como telefone
-  // verificado e tenta auto-vincular com uma conta existente do mesmo número (Fase 6).
-  private async autoLinkWhatsappPhone(platform: Platform, externalId: string): Promise<void> {
-    if (platform !== "whatsapp") return;
-    await this.mergeService.linkVerifiedPhone(platform, externalId, externalId);
   }
 
   // ---------- Onboarding / cadastro ----------
@@ -113,7 +108,7 @@ export class BotCore {
         }),
         { requestPhone: created.status !== "complete" },
       );
-      await this.autoLinkWhatsappPhone(platform, externalId);
+      await this.accountLinking.autoLinkWhatsappPhone(platform, externalId);
       return;
     }
 
@@ -281,61 +276,43 @@ export class BotCore {
   private async handleCommand(msg: IncomingMessage, reply: Replier): Promise<void> {
     const { platform, externalId } = msg;
     const name = msg.command?.name;
-    const args = msg.command?.args ?? [];
+    if (!name) return;
 
-    if (name === "start") {
-      return this.handleStart(msg, reply);
+    const args = msg.command?.args ?? [];
+    const command = findCommand(name);
+
+    // Comando de um módulo declarado mas não construído (tarefas, projetos): responde.
+    // Sem isto ele cairia no vazio — a pior resposta possível.
+    const owner = moduleForCommand(name);
+    if (owner && !owner.implemented) {
+      await reply.text(
+        t(await this.resolveLang(platform, externalId), "module_coming_soon", {
+          title: owner.title,
+        }),
+      );
+      return;
     }
 
-    // /vincular não exige cadastro: cria a identidade e funde na conta do token.
-    if (name === "vincular") {
-      return this.handleLink(msg, reply, args[0] ?? "");
+    if (!command) return;
+
+    const base = { msg, reply, platform, externalId, args, deps: this.commandDeps() };
+
+    // `/start` e `/vincular` rodam antes do cadastro: quem chega por deep-link ainda
+    // não tem conta, e exigir cadastro antes tornaria o vínculo impossível.
+    if (!command.requiresRegistration) {
+      const lang = await this.resolveLang(platform, externalId);
+      return command.handle({ ...base, lang });
     }
 
     const user = await this.requireRegistered(reply, platform, externalId);
     if (!user) return;
-    const lang = langOf(user);
-    const userId = String(user._id); // identidade canônica (Fase 6)
 
-    // Comando de um módulo declarado mas não construído (tarefas, projetos): responde.
-    // Sem isto o `switch` abaixo o ignoraria em silêncio — a pior resposta possível.
-    const owner = name ? moduleForCommand(name) : undefined;
-    if (owner && !owner.implemented) {
-      await reply.text(t(lang, "module_coming_soon", { title: owner.title }));
-      return;
-    }
-
-    // Comando de módulo: resolvido pelo registro, sem o BotCore saber o que ele faz.
-    const command = name ? findCommand(name) : undefined;
-    if (command?.requiresRegistration) {
-      return command.handle({
-        msg,
-        reply,
-        platform,
-        externalId,
-        args,
-        lang,
-        user,
-        userId,
-        deps: this.commandDeps(),
-      });
-    }
-
-    // Comandos do chassi — conta, identidade e preferências. Saem daqui no passo 3 do C4.
-    switch (name) {
-      case "idioma":
-        return this.handleSetLanguage(reply, platform, externalId, lang, args[0]);
-      case "nome":
-        return this.handleSetName(reply, platform, externalId, lang, args.join(" "));
-      case "email":
-        return this.handleEmail(reply, platform, externalId, lang, args[0]);
-      case "codigo":
-        return this.handleEmailCode(reply, platform, externalId, lang, args[0]);
-      case "ia":
-        return this.handleSetIAModel(reply, platform, externalId, lang, args[0]);
-      case "excluir_conta":
-        return this.handleDeleteAccount(reply, lang, user, args[0]);
-    }
+    return command.handle({
+      ...base,
+      lang: langOf(user),
+      user,
+      userId: String(user._id), // identidade canônica (Fase 6)
+    });
   }
 
   // Serviços que os comandos de módulo alcançam. O BotCore os injeta e repassa; os
@@ -348,192 +325,12 @@ export class BotCore {
       reminderService: this.reminderService,
       exportService: this.exportService,
       accountService: this.accountService,
+      authService: this.authService,
+      mergeService: this.mergeService,
+      messageProcessingService: this.messageProcessingService,
+      accountLinking: this.accountLinking,
+      pendingEmails: this.pendingEmails,
       purchaseFlow: this.purchaseFlow,
     };
-  }
-
-  // ---------- Verificação de e-mail no chat (Magic Auth — Parte 4) ----------
-
-  private async handleEmail(
-    reply: Replier,
-    platform: Platform,
-    externalId: string,
-    lang: Language,
-    emailArg?: string,
-  ): Promise<void> {
-    if (!this.authService.canVerifyEmail()) {
-      await reply.text(t(lang, "verification_unavailable"));
-      return;
-    }
-    const email = (emailArg ?? "").trim().toLowerCase();
-    if (!email) {
-      await reply.text(t(lang, "email_usage"));
-      return;
-    }
-    if (!isValidEmail(email)) {
-      await reply.text(t(lang, "email_invalid_address"));
-      return;
-    }
-
-    try {
-      await this.authService.sendEmailCode(email);
-      this.pendingEmailVerification.set(conversationKey(platform, externalId), email);
-      await reply.text(t(lang, "email_sent", { email }));
-    } catch (error) {
-      logger.error({ err: error }, "Falha ao enviar código de verificação de e-mail");
-      await reply.text(t(lang, "verification_unavailable"));
-    }
-  }
-
-  private async handleEmailCode(
-    reply: Replier,
-    platform: Platform,
-    externalId: string,
-    lang: Language,
-    codeArg?: string,
-  ): Promise<void> {
-    const key = conversationKey(platform, externalId);
-    const email = this.pendingEmailVerification.get(key);
-    if (!email) {
-      await reply.text(t(lang, "code_no_pending"));
-      return;
-    }
-    const code = (codeArg ?? "").trim();
-    if (!code) {
-      await reply.text(t(lang, "code_usage"));
-      return;
-    }
-
-    const ok = await this.authService.verifyEmailCode(email, code);
-    if (!ok) {
-      await reply.text(t(lang, "code_invalid")); // mantém a pendente para nova tentativa
-      return;
-    }
-
-    this.pendingEmailVerification.delete(key);
-    // E-mail verificado → grava e auto-vincula com a conta web do mesmo e-mail.
-    await this.mergeService.linkVerifiedEmail(platform, externalId, email);
-    await reply.text(t(lang, "email_verified"));
-  }
-
-  // ---------- Perfil (edição de nome — LGPD) ----------
-
-  private async handleSetName(
-    reply: Replier,
-    platform: Platform,
-    externalId: string,
-    lang: Language,
-    name: string,
-  ): Promise<void> {
-    const trimmed = name.trim();
-    if (trimmed.length < 2) {
-      await reply.text(t(lang, "name_usage"));
-      return;
-    }
-    await this.userService.setName(platform, externalId, trimmed);
-    await reply.text(t(lang, "name_updated", { name: trimmed }));
-  }
-
-  // ---------- Idioma (A4) ----------
-
-  private async handleSetLanguage(
-    reply: Replier,
-    platform: Platform,
-    externalId: string,
-    lang: Language,
-    langArg?: string,
-  ): Promise<void> {
-    const chosen = (langArg ?? "").toLowerCase();
-    if (chosen !== "pt" && chosen !== "en" && chosen !== "es") {
-      await reply.text(t(lang, "language_usage"));
-      return;
-    }
-    await this.userService.setLanguage(platform, externalId, chosen as Language);
-    await reply.text(t(chosen as Language, "language_set"));
-  }
-
-  // ---------- Vínculo de contas por deep-link (Fase 6) ----------
-
-  // Consome o token de vínculo e funde a identidade atual na conta canônica (web).
-  private async tryLink(platform: Platform, externalId: string, token: string): Promise<boolean> {
-    const canonicalUserId = this.linkTokens.consume(token);
-    if (!canonicalUserId) return false;
-    return this.mergeService.linkAccounts(platform, externalId, canonicalUserId);
-  }
-
-  // /vincular <token> (WhatsApp/Web/Telegram). Não exige cadastro: garante a identidade e funde.
-  private async handleLink(msg: IncomingMessage, reply: Replier, token: string): Promise<void> {
-    const { platform, externalId } = msg;
-    const lang = await this.resolveLang(platform, externalId);
-    await this.userService.ensureUser(platform, externalId, msg.profile, lang);
-    const linked = token ? await this.tryLink(platform, externalId, token) : false;
-    await reply.text(t(lang, linked ? "link_success" : "link_invalid"));
-  }
-
-  private async handleStart(msg: IncomingMessage, reply: Replier): Promise<void> {
-    // Resolve o idioma antes para localizar já a saudação/pergunta.
-    const lang = await this.resolveLang(msg.platform, msg.externalId);
-    const { user, question } = await this.userService.ensureUser(
-      msg.platform,
-      msg.externalId,
-      msg.profile,
-      lang,
-    );
-    const userLang = langOf(user);
-    const name = user.name ? `, ${user.name}` : "";
-
-    // No WhatsApp o número já é verificado → registra/auto-vincula (Fase 6).
-    await this.autoLinkWhatsappPhone(msg.platform, msg.externalId);
-
-    // Deep-link do Telegram: /start carrega o token de vínculo no payload.
-    const startToken = msg.command?.args?.[0] ?? "";
-    if (startToken) {
-      const linked = await this.tryLink(msg.platform, msg.externalId, startToken);
-      await reply.text(t(userLang, linked ? "link_success" : "link_invalid"));
-      return;
-    }
-
-    if (user.status === "complete") {
-      await reply.text(t(userLang, "greeting_returning", { name }));
-      return;
-    }
-
-    await reply.text(t(userLang, "greeting_new", { name, question }), { requestPhone: true });
-  }
-
-  private async handleSetIAModel(
-    reply: Replier,
-    platform: Platform,
-    externalId: string,
-    lang: Language,
-    model?: string,
-  ): Promise<void> {
-    if (!model) {
-      await reply.text(t(lang, "ia_usage"));
-      return;
-    }
-    const response = await this.messageProcessingService.setUserModel(
-      platform,
-      externalId,
-      model.toLowerCase(),
-      lang,
-    );
-    await reply.text(response);
-  }
-
-  // ---------- Exclusão de conta (LGPD) ----------
-
-  private async handleDeleteAccount(
-    reply: Replier,
-    lang: Language,
-    user: IUser,
-    confirmArg?: string,
-  ): Promise<void> {
-    if ((confirmArg ?? "").toLowerCase() !== "confirmar") {
-      await reply.text(t(lang, "account_delete_warn"));
-      return;
-    }
-    await this.accountService.deleteAccount(user);
-    await reply.text(t(lang, "account_deleted"));
   }
 }

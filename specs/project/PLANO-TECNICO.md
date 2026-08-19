@@ -17,7 +17,7 @@ o rumo do produto, de [`ROADMAP.md`](ROADMAP.md); as decisões, de
 | **1** | Rate limit no HTTP · origem explícita em produção | `C6` `C7` | ✅ **2026-08-17** |
 | **2** | [Cobrir os adapters de Telegram e WhatsApp](#4-fase-2--cobrir-os-adapters-c5) | `C5` | ✅ **2026-08-18** |
 | **3** | [Quebrar o `BotCore`](#5-fase-3--quebrar-o-botcore-c4) — de 1042 para 336 linhas | `C4` | ✅ **2026-08-18** |
-| **4** | [Rodar com mais de uma instância](#6-fase-4--deixar-rodar-com-mais-de-uma-instância-c2-c3) | ~~`C2`~~ ~~`C3`~~ `C8` | 🔨 falta só o `C8` |
+| **4** | [Rodar com mais de uma instância](#6-fase-4--deixar-rodar-com-mais-de-uma-instância-c2-c3) | `C2` `C3` `C8` | ✅ **2026-08-19** |
 
 **Por que os adapters vêm antes de quebrar o `BotCore`.** A Fase 3 é refactor sem
 mudança de comportamento, e **a suíte é o contrato que prova isso**. Fazer a Fase 3
@@ -99,11 +99,14 @@ atual.
 > com 277 testes verdes — inclusive um que prova, com banco de verdade, que cinco
 > instâncias disputando resultam em uma vencedora.
 >
-> **`C2` fechado com Mongo** (decisão sua, 2026-08-18): o estado de conversa foi para
-> uma coleção com índice de TTL; o rate limit ficou em memória com o teto dividido por
-> `REPLICAS`. 291 testes verdes.
+> **As quatro fases estão fechadas.** 303 testes, cobertura 78,7 %, gate verde.
 >
-> **Falta só o `C8`** — JWT revogável — para fechar a Fase 4 e o plano inteiro.
+> O plano nasceu com 4 riscos altos e 2 críticos em aberto; hoje `C0` `C2` `C3` `C4`
+> `C5` `C6` `C7` `C8` `C12` `C13` `C18` `C21` estão fechados. Sobrou `C1` — rotacionar
+> a chave do GCP, que é ação sua — e o backlog de §7.
+>
+> **O que vem depois não é mais deste plano:** é o produto (`ROADMAP.md`), com a
+> proatividade à frente.
 
 - [x] **F1.1 — C6** rate limit nos endpoints HTTP · 2026-08-17
 - [x] **F1.2 — C7** origem explícita em produção · 2026-08-17
@@ -221,15 +224,14 @@ precisou mudar, ou o refactor mudou comportamento ou o teste testava a implement
 
 ---
 
-## 6. Fase 4 — Deixar rodar com mais de uma instância `C2` `C3`
+## 6. Fase 4 — Deixar rodar com mais de uma instância `C2` `C3` `C8` ✅ *(concluída em 2026-08-19)*
 
 Só bloqueia quando houver deploy com réplica — mas bloqueia **inteiro**.
 
 - [x] **F4.2** — lock nos schedulers · 2026-08-18 (feito primeiro: não dependia da decisão)
 - [x] **F4.1** — estado de conversa no Mongo com TTL; rate limit em memória com teto
       dividido por `REPLICAS` · 2026-08-18
-- [ ] **F4.3** — `C8` JWT revogável (`tokenVersion` no `User`): é o mínimo para
-      atender a um pedido de revogação do titular (LGPD)
+- [x] **F4.3** — `C8` JWT revogável (`tokenVersion` no `User`) · 2026-08-19
 
 **Decidido em 2026-08-18: Mongo.** O host ainda não foi escolhido, e adotar Redis
 agora seria escolher um host que tenha Redis. A troca depois é por classe — cada um

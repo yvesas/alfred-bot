@@ -114,6 +114,9 @@ export class AuthServer {
     if (req.method === "DELETE" && url.pathname === "/api/account") {
       return this.apiDeleteAccount(req, res);
     }
+    if (req.method === "POST" && url.pathname === "/api/sessions/revoke") {
+      return this.apiRevokeSessions(req, res);
+    }
 
     res.writeHead(404);
     res.end();
@@ -122,12 +125,19 @@ export class AuthServer {
   // ---------- API do app web (JWT) ----------
 
   // Resolve o usuário canônico a partir do Bearer JWT (sub = id do WorkOS → identidade web).
+  //
+  // Assinatura válida não basta: um token roubado continua assinado pelos 30 dias
+  // inteiros. Por isso a versão da sessão também é conferida — se o usuário revogou,
+  // a dele subiu e este token deixou de ser corrente (C8).
   private async authedUser(req: http.IncomingMessage): Promise<IUser | null> {
     const header = req.headers.authorization ?? "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : "";
     const session = this.auth.verifyJwt(token);
     if (!session) return null;
-    return this.users.findByIdentity("web", session.sub);
+
+    const user = await this.users.findByIdentity("web", session.sub);
+    if (!user || !this.auth.isCurrent(session, user)) return null;
+    return user;
   }
 
   private async apiMe(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
@@ -190,6 +200,22 @@ export class AuthServer {
     json(res, 200, { ok: true, name });
   }
 
+  // "Sair de todos os dispositivos". Derruba inclusive a sessão de quem chamou — é o
+  // comportamento certo para quem suspeita que o token vazou (C8).
+  private async apiRevokeSessions(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ): Promise<void> {
+    const user = await this.authedUser(req);
+    if (!user) {
+      json(res, 401, { error: "unauthorized" });
+      return;
+    }
+    await this.users.revokeSessions(String(user._id));
+    logger.info({ user: String(user._id) }, "Sessões revogadas a pedido do titular");
+    json(res, 200, { ok: true });
+  }
+
   private async apiDeleteAccount(
     req: http.IncomingMessage,
     res: http.ServerResponse,
@@ -244,14 +270,14 @@ export class AuthServer {
         json(res, 401, { error: "invalid code" });
         return;
       }
-      await this.accounts.ensureWorkosUser(profile.id, {
+      const user = await this.accounts.ensureWorkosUser(profile.id, {
         name: profile.name,
         email: profile.email,
       });
       if (anon) {
         await this.accounts.absorbAnonymous(profile.id, anon);
       }
-      json(res, 200, { token: this.auth.issueJwt(profile) });
+      json(res, 200, { token: this.auth.issueJwt(profile, user.tokenVersion ?? 0) });
     } catch (err) {
       logger.error({ err }, "Falha na verificação de login");
       json(res, 500, { error: "verify failed" });
@@ -303,7 +329,7 @@ export class AuthServer {
       const profile = await this.auth.authenticate(code);
       const { anon } = decodeState(url.searchParams.get("state"));
 
-      await this.accounts.ensureWorkosUser(profile.id, {
+      const user = await this.accounts.ensureWorkosUser(profile.id, {
         name: profile.name,
         email: profile.email,
       });
@@ -311,7 +337,7 @@ export class AuthServer {
         await this.accounts.absorbAnonymous(profile.id, anon);
       }
 
-      const token = this.auth.issueJwt(profile);
+      const token = this.auth.issueJwt(profile, user.tokenVersion ?? 0);
       const base = config.webAppUrl || "/";
       const sep = base.includes("?") ? "&" : "?";
       res.writeHead(302, { Location: `${base}${sep}token=${encodeURIComponent(token)}` });

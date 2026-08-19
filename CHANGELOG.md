@@ -10,6 +10,11 @@ O projeto ainda **não foi para produção** e não tem versão publicada.
 
 ### Segurança
 
+- **Sessão revogável.** O JWT valia 30 dias e o `logout` só limpava o `localStorage`
+  — o servidor continuava aceitando o token. Agora todo token carrega a versão da
+  sessão, e `POST /api/sessions/revoke` incrementa a do usuário, derrubando de uma vez
+  todos os já emitidos. A conferência vale na API **e** no chat web. É o mínimo para
+  atender a um pedido de revogação do titular (LGPD). (C8)
 - **O estado de conversa saiu da memória do processo.** Compra aguardando "sim/não",
   e-mail aguardando código e token de vínculo vivem numa coleção do Mongo com índice
   de TTL — então a pergunta pode sair de uma réplica e a resposta chegar noutra, e

@@ -202,15 +202,30 @@ WebSocket e a API para qualquer site. O default falha **aberto**, não fechado.
 `WEB_APP_URL` ausentes **ou iguais a `"*"`** derrubam o startup com a lista do que
 falta. Fora de produção segue permissivo. Coberto em `productionOrigins.test.ts`.
 
-### C8 — JWT de 30 dias sem revogação
+### ~~C8~~ — JWT de 30 dias sem revogação · ✅ **resolvido em 2026-08-19**
 
 **Onde:** `services/AuthService.ts:54` (`expiresIn: "30d"`) ·
 `web/src/lib/auth.ts:19` (guardado em `localStorage`)
 **Risco:** token vazado (XSS, máquina compartilhada) vale um mês; `logout()` só
 apaga o `localStorage` — o servidor continua aceitando o token.
-**Correção:** encurtar a validade e adicionar refresh, ou versionar a sessão
-(`tokenVersion` no `User`, comparado no `verifyJwt`) para permitir invalidação —
-que é o mínimo para poder revogar acesso a pedido do titular (LGPD).
+**✅ Resolvido em 2026-08-19 — versionando a sessão.** `User.tokenVersion` entra em
+todo JWT emitido; incrementá-lo derruba de uma vez todos os tokens já emitidos, sem
+precisar rastreá-los. `POST /api/sessions/revoke` faz isso a pedido do titular, e
+derruba inclusive a sessão de quem chamou — que é o certo para quem suspeita de
+vazamento.
+
+**Assinatura válida deixou de bastar.** A conferência acontece nos dois lugares onde
+um token dá acesso: `authedUser` na API (que já carregava o usuário, então não custou
+consulta nova) e `AuthService.resolveCurrentSession` no chat web — sem este segundo,
+um token revogado continuaria conversando pelos 30 dias inteiros.
+
+**Token antigo não é derrubado por engano:** os emitidos antes desta mudança não têm
+`v`, e ausente conta como zero. Eles expiram sozinhos em vez de deslogar a base
+inteira de uma vez.
+
+**Fica pendente (produto, não segurança):** o botão "sair de todos os dispositivos"
+no app web. O endpoint existe; a tela não o chama ainda — o `logout` atual continua
+sendo só deste dispositivo, que é o que a pessoa espera dele.
 
 ---
 

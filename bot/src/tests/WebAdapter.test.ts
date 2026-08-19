@@ -19,7 +19,7 @@ describe("WebAdapter.processRaw", () => {
     core = sinon.createStubInstance(BotCore);
     outbound = sinon.createStubInstance(OutboundRegistry);
     auth = sinon.createStubInstance(AuthService);
-    auth.verifyJwt.returns(null); // anônimo por padrão
+    auth.resolveCurrentSession.resolves(null); // anônimo por padrão
     adapter = new WebAdapter(core, outbound, auth);
     out = [];
   });
@@ -72,7 +72,7 @@ describe("WebAdapter.processRaw", () => {
   });
 
   it("usa o sub do JWT como externalId quando o token é válido", async () => {
-    auth.verifyJwt.returns({ sub: "wos1" });
+    auth.resolveCurrentSession.resolves({ sub: "wos1" });
     core.handle.resolves();
 
     await adapter.processRaw(

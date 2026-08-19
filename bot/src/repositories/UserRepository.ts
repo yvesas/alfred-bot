@@ -58,6 +58,19 @@ export class UserRepository {
     return await UserModel.findByIdAndUpdate(id, patch, { new: true }).exec();
   }
 
+  /**
+   * Incrementa a versão da sessão, invalidando de uma vez todo JWT já emitido para
+   * este usuário (C8). Devolve a versão nova.
+   */
+  async bumpTokenVersion(id: string): Promise<number> {
+    const updated = await UserModel.findByIdAndUpdate(
+      id,
+      { $inc: { tokenVersion: 1 } },
+      { new: true },
+    ).exec();
+    return updated?.tokenVersion ?? 0;
+  }
+
   async deleteById(id: string): Promise<void> {
     await UserModel.deleteOne({ _id: id }).exec();
   }

@@ -14,13 +14,15 @@ O Alfred deixou de ser um bot de finanças e passou a ser um **assistente pessoa
 com capacidades em módulos** — `fin` (implementado), `tarefas` e `projetos`
 (declarados, não construídos). Ver [ADR-0004](../../docs/adr/0004-alfred-modular.md).
 
-Suíte verde: bot **43 suítes / 291 testes**, web 8 arquivos /
+Suíte verde: bot **44 suítes / 303 testes** (cobertura 78,7 %), web 8 arquivos /
 21 testes. Lint e typecheck limpos. `./scripts/check.sh` é o gate único.
 
 **Fases 1, 2 e 3 concluídas** — ver [`PLANO-TECNICO.md`](PLANO-TECNICO.md).
 O `BotCore` caiu de **1042 para 336 linhas** e não existe mais `switch` de comando.
-**Fase 4 quase fechada:** `C3` (schedulers sob lock) e `C2` (estado de conversa no
-Mongo com TTL) resolvidos. Falta só o `C8` — JWT revogável.
+**O [`PLANO-TECNICO.md`](PLANO-TECNICO.md) está concluído** — as quatro fases.
+Doze riscos fechados; sobrou o `C1` (rotacionar a chave do GCP, ação sua) e o
+backlog. **O próximo trabalho é de produto**, não de endurecimento: a proatividade
+(F2 do [`ROADMAP.md`](ROADMAP.md)).
 
 **Nunca foi para produção**: sem host, sem CD, sem cobrança.
 

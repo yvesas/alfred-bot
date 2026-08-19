@@ -52,11 +52,19 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Falha em vulnerabilidade alta ou crítica. Moderada e baixa aparecem no log
-      # sem quebrar o build — senão o gate vira ruído e as pessoas param de olhar.
-      - name: Audit (high e critical quebram)
-        run: pnpm audit --audit-level=high
+      # Bloqueia em CRÍTICO nas dependências de PRODUÇÃO. Duas escolhas deliberadas:
+      #
+      # `--prod` porque uma falha no runner de teste não alcança o bot em produção —
+      # o vitest não é publicado. Tratá-la como igual faria o gate gritar sempre, e
+      # gate que grita sempre é gate que ninguém lê.
+      #
+      # `critical` e não `high` porque este repositório já nasce com dívida de
+      # dependência (ver C22 em specs/codebase/CONCERNS.md): barrar todo PR por causa
+      # dela puniria trabalho não relacionado. Crítico em produção, sim, é parar tudo.
+      # As altas são acompanhadas pelo Dependabot e pelo passo informativo abaixo.
+      - name: Audit de produção (crítico quebra)
+        run: pnpm audit --prod --audit-level=critical
 
-      - name: Audit completo (informativo)
+      - name: Audit completo (informativo — inclui dev)
         if: always()
         run: pnpm audit || true

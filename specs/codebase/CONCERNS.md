@@ -227,6 +227,39 @@ inteira de uma vez.
 no app web. O endpoint existe; a tela não o chama ainda — o `logout` atual continua
 sendo só deste dispositivo, que é o que a pessoa espera dele.
 
+### C22 — Dívida de dependência: 6 vulnerabilidades altas em produção
+
+**Descoberto em 2026-08-19**, pelo próprio workflow de auditoria adicionado no mesmo
+PR — o gate funcionou na primeira execução e encontrou dívida pré-existente.
+
+| Projeto | Advisory | Caminho |
+|---|---|---|
+| bot | `form-data` — CRLF injection | `baileys → axios → form-data` |
+| bot | `form-data` — CRLF injection | `@google-cloud/vision → google-gax → form-data` |
+| bot | `axios` — adapter HTTP herda proxy do ambiente | `baileys → axios` |
+| bot | `sharp` — vulnerabilidades herdadas da libvips | `baileys → sharp` |
+| web | React Router — DoS não autenticado | `react-router-dom → react-router` |
+| web | React Router — bypass de CSRF no modo RSC | `react-router-dom → react-router` |
+
+Mais 13 moderadas no bot e 5 no web. Contando as de desenvolvimento, 29 e 30.
+
+**Risco real, não teórico.** O `sharp` chega pelo Baileys e é usado no processamento
+de imagem — o bot recebe foto de cupom de qualquer pessoa. As duas do React Router
+afetam o app web publicado.
+
+**Quatro das seis são transitivas do Baileys**, que já é a dependência mais frágil do
+projeto (biblioteca de engenharia reversa, sem contrato de suporte). Isso reforça a
+troca pela Cloud API oficial, que está no `ROADMAP.md`.
+
+**Por que o gate não barra nisto.** O workflow bloqueia em **crítico de produção**;
+altas ficam informativas. Barrar todo PR por dívida pré-existente puniria trabalho
+não relacionado e o gate viraria ruído que ninguém lê. As altas são acompanhadas pelo
+Dependabot (ligado no mesmo PR, com updates agrupados por semana).
+
+**Correção:** deixar o Dependabot propor, e revisar os PRs dele. O que ele não
+resolver sozinho depende do fornecedor — `sharp` e `axios` só saem quando o Baileys
+atualizar, ou quando o WhatsApp migrar para a Cloud API.
+
 ---
 
 ## 🟡 Médio

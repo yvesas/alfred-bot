@@ -4,7 +4,7 @@
 > ADR em [`docs/adr/`](../../docs/adr/).
 
 **Última sessão:** 2026-08-18
-**Branch:** `docs/codebase-mapping`
+**Branch:** `chore/foundation-and-hardening`
 
 ---
 
@@ -19,10 +19,13 @@ Suíte verde: bot **44 suítes / 303 testes** (cobertura 78,7 %), web 8 arquivos
 
 **Fases 1, 2 e 3 concluídas** — ver [`PLANO-TECNICO.md`](PLANO-TECNICO.md).
 O `BotCore` caiu de **1042 para 336 linhas** e não existe mais `switch` de comando.
-**O [`PLANO-TECNICO.md`](PLANO-TECNICO.md) está concluído** — as quatro fases.
-Doze riscos fechados; sobrou o `C1` (rotacionar a chave do GCP, ação sua) e o
-backlog. **O próximo trabalho é de produto**, não de endurecimento: a proatividade
-(F2 do [`ROADMAP.md`](ROADMAP.md)).
+**O [`PLANO-TECNICO.md`](PLANO-TECNICO.md) está concluído** — as quatro fases, doze
+riscos fechados. O backlog restante virou a **Fase 5**, agrupada por natureza e
+**sob demanda**: nada ali é urgente, e cada bloco traz o gatilho que o justifica.
+
+Sobrou o `C1` (rotacionar a chave do GCP, ação sua). **O próximo trabalho de maior
+valor é de produto**, não de endurecimento: a proatividade (F2 do
+[`ROADMAP.md`](ROADMAP.md)).
 
 **Nunca foi para produção**: sem host, sem CD, sem cobrança.
 

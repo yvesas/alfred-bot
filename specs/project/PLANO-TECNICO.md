@@ -17,7 +17,8 @@ o rumo do produto, de [`ROADMAP.md`](ROADMAP.md); as decisões, de
 | **1** | Rate limit no HTTP · origem explícita em produção | `C6` `C7` | ✅ **2026-08-17** |
 | **2** | [Cobrir os adapters de Telegram e WhatsApp](#4-fase-2--cobrir-os-adapters-c5) | `C5` | ✅ **2026-08-18** |
 | **3** | [Quebrar o `BotCore`](#5-fase-3--quebrar-o-botcore-c4) — de 1042 para 336 linhas | `C4` | ✅ **2026-08-18** |
-| **4** | [Rodar com mais de uma instância](#6-fase-4--deixar-rodar-com-mais-de-uma-instância-c2-c3) | `C2` `C3` `C8` | ✅ **2026-08-19** |
+| **4** | [Rodar com mais de uma instância](#6-fase-4--deixar-rodar-com-mais-de-uma-instância-c2-c3-c8-concluída-em-2026-08-19) | `C2` `C3` `C8` | ✅ **2026-08-19** |
+| **5** | [O backlog, agrupado por natureza](#7-fase-5--o-backlog-agrupado-por-natureza-) — nada urgente | `C9`–`C20` | ⬜ sob demanda |
 
 **Por que os adapters vêm antes de quebrar o `BotCore`.** A Fase 3 é refactor sem
 mudança de comportamento, e **a suíte é o contrato que prova isso**. Fazer a Fase 3
@@ -86,27 +87,21 @@ atual.
 
 ## 2. Em andamento
 
-> **▶ ESTADO (2026-08-18)**
+> **▶ ESTADO (2026-08-19) — plano concluído**
 >
-> Branch `docs/codebase-mapping`, ainda sem PR. **Fases 1 e 2 concluídas.**
-> Suíte em **243 testes / 39 suítes**, cobertura 76,9 %, `./scripts/check.sh` verde
-> nos dois projetos.
+> Branch `chore/foundation-and-hardening`. **303 testes / 44 suítes**, cobertura
+> 78,7 %, `./scripts/check.sh` verde nos dois projetos.
 >
-> **Fases 1, 2 e 3 concluídas.** O `BotCore` caiu de **1042 para 336 linhas** — 68 %
-> — sem uma única mudança de comportamento. 259 testes verdes, cobertura 78,2 %.
+> As quatro fases estão fechadas. O plano nasceu com dois riscos críticos e cinco
+> altos em aberto; hoje `C0` `C2` `C3` `C4` `C5` `C6` `C7` `C8` `C12` `C13` `C18`
+> `C21` estão resolvidos. A suíte foi de 177 para 303 testes e o `BotCore` de 1042
+> para 336 linhas.
 >
-> **Fase 4 em andamento.** `C3` fechado: os dois schedulers rodam sob lock de Mongo,
-> com 277 testes verdes — inclusive um que prova, com banco de verdade, que cinco
-> instâncias disputando resultam em uma vencedora.
+> Sobrou o `C1` — rotacionar a chave do GCP, que é ação sua — e o backlog de §7,
+> planejado como **Fase 5** abaixo.
 >
-> **As quatro fases estão fechadas.** 303 testes, cobertura 78,7 %, gate verde.
->
-> O plano nasceu com 4 riscos altos e 2 críticos em aberto; hoje `C0` `C2` `C3` `C4`
-> `C5` `C6` `C7` `C8` `C12` `C13` `C18` `C21` estão fechados. Sobrou `C1` — rotacionar
-> a chave do GCP, que é ação sua — e o backlog de §7.
->
-> **O que vem depois não é mais deste plano:** é o produto (`ROADMAP.md`), com a
-> proatividade à frente.
+> **O trabalho de maior valor agora não é mais endurecimento: é produto**
+> (`ROADMAP.md`), com a proatividade à frente.
 
 - [x] **F1.1 — C6** rate limit nos endpoints HTTP · 2026-08-17
 - [x] **F1.2 — C7** origem explícita em produção · 2026-08-17
@@ -239,20 +234,77 @@ dos quatro já tinha dono desde o C4.
 
 ---
 
-## 7. Backlog — sem fase
+## 7. Fase 5 — O backlog, agrupado por natureza ⬜
 
-Riscos catalogados que não entram nas quatro fases acima:
+Os nove riscos que sobraram não formam uma fase por si — são de naturezas diferentes
+e não se destravam. Agrupados pelo que **motiva** cada um, viram quatro blocos que
+podem ser feitos em qualquer ordem, ou nenhum.
 
-| Id | O quê | Quando |
-|---|---|---|
-| `C9` | `/editar` e `/excluir` carregam o histórico inteiro | junto com a F3 |
-| `C10` | três agregações por compra registrada | quando o custo aparecer |
-| `C11` | GPT não lê imagem e o usuário não é avisado | quando houver escolha de modelo de verdade |
-| `C14` | entrada externa validada à mão, sem schema (Zod) | junto com a F2 |
-| `C15` | `validatePurchaseData` responde fora do i18n | avulso, barato |
-| `C16` `C17` | `Purchase.userId` como `ObjectId`; remover `telegramId` legado | exige migração e produção |
-| `C19` | ruído de `dynamic import` no teste do QR | avulso |
-| `C20` | `ocr-service` sem teste e sem imagem construída | se o custo de OCR pesar |
+> **Antes de começar qualquer bloco, leia isto:** nada aqui é urgente. Nenhum é falha
+> de segurança, nenhum bloqueia deploy, nenhum bloqueia o produto. O trabalho de maior
+> valor hoje está no `ROADMAP.md`, não aqui. Estes blocos existem para quando houver
+> um motivo concreto — e cada um traz o **gatilho** que o justifica.
+
+### F5.A — Correções baratas e avulsas *(~1 sessão, sem gatilho)*
+
+Os dois únicos que valem fazer "porque sim": são pequenos, isolados e removem ruído.
+
+- [ ] **`C15`** — `validatePurchaseData` devolve `reason` em pt-BR cru e o `BotCore`
+      responde `❌ ${reason}`. Usuário em `en`/`es` recebe português, num projeto cujo
+      catálogo é tipado justamente para impedir isso. Trocar `reason` por `MessageKey`.
+      Mesmo tratamento para o `"Por favor, compartilhe o seu próprio contato"` do
+      `TelegramAdapter`.
+- [ ] **`C19`** — `QrService.test.ts` despeja um stack trace de
+      `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG` a cada execução: o `jimp` usa
+      import dinâmico e o ts-jest está em CommonJS. O teste passa, mas o log sujo
+      esconde falha de verdade — foi assim que a instabilidade do `JobLockService`
+      quase passou batida. Mockar o `jimp` na suíte.
+
+**Gate:** `./scripts/check.sh bot`
+
+### F5.B — Custo e latência *(gatilho: a conta de IA ou o tempo de resposta doer)*
+
+- [ ] **`C9`** — `/editar` e `/excluir` carregam **todo** o histórico para pegar o
+      n-ésimo item. `findByUserPaged(userId, n-1, 1)` já existe no repositório. Cresce
+      sem teto; hoje ninguém tem histórico grande o bastante para sentir.
+- [ ] **`C10`** — três agregações `$facet` por compra registrada, e o gate de plano
+      usa **só o `count`** de uma delas. Um `countByUser` com período resolve a
+      primeira; as outras duas podem compartilhar um `SpendingReport` na mesma
+      requisição.
+
+**Por que juntos:** os dois são a mesma conversa — o custo por mensagem — e medir
+antes é obrigatório. Sem número, é otimização por palpite.
+
+### F5.C — Endurecer a borda *(gatilho: primeiro usuário real, ou antes do deploy)*
+
+- [ ] **`C14`** — entrada externa validada à mão em três bordas: payload do WebSocket,
+      corpo das rotas do `AuthServer` e a resposta da IA (uma cadeia de `if` sobre
+      `any`). A regra do workspace pede schema; o projeto não tem validador nenhum.
+      Um schema Zod por borda, reaproveitado como tipo — elimina o `any` do converter
+      de quebra.
+
+**Nota de escopo:** este é o maior bloco do backlog e o único que adiciona
+dependência. Vale um ADR curto antes, porque "qual validador" é decisão que se
+repete em todo produto YAS.
+
+### F5.D — Dívidas que exigem produção *(gatilho: existir produção)*
+
+Nenhum destes é fazível hoje com honestidade — todos precisam de dado real ou de um
+ambiente que ainda não existe.
+
+- [ ] **`C16`** — `Purchase.userId` é `String`, não `ObjectId` com `ref`. Sem
+      integridade referencial. Exige migração de dados.
+- [ ] **`C17`** — remover o campo legado `telegramId` e o `$or` que ele obriga em toda
+      query de usuário do Telegram. Depende de rodar o `migrateCanonical` em produção
+      e **confirmar que não sobrou usuário sem `identities[]`** — sem essa confirmação,
+      remover o `$or` desloga gente.
+- [ ] **`C11`** — `GptProcessor` não implementa `processImage`; quem escolhe `/ia gpt`
+      perde a leitura multimodal de cupom, em silêncio, e ainda paga o OCR à parte.
+      **Depende do ADR-0006:** a escolha de modelo pelo usuário vai crescer, e é lá
+      que isto se resolve — não com um remendo no processador atual.
+- [ ] **`C20`** — `ocr-service` sem teste e com imagem que nunca foi construída
+      (paddlepaddle não tem wheel para linux/arm64). Só volta à mesa se o custo de OCR
+      justificar self-host.
 
 ---
 

@@ -37,10 +37,10 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@google-cloud/vertexai": "1.9.3",
+    "@google-cloud/vertexai": "1.12.0",
     "@google-cloud/vision": "^4.3.2",
-    "@whiskeysockets/baileys": "6.7.23",
-    "@workos-inc/node": "^10.2.0",
+    "@whiskeysockets/baileys": "6.7.24",
+    "@workos-inc/node": "^10.10.0",
     "dotenv": "^16.4.7",
     "inversify": "^6.2.2",
     "jimp": "^1.6.1",
@@ -53,7 +53,7 @@
     "qrcode-terminal": "^0.12.0",
     "reflect-metadata": "^0.2.2",
     "telegraf": "^4.16.3",
-    "ws": "^8.21.0"
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

@@ -158,6 +158,16 @@ export class BotCore {
   private async handleContact(msg: IncomingMessage, reply: Replier): Promise<void> {
     if (!msg.contact) return;
     const lang = await this.resolveLang(msg.platform, msg.externalId);
+
+    // O telefone compartilhado vira `verifiedPhone` e serve de chave de fusão de
+    // contas — então aceitar o contato de OUTRA pessoa deixaria alguém reivindicar o
+    // telefone alheio. Quem sabe se o contato é do próprio remetente é o adapter;
+    // quem sabe o idioma para recusar é aqui.
+    if (msg.contact.belongsToSender === false) {
+      await reply.text(t(lang, "contact_not_yours"));
+      return;
+    }
+
     const { reply: answer, completed } = await this.userService.saveContact(
       msg.platform,
       msg.externalId,

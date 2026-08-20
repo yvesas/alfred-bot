@@ -127,8 +127,17 @@ describe("TelegramAdapter — tradução para IncomingMessage", () => {
         platform: "telegram",
         externalId: "12345",
         kind: "contact",
-        contact: { phone: "+5548999990000", name: "Ana" },
+        contact: { phone: "+5548999990000", name: "Ana", belongsToSender: true },
       });
+    });
+
+    // O adapter reporta o fato da plataforma; quem recusa é o BotCore, que sabe o
+    // idioma do usuário (C15).
+    it("marca o contato de terceiro em vez de recusá-lo no adapter", () => {
+      const msg = toTelegramContact("12345", contact({ user_id: 777 }));
+
+      expect(msg.contact?.belongsToSender).toBe(false);
+      expect(msg.contact?.phone).toBe("+5548999990000");
     });
 
     it("aceita o contato do próprio usuário", () => {

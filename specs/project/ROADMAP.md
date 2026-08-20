@@ -11,77 +11,185 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ a fazer · 🔴 risco aberto
 
 ---
 
-## Próximo ciclo — revisto em 2026-08-14
+## O plano, por fases — revisto em 2026-08-20
 
-**O produto mudou de tamanho.** O Alfred deixou de ser um bot de finanças e passou
-a ser um assistente pessoal com capacidades em módulos — **fin**, **tarefas**,
-**projetos**. Ver [ADR-0004](../../docs/adr/0004-alfred-modular.md).
+**Cada fase é base da seguinte.** A ordem não é por valor percebido: é por
+dependência. Fase que não destrava outra fica fora da sequência, no fim.
 
-E o chassi tem destino: o `yas-harness`, que já traz roteador em modelo barato,
-gateway de modelos por configuração e custo por chamada. Caminho **híbrido** —
-consertar aqui, migrar depois. Ver [ADR-0005](../../docs/adr/0005-caminho-hibrido-harness.md)
-e [`PLANO-ESTRUTURACAO.md`](PLANO-ESTRUTURACAO.md).
+_Legenda: ✅ feito · 🔨 em andamento · ⬜ a fazer · 🔴 bloqueia tudo abaixo_
 
-> **Regra de contenção:** `tasks` e `projects` estão **declarados, não em
-> construção**. Construir largura antes de o `fin` funcionar seria o erro clássico.
+| # | Fase | Por que aqui | Estado |
+|---|---|---|---|
+| **0** | [Colocar no ar](#fase-0--colocar-no-ar-) | Nada abaixo alcança um usuário sem isto | 🔴 |
+| **1** | [Módulo tarefas](#fase-1--módulo-tarefas) | Segundo módulo; dá à proatividade o que vigiar | ⬜ |
+| **2** | [Proatividade](#fase-2--proatividade-) | O diferencial. Precisa de mais de um módulo para valer | ⬜ |
+| **3** | [UX de conversa e voz](#fase-3--ux-de-conversa-e-voz) | O que a pessoa sente primeiro | ⬜ |
+| **4** | [Módulo projetos](#fase-4--módulo-projetos) | O cruzamento fin × tarefas que justifica ser um assistente só | ⬜ |
+| **5** | [Web de gestão](#fase-5--web-de-gestão) | Só tem o que mostrar depois dos três módulos | ⬜ |
+| **6** | [Second brain — fatia fina](#fase-6--second-brain--fatia-fina-) | A IA que responde sobre o que já existe | ⬜ |
+| **7** | [Cobrança](#fase-7--cobrança) | Só faz sentido com algo que valha pagar | ⬜ |
+| **8** | [WhatsApp oficial](#fase-8--whatsapp-oficial) | Tira o risco de banimento; não destrava nada | ⬜ |
+| **9** | [Second brain — profundidade](#fase-9--second-brain--profundidade) | É aqui que vira diferencial vendável | ⬜ |
 
-### F1 — Camada de IA ✅ *(o que sobrou dela, feito em 2026-08-14)*
+**Fora da sequência**, quando houver motivo: LGPD fase 3 (jurídico), NFC-e fase 2
+(itens via SEFAZ), dashboards do Grafana, e os blocos B/C/D do
+[`PLANO-TECNICO.md`](PLANO-TECNICO.md).
 
-Era reparo, não otimização: o `gemini-2.0-flash-lite-001` — default para texto
-**e** cupom, hardcoded em dois arquivos — foi desligado no Vertex AI em
-**2026-06-01**, o mesmo mês em que o trabalho parou. O fallback do B7 caía num
-`gpt-4-turbo` que morre em **2026-10-23**.
+### A lição que definiu esta ordem
 
-- ✅ Modelo, região e visão saem do código para `infra/config.ts` (fecha o C13)
-- ✅ Default aponta para `gemini-3.1-flash-lite`; teste trava a lição — nenhum
-  modelo já aposentado volta a ser default em silêncio
-- ✅ Falha de OCR sobe como `OcrError` em vez de virar texto do cupom (fecha o C12)
-- ❌ **Roteador de intenção — removido do escopo do Alfred.** É do chassi.
-- ❌ **Provider Groq — removido do escopo do Alfred.** O harness já o tem
-  configurado como provider `fast`.
+O Niklas reordenou o roadmap dele em agosto e escreveu o porquê:
 
-> Falta você confirmar o desligamento com
-> `gcloud ai models list --region=us-central1 | grep flash-lite`.
+> *"A ordem anterior colocava o second brain na 3 e o WhatsApp na 8; a ordem atual
+> constrói primeiro aquilo que o escritório usa todo dia — captação, boards, caso,
+> chat — e só então a IA que responde sobre isso."*
 
-### F2 — Proatividade 🔴 *a próxima frente*
+**Vale igual aqui.** Um second brain sobre um módulo só não tem o que cruzar, e
+proatividade sobre um módulo só é o `ReminderScheduler` que já existe. Por isso
+tarefas vem antes de proatividade, e projetos antes do second brain.
 
-**Por quê:** é o que separa um assistente de um formulário com IA — e é o que o
-Caddy vende como produto: *"keeps an eye on your calendars, chats, and tasks, then
-tells you what needs your attention right now."* Hoje o Alfred só fala quando falam
-com ele; a única exceção é o `ReminderScheduler`.
+> **Não renumere sem registrar aqui o porquê.** Esta ordem substituiu a de
+> 2026-08-14, que colocava proatividade em primeiro — antes de haver o que vigiar.
 
-**O que já existe:** o `OutboundRegistry` entrega push nas três plataformas. A
-infraestrutura está pronta.
+---
 
-**O que falta:** o que **decide o que merece ser dito** — e o limite de quando
-calar. Um assistente que fala demais é desinstalado.
+### Fase 0 — Colocar no ar 🔴
 
-**Depende de:** nada técnico. Depende de decisão de produto.
+**Nada abaixo alcança um usuário enquanto isto não fechar.** O Alfred nunca foi para
+produção, e o conserto do C0 nunca foi confirmado contra o Vertex de verdade.
 
-### F3 — UX de conversa além dos comandos
-
-**Por quê:** 19 comandos com sintaxe posicional (`/editar 3 total 45,90`) é
-interface de CLI num app de chat. Comando é bom **como atalho**, não como caminho
-principal.
-**Escopo:** botões inline e teclado contextual do Telegram, confirmação e edição
-por toque, entrada por **voz** (o Caddy aceita áudio; o Alfred não).
-**Depende de:** quebrar o `BotCore` antes (C4) — mexer em UX com 1042 linhas é caro.
-
-### F4 — Web de gestão com dashboards
-
-**Por quê:** o web hoje é chat + painel de leitura. Falta o CRUD que um sistema de
-gestão tem.
-**Escopo:** layout de aplicação, tabela com filtro e paginação, telas por módulo,
-e os endpoints REST que faltam no `AuthServer`.
-**Depende de:** decidir se o `AuthServer` em `node:http` puro continua ou vira
-framework — e de os módulos existirem, senão as telas não têm o que mostrar.
-
-### Módulos declarados, a construir
-
-| Módulo | Pré-requisito | Semente que já existe |
+| | Item | De quem |
 |---|---|---|
-| **tarefas** | `fin` funcionando + F2 | `/lembretes` já é tarefa com data e push |
-| **projetos** | `tarefas` | — |
+| ⬜ | **Confirmar o C0** — `gcloud ai models list --region=us-central1 \| grep flash-lite` | você |
+| ⬜ | **Rotacionar a chave do GCP** (`C1`) — aberta desde o começo | você |
+| ⬜ | Mergear os PRs [#8](https://github.com/yvesas/alfred-bot/pull/8) e [#9](https://github.com/yvesas/alfred-bot/pull/9) | você |
+| ⬜ | **Escolher o host** (`BL-3`) — Railway · Fly.io · Render · Cloud Run · VPS | você |
+| ⬜ | CD por tag, com `CHANGELOG` mergeado antes | — |
+| ⬜ | Primeiro deploy, com `REPLICAS` e origens explícitas configuradas | — |
+| ⬜ | Rodar o `migrateCanonical` e **confirmar que não sobrou usuário sem `identities[]`** | — |
+
+O último item destrava o `C17` — sem essa confirmação, remover o `$or` desloga gente.
+
+**Pronto quando:** uma pessoa que não é você registra um gasto pelo Telegram e ele
+aparece no painel.
+
+---
+
+### Fase 1 — Módulo tarefas
+
+Está declarado desde o ADR-0004 e responde *"ainda não disponível"*. É o segundo
+módulo, e o mais barato: `/lembretes` já é uma tarefa com data e entrega por push.
+
+- ⬜ Modelo `Task` (descrição, prazo, estado, `userId` canônico)
+- ⬜ Comandos no módulo, no formato que o registro já espera
+- ⬜ Criar tarefa por conversa, não só por comando — a IA já roteia intenção
+- ⬜ Decidir o destino de `/lembretes`: vira tarefa recorrente ou continua ao lado?
+
+**Pronto quando:** `implemented: true` no `tasksModule` e a pessoa anota, lista e
+conclui uma tarefa conversando.
+
+---
+
+### Fase 2 — Proatividade ⭐
+
+**O diferencial.** É o que o Caddy vende — *"tells you what needs your attention
+right now"* — e o que separa um assistente de um formulário com IA.
+
+A infraestrutura existe: o `OutboundRegistry` entrega push nas três plataformas, e o
+`JobLockService` garante que só uma réplica dispara.
+
+**O que falta é o que decide o que merece ser dito.** E, mais difícil, **o limite de
+quando calar** — assistente que fala demais é desinstalado.
+
+- ⬜ Regras iniciais explícitas, não IA: orçamento perto do teto, tarefa vencendo
+      hoje, conta a pagar amanhã, silêncio quando não há nada
+- ⬜ Teto de frequência por usuário, e respeito a horário
+- ⬜ Preferência do usuário: o que ele quer ouvir e quando
+- ⬜ Métrica de quantas mensagens proativas foram úteis (alguém respondeu?)
+
+**Começar com regra, não com modelo.** Regra é auditável e barata; quando houver
+sinal de que ela erra, aí entra julgamento de IA.
+
+---
+
+### Fase 3 — UX de conversa e voz
+
+19 comandos de sintaxe posicional (`/editar 3 total 45,90`) é interface de CLI num
+app de chat. Comando é bom **como atalho**, não como caminho principal.
+
+- ⬜ Botões inline e teclado contextual no Telegram
+- ⬜ Confirmar e editar por toque, em vez de sintaxe
+- ⬜ **Entrada por voz** — o Caddy aceita áudio; o Alfred não
+- ⬜ `/ajuda` gerado a partir do registro de módulos
+
+O refactor do `C4` foi feito justamente para isto: um comando é um objeto, então o
+botão se pendura nele.
+
+---
+
+### Fase 4 — Módulo projetos
+
+Trabalhos que agrupam tarefas — e custo. **O cruzamento é a razão de o Alfred ser um
+assistente só, e não três apps.** "Quanto este projeto já me custou" só existe aqui.
+
+- ⬜ Modelo `Project`, tarefas ligadas a ele
+- ⬜ Compra opcionalmente ligada a projeto
+- ⬜ A pergunta que justifica a fase: custo acumulado por projeto
+
+---
+
+### Fase 5 — Web de gestão
+
+O web hoje é chat mais um painel de leitura. Falta o CRUD que um sistema de gestão
+tem — e só agora há três módulos para mostrar.
+
+- ⬜ Layout de aplicação: navegação lateral, tabela com filtro e paginação
+- ⬜ Uma tela por módulo
+- ⬜ Os endpoints REST que faltam no `AuthServer`
+- ⬜ **Decidir:** o `AuthServer` em `node:http` puro continua, ou vira framework?
+- ⬜ Botão "sair de todos os dispositivos" — o endpoint já existe desde o `C8`
+
+---
+
+### Fase 6 — Second brain — fatia fina ⭐
+
+A IA que responde sobre o que já existe. **É do Alfred, não do chassi**
+([ADR-0006](../../docs/adr/0006-inteligencia-e-second-brain-sao-do-alfred.md)).
+
+Fatia fina, no modelo do Niklas: **poucas fontes, honesto ponta a ponta**, com
+citação da fonte. Melhor responder pouco e certo do que muito e sem lastro.
+
+- ⬜ Indexar o que já existe: compras, tarefas, projetos
+- ⬜ Pergunta em linguagem natural com **citação de origem**
+- ⬜ Busca vetorial no Atlas — o Mongo fica ([ADR-0007](../../docs/adr/0007-relacao-com-o-yas-harness.md))
+- ⬜ Atrás de interface própria, mock antes de implementação
+
+---
+
+### Fase 7 — Cobrança
+
+`User.plan` e o limite do free já existem; falta a forma de assinar. Stripe já está
+configurado no portfólio.
+
+- ⬜ Checkout e assinatura do Pro
+- ⬜ Webhook de status, com o plano refletido no `User`
+- ⬜ Portal de cobrança do cliente
+
+---
+
+### Fase 8 — WhatsApp oficial
+
+Hoje é Baileys: engenharia reversa, login por QR, número sujeito a banimento — e
+**quatro das seis vulnerabilidades altas do `C22` vêm dele**.
+
+- ⬜ Adapter da Cloud API oficial, ao lado do atual
+- ⬜ Migrar e aposentar o Baileys
+
+---
+
+### Fase 9 — Second brain — profundidade
+
+Cruzar fontes numa resposta só, extração estruturada, avaliação de qualidade. **É
+aqui que vira diferencial vendável.**
 
 ---
 
@@ -137,53 +245,39 @@ framework — e de os módulos existirem, senão as telas não têm o que mostra
 
 ---
 
-## Aberto
+## Aberto, fora das fases
 
-### Bugs
+O que não destrava fase nenhuma. Fica aqui para não sumir — não para virar fila.
 
-| # | O quê | Estado |
-|---|---|---|
-| B1 | **Rotacionar a chave GCP** (`google-credentials.json` real em disco) | 🔴 **aberto — ação sua**, não é código |
-| B2–B7 | conexão de DB, shutdown, data de lançamento, preferência de modelo, parser rígido, fallback de IA | ✅ resolvidos |
+| O quê | Quando |
+|---|---|
+| **LGPD fase 3** — DPO, ROPA, DPIA | jurídico, não código; antes de cobrar de verdade |
+| **NFC-e fase 2** — itens completos via SEFAZ | se a leitura por IA não bastar |
+| **Dashboards do Grafana** | `/metrics` já expõe; falta o painel. Depois do deploy |
+| **E2E foto → IA → persistência** | quando houver ambiente para rodar |
+| **Cobertura do front** (Painel, Conta, Landing) | avulso |
+| **`C22` — 6 vulnerabilidades altas em produção** | Dependabot propõe; 4 saem com a Fase 8 |
+| Blocos B, C e D do [`PLANO-TECNICO.md`](PLANO-TECNICO.md) | cada um com o gatilho escrito lá |
 
-Os riscos técnicos abertos hoje estão catalogados em
-[`specs/codebase/CONCERNS.md`](../codebase/CONCERNS.md) — 23 itens, com C1-C3 em
-crítico. Os que bloqueiam produção: **C2** (estado em memória) e **C3**
-(schedulers duplicados) impedem rodar com mais de uma réplica.
+### Bugs históricos
 
-### Produto e negócio
+`B1` (rotacionar a chave do GCP) é o único aberto, e está na **Fase 0**.
+`B2`–`B7` foram resolvidos entre fevereiro e junho de 2026.
 
-- ⬜ **Cobrança (Stripe)** — checkout e assinatura do Pro. É o que falta para o
-  produto poder cobrar.
-- ⬜ **WhatsApp Cloud API oficial** (multi-plataforma fases 4-5) — hoje é Baileys,
-  engenharia reversa, com risco de banimento do número.
-- ⬜ **LGPD fase 3** — DPO, ROPA, DPIA. Jurídico, não código.
-- ⬜ **NFC-e fase 2** — itens completos via SEFAZ.
-
-### Operação
-
-- ⬜ **Definir host e CD** — Railway / Fly.io / Render / Cloud Run / VPS. Nunca
-  decidido; é pré-requisito de tudo que é "produção".
-- 🟡 **Observabilidade** — `/metrics` exposto, **nenhum dashboard no Grafana**.
-
-### Qualidade
-
-- ⬜ **E2E foto → IA → persistência**
-- ⬜ **Cobertura do front** (Painel/Conta/Landing com API mockada)
-- ⬜ **Testes dos adapters Telegram e WhatsApp** (hoje 0 %) — C5
-- ⬜ **`CONTRIBUTING.md`** — o hook `commit-msg` já manda o usuário lê-lo
-- ⬜ **Gate de cobertura** (`coverageThreshold`) — C18
+Os riscos técnicos vivem em [`CONCERNS.md`](../codebase/CONCERNS.md) — dos 23
+catalogados, 14 estão fechados.
 
 ---
 
-## Ordem sugerida
+## Como usar este documento
 
-1. **Confirmar o C0** — um comando `gcloud`, e é seu. Tudo abaixo assume o bot vivo.
-2. **B1 — rotacionar a chave do GCP.** Não entra em fila; é independente de tudo.
-3. **F2 (proatividade)** — é o que separa o Alfred de um formulário com IA, e não
-   depende de refactor nenhum.
-4. **Quebrar o `BotCore`** (C4) — barato agora, caríssimo depois do F3.
-5. **F3 (UX de conversa + voz)** — o que o usuário sente primeiro.
-6. **Migrar para o `yas-harness`** (ADR-0005) — quando o fin estiver de pé.
-7. **Construir `tasks`**, depois `projects`.
-8. **Cobrança + deploy** — quando houver o que cobrar. Antes, resolver C2 e C3.
+**Uma fase por vez, até o fim.** É a regra de contenção do
+[`PROJECT.md`](PROJECT.md), e ela existe porque o risco deste projeto não é falta de
+ideia — é dispersão.
+
+Ao terminar uma fase: marque aqui, atualize o [`STATE.md`](STATE.md) e o
+[`HANDOFF.md`](HANDOFF.md), e registre em ADR o que virou estrutura. O ritual completo
+está no [`PLANO-TECNICO.md`](PLANO-TECNICO.md) §0 — vale igual para o produto.
+
+Fase grande vira `specs/features/NNNN-slug/` com spec, design e tasks, na numeração
+sequencial de quatro dígitos. Fase pequena dispensa.

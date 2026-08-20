@@ -18,7 +18,7 @@ o rumo do produto, de [`ROADMAP.md`](ROADMAP.md); as decisões, de
 | **2** | [Cobrir os adapters de Telegram e WhatsApp](#4-fase-2--cobrir-os-adapters-c5) | `C5` | ✅ **2026-08-18** |
 | **3** | [Quebrar o `BotCore`](#5-fase-3--quebrar-o-botcore-c4) — de 1042 para 336 linhas | `C4` | ✅ **2026-08-18** |
 | **4** | [Rodar com mais de uma instância](#6-fase-4--deixar-rodar-com-mais-de-uma-instância-c2-c3-c8-concluída-em-2026-08-19) | `C2` `C3` `C8` | ✅ **2026-08-19** |
-| **5** | [O backlog, agrupado por natureza](#7-fase-5--o-backlog-agrupado-por-natureza-) — nada urgente | `C9`–`C20` | ⬜ sob demanda |
+| **5** | [O backlog, agrupado por natureza](#7-fase-5--o-backlog-agrupado-por-natureza-) — nada urgente | ~~`C15`~~ ~~`C19`~~ · `C9`–`C20` | 🔨 bloco A feito |
 
 **Por que os adapters vêm antes de quebrar o `BotCore`.** A Fase 3 é refactor sem
 mudança de comportamento, e **a suíte é o contrato que prova isso**. Fazer a Fase 3
@@ -245,20 +245,18 @@ podem ser feitos em qualquer ordem, ou nenhum.
 > valor hoje está no `ROADMAP.md`, não aqui. Estes blocos existem para quando houver
 > um motivo concreto — e cada um traz o **gatilho** que o justifica.
 
-### F5.A — Correções baratas e avulsas *(~1 sessão, sem gatilho)*
+### F5.A — Correções baratas e avulsas ✅ *(concluído em 2026-08-20)*
 
 Os dois únicos que valem fazer "porque sim": são pequenos, isolados e removem ruído.
 
-- [ ] **`C15`** — `validatePurchaseData` devolve `reason` em pt-BR cru e o `BotCore`
-      responde `❌ ${reason}`. Usuário em `en`/`es` recebe português, num projeto cujo
-      catálogo é tipado justamente para impedir isso. Trocar `reason` por `MessageKey`.
-      Mesmo tratamento para o `"Por favor, compartilhe o seu próprio contato"` do
-      `TelegramAdapter`.
-- [ ] **`C19`** — `QrService.test.ts` despeja um stack trace de
-      `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG` a cada execução: o `jimp` usa
-      import dinâmico e o ts-jest está em CommonJS. O teste passa, mas o log sujo
-      esconde falha de verdade — foi assim que a instabilidade do `JobLockService`
-      quase passou batida. Mockar o `jimp` na suíte.
+- [x] **`C15`** — validação devolve `MessageKey`; a recusa do contato de terceiro
+      saiu do adapter para o `BotCore`, que sabe o idioma
+- [x] **`C19`** — `jimp` e `jsqr` mockados; o ruído sumiu e o teste passou a cobrir o
+      caminho de sucesso, que antes não era exercitado
+
+**O que apareceu:** o contato do Telegram não era só uma string mal colocada. O
+adapter **decidia** recusar, e decisão de domínio no adapter é a fronteira errada
+(ADR-0004). Agora ele reporta o fato da plataforma e o núcleo decide.
 
 **Gate:** `./scripts/check.sh bot`
 

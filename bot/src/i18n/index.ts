@@ -12,6 +12,13 @@ export type MessageKey =
   | "not_understood"
   // módulos declarados e ainda não construídos
   | "module_coming_soon"
+  // validação programática da compra extraída pela IA
+  | "purchase_invalid_total"
+  | "purchase_total_too_high"
+  | "purchase_missing_description"
+  | "purchase_invalid_items"
+  // contato compartilhado (Telegram)
+  | "contact_not_yours"
   // confirmação / compra
   | "purchase_confirm"
   | "purchase_cancelled"
@@ -174,6 +181,11 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     stock_empty: 'Seu estoque está vazio. Adicione com "/estoque add 2 Leite".',
     module_coming_soon:
       "📌 {title} ainda não está disponível — está no plano, mas ainda não foi construído.",
+    purchase_invalid_total: "❌ Não identifiquei um valor total válido. Pode informar o valor?",
+    purchase_total_too_high: "❌ Esse valor parece alto demais. Pode conferir?",
+    purchase_missing_description: "❌ Não entendi o que foi comprado. Pode descrever?",
+    purchase_invalid_items: "❌ Alguns itens vieram com valores inválidos. Pode repetir?",
+    contact_not_yours: "Por favor, compartilhe o seu próprio contato. 🙂",
     stock_header: "📦 Seu estoque:",
     stock_footer: '"/estoque add <qtd> <nome>" ou "/estoque remover <nome>".',
     stock_item: "• {name}: {quantity}",
@@ -294,6 +306,11 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
       "🔔 You've already used {pct}% of the {category} budget: $ {spent} of $ {limit}.",
     stock_empty: 'Your pantry is empty. Add with "/estoque add 2 Milk".',
     module_coming_soon: "📌 {title} is not available yet — it is planned, but not built.",
+    purchase_invalid_total: "❌ I could not find a valid total. Could you tell me the amount?",
+    purchase_total_too_high: "❌ That amount looks far too high. Could you double-check?",
+    purchase_missing_description: "❌ I did not catch what was bought. Could you describe it?",
+    purchase_invalid_items: "❌ Some items came with invalid values. Could you send it again?",
+    contact_not_yours: "Please share your own contact. 🙂",
     stock_header: "📦 Your stock:",
     stock_footer: '"/estoque add <qty> <name>" or "/estoque remover <name>".',
     stock_item: "• {name}: {quantity}",
@@ -414,6 +431,11 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     budget_alert_warn: "🔔 Ya usaste {pct}% del presupuesto de {category}: $ {spent} de $ {limit}.",
     stock_empty: 'Tu despensa está vacía. Agrega con "/estoque add 2 Leche".',
     module_coming_soon: "📌 {title} aún no está disponible — está planificado, pero no construido.",
+    purchase_invalid_total: "❌ No identifiqué un total válido. ¿Puedes decirme el importe?",
+    purchase_total_too_high: "❌ Ese importe parece demasiado alto. ¿Puedes verificarlo?",
+    purchase_missing_description: "❌ No entendí qué se compró. ¿Puedes describirlo?",
+    purchase_invalid_items: "❌ Algunos ítems vinieron con valores inválidos. ¿Puedes repetirlo?",
+    contact_not_yours: "Por favor, comparte tu propio contacto. 🙂",
     stock_header: "📦 Tu stock:",
     stock_footer: '"/estoque add <cant> <nombre>" o "/estoque remover <nombre>".',
     stock_item: "• {name}: {quantity}",

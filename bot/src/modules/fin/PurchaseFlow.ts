@@ -98,7 +98,7 @@ export class PurchaseFlow {
 
     const validation = validatePurchaseData(purchaseData);
     if (!validation.ok) {
-      await reply.text(`❌ ${validation.reason}`);
+      await reply.text(t(lang, validation.reason));
       return;
     }
 

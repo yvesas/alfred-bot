@@ -355,14 +355,25 @@ toda entrada externa; o projeto não tem nenhum validador.
 **Correção:** um schema Zod por borda (payload do WS, corpo de cada rota, resposta
 da IA), reaproveitado como tipo — elimina o `any` do converter de quebra.
 
-### C15 — Mensagem de erro fora do i18n
+### ~~C15~~ — Mensagem de erro fora do i18n · ✅ **resolvido em 2026-08-20**
 
 **Onde:** `infra/converters/purchaseConverter.ts:57-73` — `validatePurchaseData`
 devolve `reason` em pt-BR cru, e `BotCore` responde `❌ ${validation.reason}`.
 Também `TelegramAdapter.ts:144` ("Por favor, compartilhe o seu próprio contato").
 **Risco:** usuário em `en`/`es` recebe português. O catálogo tipado existe
 justamente para isso.
-**Correção:** devolver `MessageKey` em vez de texto.
+**✅ Resolvido em 2026-08-20.** `validatePurchaseData` devolve `MessageKey`, e quem
+responde traduz — quem sabe o idioma é quem tem o usuário em mãos.
+
+O contato do Telegram foi por outro caminho: o adapter não sabe o idioma, então
+**parou de decidir**. Ele reporta o fato da plataforma (`contact.belongsToSender`) e
+o `BotCore` recusa, localizado. Isso também põe a regra onde ela pertence — aceitar
+o contato de terceiro deixaria alguém reivindicar o telefone alheio, e telefone
+verificado é chave de fusão de contas.
+
+Cinco chaves novas em pt/en/es. `i18nCoverage.test.ts` prova que cada recusa existe
+nos três idiomas, que as traduções são de fato distintas e que nenhuma tem
+placeholder solto.
 
 ### C16 — `Purchase.userId` é `string` solta
 
@@ -396,12 +407,16 @@ lines 75). Catraca, não meta.
 
 ## 🔵 Baixo / manutenção
 
-### C19 — Ruído de `dynamic import` no teste do QR
+### ~~C19~~ — Ruído de `dynamic import` no teste do QR · ✅ **resolvido em 2026-08-20**
 
-`src/tests/QrService.test.ts` faz o Jest despejar um stack trace com
+`src/tests/QrService.test.ts` fazia o Jest despejar um stack trace com
 `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG` — o `jimp` usa import dinâmico e o
-ts-jest está em CommonJS. **O teste passa**, mas o log sujo esconde falha real.
-Correção: mockar o `jimp` na suíte ou rodar com `--experimental-vm-modules`.
+ts-jest está em CommonJS. O teste passava, mas o log sujo esconde falha real.
+
+**✅ Resolvido em 2026-08-20** mockando `jimp` e `jsqr`. De quebra, o teste passou a
+cobrir o que antes não dava: o caminho de sucesso (QR com a URL da SEFAZ), a imagem
+sem QR, e a largura/altura repassadas ao decodificador. Antes só exercitava o caso
+de entrada inválida.
 
 ### C20 — `ocr-service` sem teste e sem imagem construída
 

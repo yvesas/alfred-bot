@@ -158,6 +158,55 @@ describe("BotCore", () => {
     });
   });
 
+  // C15 — quem recusa o contato de terceiro é o núcleo, que sabe o idioma; antes era
+  // o adapter do Telegram, com português fixo.
+  describe("contato compartilhado", () => {
+    const contactMsg = (belongsToSender?: boolean) =>
+      baseMsg({
+        kind: "contact",
+        contact: { phone: "+5548999990000", name: "Ana", belongsToSender },
+      });
+
+    it("recusa o contato de outra pessoa, sem salvar", async () => {
+      userService.findByIdentity.resolves({ language: "pt" } as any);
+
+      await core.handle(contactMsg(false), reply);
+
+      expect(replies[0]).toContain("seu próprio contato");
+      expect(userService.saveContact.called).toBe(false);
+      expect(mergeService.linkVerifiedPhone.called).toBe(false);
+    });
+
+    it("recusa no idioma do usuário", async () => {
+      userService.findByIdentity.resolves({ language: "en" } as any);
+
+      await core.handle(contactMsg(false), reply);
+
+      expect(replies[0]).toContain("your own contact");
+    });
+
+    it("aceita o contato do próprio remetente", async () => {
+      userService.findByIdentity.resolves({ language: "pt" } as any);
+      userService.saveContact.resolves({ reply: "ok", completed: true });
+
+      await core.handle(contactMsg(true), reply);
+
+      expect(userService.saveContact.calledOnce).toBe(true);
+      expect(mergeService.linkVerifiedPhone.calledOnce).toBe(true);
+    });
+
+    // Plataforma que não informa a origem do contato: aceitar é o comportamento
+    // anterior, e o WhatsApp nem passa por aqui (o número já é o externalId).
+    it("aceita quando a plataforma não informa a origem", async () => {
+      userService.findByIdentity.resolves({ language: "pt" } as any);
+      userService.saveContact.resolves({ reply: "ok", completed: true });
+
+      await core.handle(contactMsg(undefined), reply);
+
+      expect(userService.saveContact.calledOnce).toBe(true);
+    });
+  });
+
   it("greets a returning user on /start", async () => {
     userService.ensureUser.resolves({
       user: { status: "complete", name: "Yves" } as any,

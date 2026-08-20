@@ -9,21 +9,16 @@ import { config } from "../infra/config";
 
 @injectable()
 export class GeminiProcessor implements IMessageProcessor {
-  private vertexAI: VertexAI;
-  private projectId: string;
-  private location: string;
-  private modelName: string;
-  private model: any;
+  private model?: any;
 
-  constructor() {
-    this.projectId = config.gcpProjectId;
-    this.location = config.geminiLocation;
-    this.modelName = config.geminiModel;
-
-    this.vertexAI = new VertexAI({ project: this.projectId, location: this.location });
-    this.model = this.vertexAI.getGenerativeModel({
-      model: this.modelName,
-    });
+  // Cliente preguiçoso — ver a nota em GeminiOcrProvider. O `VertexAI` estoura sem
+  // projeto inferível, e este processador é instanciado mesmo para quem escolheu GPT.
+  private getModel(): any {
+    this.model ??= new VertexAI({
+      project: config.gcpProjectId,
+      location: config.geminiLocation,
+    }).getGenerativeModel({ model: config.geminiModel });
+    return this.model;
   }
 
   async processMessage(
@@ -34,7 +29,7 @@ export class GeminiProcessor implements IMessageProcessor {
     try {
       const prompt = getPrompt001(lang ?? null, message, categories);
 
-      const result = await this.model.generateContent(prompt);
+      const result = await this.getModel().generateContent(prompt);
       const response = await result.response;
       let text = response.candidates[0].content.parts[0].text;
       return validateAndConvertModelResponse(text);
@@ -56,7 +51,7 @@ export class GeminiProcessor implements IMessageProcessor {
       categories,
     );
 
-    const result = await this.model.generateContent({
+    const result = await this.getModel().generateContent({
       contents: [
         {
           role: "user",

@@ -12,17 +12,25 @@ import { config } from "../../infra/config";
 // Usa o GCP_PROJECT_ID já configurado, sem credencial adicional.
 @injectable()
 export class GeminiOcrProvider implements IOcrProvider {
-  private model: any;
+  private model?: any;
 
-  constructor() {
-    const projectId = config.gcpProjectId;
-    const vertexAI = new VertexAI({ project: projectId, location: config.geminiLocation });
-    this.model = vertexAI.getGenerativeModel({ model: config.geminiVisionModel });
+  // O cliente é criado na primeira leitura, não no construtor.
+  //
+  // O `VertexAI` estoura se não conseguir inferir o projeto, e o container instancia
+  // este provider mesmo quando `OCR_PROVIDER` aponta para outro — então construção
+  // ávida derrubava o startup de quem nem usa Gemini, e derrubava o CI, que não tem
+  // credencial de GCP. Preguiçoso, quem não usa não paga.
+  private getModel(): any {
+    this.model ??= new VertexAI({
+      project: config.gcpProjectId,
+      location: config.geminiLocation,
+    }).getGenerativeModel({ model: config.geminiVisionModel });
+    return this.model;
   }
 
   async extractTextFromImage(base64Image: string): Promise<string> {
     try {
-      const result = await this.model.generateContent({
+      const result = await this.getModel().generateContent({
         contents: [
           {
             role: "user",

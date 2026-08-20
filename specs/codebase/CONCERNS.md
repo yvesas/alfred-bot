@@ -227,6 +227,36 @@ inteira de uma vez.
 no app web. O endpoint existe; a tela não o chama ainda — o `logout` atual continua
 sendo só deste dispositivo, que é o que a pessoa espera dele.
 
+### ~~C23~~ — CI do bot vermelho desde junho, sem ninguém ver · ✅ **resolvido em 2026-08-20**
+
+**Descoberto em 2026-08-20**, ao abrir o primeiro PR do projeto. As três últimas
+execuções do workflow `CI - bot` na `main` — 2026-06-06, 2026-06-08 e 2026-08-04 —
+falharam. O `ROADMAP` afirmava "✅ CI" o tempo todo.
+
+**Causa:** `GeminiProcessor` e `GeminiOcrProvider` criavam o cliente `VertexAI` **no
+construtor**, e o `VertexAI` estoura quando não consegue inferir o projeto. O runner
+não tem credencial de GCP; a máquina de desenvolvimento tem `GCP_PROJECT_ID` no
+arquivo de ambiente. Passava local, quebrava no CI — e ninguém olhava o CI porque não
+havia PR: tudo ia direto para a `main`.
+
+**Não era só teste.** O container instancia os dois mesmo quando o usuário escolheu
+GPT ou `OCR_PROVIDER=paddle`. Faltar configuração de GCP derrubava o **startup** de
+quem nem usa Gemini.
+
+**✅ Resolvido:** o cliente passou a ser criado na primeira leitura, não no
+construtor. Quem não usa não paga; quem usa recebe o erro na hora da chamada, onde há
+`catch` que sabe responder, em vez de na carga do processo.
+`tests/lazyVertexClient.test.ts` trava isso.
+
+**De quebra, um bug latente nos testes:** eles faziam
+`process.env.GCP_PROJECT_ID = "test-project"` no `beforeEach` — tarde demais, porque
+o `config` é congelado na carga do módulo. A linha nunca teve efeito; o que fazia os
+testes passarem era o ambiente do desenvolvedor.
+
+**A lição que fica:** *"passa na minha máquina"* escondeu isto por dois meses e meio.
+O `pre-push` roda os testes, mas com o ambiente local. Só o CI — e só depois de haver
+PR — expôs a diferença.
+
 ### C22 — Dívida de dependência: 6 vulnerabilidades altas em produção
 
 **Descoberto em 2026-08-19**, pelo próprio workflow de auditoria adicionado no mesmo

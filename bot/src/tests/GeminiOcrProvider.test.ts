@@ -9,7 +9,6 @@ describe("GeminiOcrProvider", () => {
   let modelStub: any;
 
   beforeEach(() => {
-    process.env.GCP_PROJECT_ID = "test-project";
     provider = new GeminiOcrProvider();
     modelStub = { generateContent: sinon.stub() };
     (provider as any).model = modelStub;

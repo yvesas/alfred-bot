@@ -131,7 +131,7 @@ framework — e de os módulos existirem, senão as telas não têm o que mostra
 | ✅ OCR trocável | `IOcrProvider` com Vision, Gemini e Paddle |
 | ✅ Agregações no Mongo | `$facet` no lugar de somatório em memória |
 | ✅ Testes | bot 189 (35 suítes), web 21; Mongo em memória nos repositórios; integração HTTP |
-| ✅ CI | `bot.yml`, `web.yml`, `ocr-service.yml` path-filtered; Codecov; cache do binário do Mongo |
+| ✅ CI | `bot.yml`, `web.yml`, `ocr-service.yml` path-filtered; Codecov; cache do binário do Mongo. **O do bot esteve vermelho de junho a agosto/2026 sem ninguém ver** — ver C23 |
 | ✅ Husky | pre-commit (lint-staged + typecheck) e pre-push (testes) nos dois projetos |
 | ✅ Docker | Dockerfile multi-stage por projeto + compose com perfis |
 

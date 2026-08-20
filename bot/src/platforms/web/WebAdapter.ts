@@ -130,7 +130,7 @@ export class WebAdapter implements IMessagingAdapter, OutboundSender {
       return;
     }
 
-    const incoming = this.toIncoming(payload);
+    const incoming = await this.toIncoming(payload);
     if (!incoming) {
       send({ type: "error", message: "Mensagem inválida." });
       return;
@@ -155,13 +155,17 @@ export class WebAdapter implements IMessagingAdapter, OutboundSender {
     }
   }
 
-  private toIncoming(payload: any): IncomingMessage | null {
+  private async toIncoming(payload: any): Promise<IncomingMessage | null> {
     const clientId = typeof payload?.clientId === "string" ? payload.clientId.trim() : "";
     if (!clientId) return null;
 
-    // Com um JWT válido, a identidade canônica passa a ser o id do WorkOS (sub);
-    // sem token (ou inválido), segue anônimo pelo clientId.
-    const session = typeof payload?.token === "string" ? this.auth.verifyJwt(payload.token) : null;
+    // Com uma sessão CORRENTE, a identidade canônica passa a ser o id do WorkOS (sub);
+    // sem token, inválido ou revogado, segue anônimo pelo clientId. Conferir só a
+    // assinatura deixaria um token revogado conversar pelos 30 dias inteiros (C8).
+    const session =
+      typeof payload?.token === "string"
+        ? await this.auth.resolveCurrentSession(payload.token)
+        : null;
     const externalId = session?.sub ?? clientId;
 
     if (payload.type === "user_photo" && typeof payload.imageBase64 === "string") {

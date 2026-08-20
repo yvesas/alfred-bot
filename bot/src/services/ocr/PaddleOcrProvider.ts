@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { injectable } from "inversify";
 import { IOcrProvider } from "./IOcrProvider";
+import { OcrError } from "../../utils/errors";
 import { logger } from "../../infra/logger";
 import { config } from "../../infra/config";
 
@@ -30,8 +31,8 @@ export class PaddleOcrProvider implements IOcrProvider {
       const data = (await res.json()) as { text: string };
       return data.text || "Nenhum texto detectado.";
     } catch (error) {
-      logger.error({ err: error }, "Erro ao processar a imagem (PaddleOCR)");
-      return "Erro ao processar a imagem.";
+      logger.error({ err: error, url: this.url }, "Falha no OCR (PaddleOCR)");
+      throw new OcrError("Falha ao ler a imagem com o PaddleOCR.", "paddle");
     }
   }
 }

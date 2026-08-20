@@ -19,6 +19,10 @@ import { ExportService } from "../services/ExportService";
 import { AccountService } from "../services/AccountService";
 import { RateLimiter } from "../services/RateLimiter";
 import { MessageProcessingService } from "../services/MessageProcessingService";
+import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
+import { AccountLinking } from "../core/AccountLinking";
+import { PendingEmailStore } from "../core/PendingEmailStore";
+import { FakeConversationStore } from "./helpers/fakeConversationStore";
 import { accessKeyCheckDigit } from "../utils/fiscalKey";
 
 function baseMsg(over: Partial<IncomingMessage>): IncomingMessage {
@@ -41,6 +45,9 @@ describe("BotCore", () => {
   let accountService: sinon.SinonStubbedInstance<AccountService>;
   let rateLimiter: sinon.SinonStubbedInstance<RateLimiter>;
   let mps: sinon.SinonStubbedInstance<MessageProcessingService>;
+  let purchaseFlow: PurchaseFlow;
+  let accountLinking: AccountLinking;
+  let pendingEmails: PendingEmailStore;
   let core: BotCore;
   let replies: string[];
   let reply: Replier;
@@ -61,6 +68,16 @@ describe("BotCore", () => {
     accountService = sinon.createStubInstance(AccountService);
     rateLimiter = sinon.createStubInstance(RateLimiter);
     mps = sinon.createStubInstance(MessageProcessingService);
+    // Fluxo de compra real: o BotCore delega a ele, e os testes de compra exercitam
+    // o caminho inteiro — trocá-lo por stub esconderia justamente o que se quer provar.
+    // Store em memória: o C2 tirou as pendências do processo, mas o teste unitário
+    // não quer banco. O comportamento real do store é provado à parte.
+    const conversationStore = new FakeConversationStore();
+    purchaseFlow = new PurchaseFlow(purchaseService, budgetService, planService, conversationStore);
+    // Reais, como o PurchaseFlow: são estado e colaboração do próprio fluxo, não
+    // fronteira externa. Stubá-los esconderia o que os testes de vínculo provam.
+    accountLinking = new AccountLinking(mergeService, linkTokens);
+    pendingEmails = new PendingEmailStore(conversationStore);
     core = new BotCore(
       userService,
       ocrService,
@@ -77,6 +94,9 @@ describe("BotCore", () => {
       accountService,
       rateLimiter,
       mps,
+      purchaseFlow,
+      accountLinking,
+      pendingEmails,
     );
 
     replies = [];
@@ -84,6 +104,58 @@ describe("BotCore", () => {
     rateLimiter.allow.returns(true);
     budgetService.alertsForPurchase.resolves([]);
     planService.canRegister.resolves(true);
+  });
+
+  // C4 — o despacho de comando virou registro. Estes casos cobrem os desvios que o
+  // `switch` antigo escondia: comando sem nome, comando que ninguém atende, e comando
+  // de um módulo declarado mas não construído.
+  describe("despacho de comando", () => {
+    const completeUser = { _id: "u1", status: "complete", language: "pt" } as any;
+
+    it("ignora comando sem nome", async () => {
+      await core.handle(baseMsg({ kind: "command", command: { name: "", args: [] } }), reply);
+
+      expect(replies).toEqual([]);
+      expect(userService.findByIdentity.called).toBe(false);
+    });
+
+    it("ignora comando que ninguém atende", async () => {
+      userService.findByIdentity.resolves(completeUser);
+
+      await core.handle(
+        baseMsg({ kind: "command", command: { name: "inventado", args: [] } }),
+        reply,
+      );
+
+      expect(replies).toEqual([]);
+    });
+
+    // Sem isto o comando cairia no vazio — a pior resposta possível.
+    it("avisa que o módulo declarado ainda não foi construído", async () => {
+      userService.findByIdentity.resolves(completeUser);
+
+      await core.handle(
+        baseMsg({ kind: "command", command: { name: "tarefas", args: [] } }),
+        reply,
+      );
+
+      expect(replies[0]).toContain("Tarefas");
+      expect(replies[0]).toContain("ainda não está disponível");
+    });
+
+    // O aviso vem ANTES de exigir cadastro: quem nem se cadastrou ainda merece saber
+    // que o módulo não existe, em vez de ser mandado completar o cadastro à toa.
+    it("avisa do módulo não construído mesmo sem cadastro completo", async () => {
+      userService.findByIdentity.resolves(null);
+
+      await core.handle(
+        baseMsg({ kind: "command", command: { name: "projetos", args: [] } }),
+        reply,
+      );
+
+      expect(replies[0]).toContain("Projetos");
+      expect(userService.ensureUser.called).toBe(false);
+    });
   });
 
   it("greets a returning user on /start", async () => {
@@ -359,7 +431,7 @@ describe("BotCore", () => {
 
   it("links an account via /vincular <token>", async () => {
     userService.ensureUser.resolves({ user: { status: "complete" } as any, question: "" });
-    linkTokens.consume.returns("canonId");
+    linkTokens.consume.resolves("canonId");
     mergeService.linkAccounts.resolves(true);
 
     await core.handle(
@@ -374,7 +446,7 @@ describe("BotCore", () => {
 
   it("rejects /vincular with an invalid token", async () => {
     userService.ensureUser.resolves({ user: { status: "complete" } as any, question: "" });
-    linkTokens.consume.returns(null);
+    linkTokens.consume.resolves(null);
 
     await core.handle(
       baseMsg({ kind: "command", command: { name: "vincular", args: ["BAD"] } }),
@@ -390,7 +462,7 @@ describe("BotCore", () => {
       user: { status: "complete", name: "Yves", _id: "u1" } as any,
       question: "",
     });
-    linkTokens.consume.returns("canonId");
+    linkTokens.consume.resolves("canonId");
     mergeService.linkAccounts.resolves(true);
 
     await core.handle(

@@ -10,11 +10,10 @@ import makeWASocket, {
 import qrcode from "qrcode-terminal";
 import pino from "pino";
 import { IMessagingAdapter } from "../../core/IMessagingAdapter";
-import { IncomingMessage } from "../../core/IncomingMessage";
 import { Replier } from "../../core/Replier";
 import { BotCore } from "../../core/BotCore";
 import { OutboundRegistry, OutboundSender } from "../../core/OutboundRegistry";
-import { KNOWN_COMMANDS } from "../../core/commands";
+import { isDirectMessage, whatsappExternalId, toWhatsappIncoming } from "./translate";
 import { config } from "../../infra/config";
 import { logger } from "../../infra/logger";
 
@@ -96,37 +95,13 @@ export class WhatsAppAdapter implements IMessagingAdapter, OutboundSender {
   private async onMessage(m: WAMessage): Promise<void> {
     const jid = m.key.remoteJid;
     // Apenas mensagens diretas (ignora grupos, status e as próprias).
-    if (!jid || m.key.fromMe || !jid.endsWith("@s.whatsapp.net")) return;
+    if (!isDirectMessage(jid, m.key.fromMe)) return;
 
-    const externalId = jid.split("@")[0];
-    const incoming = this.toIncoming(externalId, m);
+    const externalId = whatsappExternalId(jid!);
+    const incoming = toWhatsappIncoming(externalId, m.message, () => this.downloadImage(m));
     if (!incoming) return;
 
-    await this.core.handle(incoming, this.replier(jid));
-  }
-
-  private toIncoming(externalId: string, m: WAMessage): IncomingMessage | null {
-    if (m.message?.imageMessage) {
-      return {
-        platform: "whatsapp",
-        externalId,
-        kind: "photo",
-        getImageBase64: () => this.downloadImage(m),
-      };
-    }
-
-    const text = m.message?.conversation ?? m.message?.extendedTextMessage?.text ?? undefined;
-    if (text === undefined || text === null) return null;
-
-    if (text.startsWith("/")) {
-      const [first, ...args] = text.slice(1).trim().split(/\s+/);
-      const name = first.toLowerCase();
-      if (KNOWN_COMMANDS.includes(name)) {
-        return { platform: "whatsapp", externalId, kind: "command", command: { name, args } };
-      }
-    }
-
-    return { platform: "whatsapp", externalId, kind: "text", text };
+    await this.core.handle(incoming, this.replier(jid!));
   }
 
   private replier(jid: string): Replier {

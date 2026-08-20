@@ -10,6 +10,8 @@ export type MessageKey =
   | "finish_registration"
   | "photo_error"
   | "not_understood"
+  // módulos declarados e ainda não construídos
+  | "module_coming_soon"
   // confirmação / compra
   | "purchase_confirm"
   | "purchase_cancelled"
@@ -170,6 +172,8 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     budget_alert_warn:
       "🔔 Você já usou {pct}% do orçamento de {category}: R$ {spent} de R$ {limit}.",
     stock_empty: 'Seu estoque está vazio. Adicione com "/estoque add 2 Leite".',
+    module_coming_soon:
+      "📌 {title} ainda não está disponível — está no plano, mas ainda não foi construído.",
     stock_header: "📦 Seu estoque:",
     stock_footer: '"/estoque add <qtd> <nome>" ou "/estoque remover <nome>".',
     stock_item: "• {name}: {quantity}",
@@ -289,6 +293,7 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     budget_alert_warn:
       "🔔 You've already used {pct}% of the {category} budget: $ {spent} of $ {limit}.",
     stock_empty: 'Your pantry is empty. Add with "/estoque add 2 Milk".',
+    module_coming_soon: "📌 {title} is not available yet — it is planned, but not built.",
     stock_header: "📦 Your stock:",
     stock_footer: '"/estoque add <qty> <name>" or "/estoque remover <name>".',
     stock_item: "• {name}: {quantity}",
@@ -408,6 +413,7 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     budget_alert_over: "🚨 Presupuesto de {category} superado: $ {spent} de $ {limit} ({pct}%).",
     budget_alert_warn: "🔔 Ya usaste {pct}% del presupuesto de {category}: $ {spent} de $ {limit}.",
     stock_empty: 'Tu despensa está vacía. Agrega con "/estoque add 2 Leche".',
+    module_coming_soon: "📌 {title} aún no está disponible — está planificado, pero no construido.",
     stock_header: "📦 Tu stock:",
     stock_footer: '"/estoque add <cant> <nombre>" o "/estoque remover <nombre>".',
     stock_item: "• {name}: {quantity}",

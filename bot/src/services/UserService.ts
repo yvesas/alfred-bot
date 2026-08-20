@@ -53,6 +53,15 @@ export class UserService {
     await this.userRepo.updateByIdentity(platform, externalId, { name });
   }
 
+  /**
+   * Revoga todas as sessões do usuário — todo JWT já emitido para de valer, inclusive
+   * o de quem pediu. É o "sair de todos os dispositivos", e o mínimo para atender a um
+   * pedido de revogação do titular (LGPD, C8).
+   */
+  async revokeSessions(id: string): Promise<void> {
+    await this.userRepo.bumpTokenVersion(id);
+  }
+
   async setNameById(id: string, name: string): Promise<void> {
     await this.userRepo.updateById(id, { name });
   }

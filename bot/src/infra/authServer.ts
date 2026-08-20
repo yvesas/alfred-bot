@@ -7,6 +7,7 @@ import { ReportService } from "../services/ReportService";
 import { PlanService } from "../services/PlanService";
 import { ExportService } from "../services/ExportService";
 import { UserService } from "../services/UserService";
+import { RateLimiter } from "../services/RateLimiter";
 import { IUser } from "../models/User";
 import { config } from "./config";
 import { logger } from "./logger";
@@ -30,6 +31,7 @@ export class AuthServer {
     @inject(PlanService) private plans: PlanService,
     @inject(ExportService) private exports: ExportService,
     @inject(UserService) private users: UserService,
+    @inject(RateLimiter) private rateLimiter: RateLimiter,
   ) {}
 
   start(port: number = config.authPort): http.Server {
@@ -46,6 +48,24 @@ export class AuthServer {
     this.server?.close();
   }
 
+  // IP do cliente. `x-forwarded-for` só é considerado com proxy declarado
+  // (TRUST_PROXY); senão qualquer um forja o header e escapa do limite.
+  private clientIp(req: http.IncomingMessage): string {
+    if (config.trustProxy) {
+      const forwarded = req.headers["x-forwarded-for"];
+      const first = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+      const ip = first?.split(",")[0]?.trim();
+      if (ip) return ip;
+    }
+    return req.socket.remoteAddress ?? "unknown";
+  }
+
+  // Limite por IP. `/auth/email/*` é bem mais apertado que o resto porque cada
+  // chamada manda um e-mail de verdade pelo WorkOS (C6).
+  private rateLimitFor(pathname: string) {
+    return pathname.startsWith("/auth/email/") ? config.authEmailRateLimit : config.httpRateLimit;
+  }
+
   private async handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     this.cors(res);
     if (req.method === "OPTIONS") {
@@ -55,6 +75,24 @@ export class AuthServer {
     }
 
     const url = new URL(req.url ?? "/", "http://localhost");
+
+    // O rate limit vem antes do roteamento: vale inclusive para rota inexistente,
+    // que é justamente o que uma varredura usa.
+    const limit = this.rateLimitFor(url.pathname);
+    const bucket = `${url.pathname.startsWith("/auth/email/") ? "email" : "http"}:${this.clientIp(req)}`;
+    if (!this.rateLimiter.allow(bucket, limit)) {
+      const retryAfter = this.rateLimiter.retryAfterSeconds(bucket, limit);
+      logger.warn({ path: url.pathname }, "Requisição bloqueada por rate limit");
+      res.writeHead(429, {
+        "Content-Type": "application/json",
+        "Retry-After": String(retryAfter),
+      });
+      // Mensagem genérica de propósito: não revela qual limite foi atingido nem se
+      // o e-mail existe.
+      res.end(JSON.stringify({ error: "too many requests" }));
+      return;
+    }
+
     if (req.method === "POST" && url.pathname === "/auth/email/start") {
       return this.emailStart(req, res);
     }
@@ -76,6 +114,9 @@ export class AuthServer {
     if (req.method === "DELETE" && url.pathname === "/api/account") {
       return this.apiDeleteAccount(req, res);
     }
+    if (req.method === "POST" && url.pathname === "/api/sessions/revoke") {
+      return this.apiRevokeSessions(req, res);
+    }
 
     res.writeHead(404);
     res.end();
@@ -84,12 +125,19 @@ export class AuthServer {
   // ---------- API do app web (JWT) ----------
 
   // Resolve o usuário canônico a partir do Bearer JWT (sub = id do WorkOS → identidade web).
+  //
+  // Assinatura válida não basta: um token roubado continua assinado pelos 30 dias
+  // inteiros. Por isso a versão da sessão também é conferida — se o usuário revogou,
+  // a dele subiu e este token deixou de ser corrente (C8).
   private async authedUser(req: http.IncomingMessage): Promise<IUser | null> {
     const header = req.headers.authorization ?? "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : "";
     const session = this.auth.verifyJwt(token);
     if (!session) return null;
-    return this.users.findByIdentity("web", session.sub);
+
+    const user = await this.users.findByIdentity("web", session.sub);
+    if (!user || !this.auth.isCurrent(session, user)) return null;
+    return user;
   }
 
   private async apiMe(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
@@ -152,6 +200,22 @@ export class AuthServer {
     json(res, 200, { ok: true, name });
   }
 
+  // "Sair de todos os dispositivos". Derruba inclusive a sessão de quem chamou — é o
+  // comportamento certo para quem suspeita que o token vazou (C8).
+  private async apiRevokeSessions(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ): Promise<void> {
+    const user = await this.authedUser(req);
+    if (!user) {
+      json(res, 401, { error: "unauthorized" });
+      return;
+    }
+    await this.users.revokeSessions(String(user._id));
+    logger.info({ user: String(user._id) }, "Sessões revogadas a pedido do titular");
+    json(res, 200, { ok: true });
+  }
+
   private async apiDeleteAccount(
     req: http.IncomingMessage,
     res: http.ServerResponse,
@@ -206,14 +270,14 @@ export class AuthServer {
         json(res, 401, { error: "invalid code" });
         return;
       }
-      await this.accounts.ensureWorkosUser(profile.id, {
+      const user = await this.accounts.ensureWorkosUser(profile.id, {
         name: profile.name,
         email: profile.email,
       });
       if (anon) {
         await this.accounts.absorbAnonymous(profile.id, anon);
       }
-      json(res, 200, { token: this.auth.issueJwt(profile) });
+      json(res, 200, { token: this.auth.issueJwt(profile, user.tokenVersion ?? 0) });
     } catch (err) {
       logger.error({ err }, "Falha na verificação de login");
       json(res, 500, { error: "verify failed" });
@@ -222,7 +286,11 @@ export class AuthServer {
 
   // Gera um token de vínculo para o usuário logado (JWT em ?token=) e redireciona ao deep-link
   // da plataforma. O usuário inicia o contato com o bot (Start/enviar) carregando o token.
-  private link(url: URL, res: http.ServerResponse, platform: "telegram" | "whatsapp"): void {
+  private async link(
+    url: URL,
+    res: http.ServerResponse,
+    platform: "telegram" | "whatsapp",
+  ): Promise<void> {
     const session = this.auth.verifyJwt(url.searchParams.get("token") ?? "");
     if (!session) {
       res.writeHead(401);
@@ -230,10 +298,8 @@ export class AuthServer {
       return;
     }
 
-    const target =
-      platform === "telegram"
-        ? telegramDeepLink(this.linkTokens.issue(session.sub))
-        : whatsappDeepLink(this.linkTokens.issue(session.sub));
+    const token = await this.linkTokens.issue(session.sub);
+    const target = platform === "telegram" ? telegramDeepLink(token) : whatsappDeepLink(token);
 
     if (!target) {
       res.writeHead(503);
@@ -263,7 +329,7 @@ export class AuthServer {
       const profile = await this.auth.authenticate(code);
       const { anon } = decodeState(url.searchParams.get("state"));
 
-      await this.accounts.ensureWorkosUser(profile.id, {
+      const user = await this.accounts.ensureWorkosUser(profile.id, {
         name: profile.name,
         email: profile.email,
       });
@@ -271,7 +337,7 @@ export class AuthServer {
         await this.accounts.absorbAnonymous(profile.id, anon);
       }
 
-      const token = this.auth.issueJwt(profile);
+      const token = this.auth.issueJwt(profile, user.tokenVersion ?? 0);
       const base = config.webAppUrl || "/";
       const sep = base.includes("?") ? "&" : "?";
       res.writeHead(302, { Location: `${base}${sep}token=${encodeURIComponent(token)}` });

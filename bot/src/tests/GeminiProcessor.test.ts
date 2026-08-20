@@ -18,8 +18,6 @@ describe("GeminiProcessor", () => {
     };
     vertexAIStub.getGenerativeModel.returns(modelStub);
 
-    process.env.GCP_PROJECT_ID = "test-project";
-
     geminiProcessor = new GeminiProcessor();
     (geminiProcessor as any).vertexAI = vertexAIStub;
     (geminiProcessor as any).model = modelStub;

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import "reflect-metadata";
 import { PaddleOcrProvider } from "../services/ocr/PaddleOcrProvider";
+import { OcrError } from "../utils/errors";
 import sinon from "sinon";
 
 describe("PaddleOcrProvider", () => {
@@ -21,21 +22,20 @@ describe("PaddleOcrProvider", () => {
     expect(fetchStub.calledOnce).toBe(true);
   });
 
-  it("returns a graceful error message when the service is unreachable", async () => {
+  // C12: falha de OCR sobe como erro tipado; nunca como texto que a IA leria como cupom.
+  it("throws OcrError when the service is unreachable", async () => {
     sinon.stub(global, "fetch").rejects(new Error("connection refused"));
 
     const provider = new PaddleOcrProvider();
-    const text = await provider.extractTextFromImage("base64-img");
 
-    expect(text).toBe("Erro ao processar a imagem.");
+    await expect(provider.extractTextFromImage("base64-img")).rejects.toThrow(OcrError);
   });
 
-  it("returns a graceful error message on non-2xx responses", async () => {
+  it("throws OcrError on non-2xx responses", async () => {
     sinon.stub(global, "fetch").resolves({ ok: false, status: 500 } as any);
 
     const provider = new PaddleOcrProvider();
-    const text = await provider.extractTextFromImage("base64-img");
 
-    expect(text).toBe("Erro ao processar a imagem.");
+    await expect(provider.extractTextFromImage("base64-img")).rejects.toThrow(OcrError);
   });
 });

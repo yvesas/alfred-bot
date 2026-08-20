@@ -24,6 +24,20 @@ export const config = {
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   paddleOcrUrl: process.env.PADDLE_OCR_URL ?? "http://ocr:8000",
 
+  // ---- Modelos de IA ----
+  // Id de modelo é o fato que envelhece mais rápido neste sistema: fornecedor aposenta
+  // modelo com data marcada. Ficar hardcoded custou caro — o `gemini-2.0-flash-lite-001`
+  // foi desligado no Vertex AI em 2026-06-01 e o bot parou sem ninguém ver. Aqui, trocar
+  // de modelo é variável de ambiente; a próxima aposentadoria não pede deploy.
+  // Ver docs/adr/0003-ia-e-ocr-atras-de-interface.md e C0 em specs/codebase/CONCERNS.md.
+  geminiModel: process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
+  geminiLocation: process.env.GEMINI_LOCATION || "us-central1",
+  // Modelo que lê a imagem do cupom. Separado do de texto de propósito: a extração de
+  // cupom é a chamada cara e pode justificar um modelo diferente da conversa.
+  geminiVisionModel:
+    process.env.GEMINI_VISION_MODEL || process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
+  openaiModel: process.env.OPENAI_MODEL || "gpt-5.6-terra",
+
   // Login web (B1 — WorkOS AuthKit). Opcional: sem chaves, o login fica desligado.
   workosApiKey: process.env.WORKOS_API_KEY ?? "",
   workosClientId: process.env.WORKOS_CLIENT_ID ?? "",
@@ -63,6 +77,31 @@ export const config = {
     max: Number(process.env.RATE_LIMIT_MAX) || 20,
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
   },
+  // Validade do estado que atravessa duas mensagens (C2). Antes viviam num Map e
+  // duravam o processo inteiro; num banco precisam vencer, senão a coleção cresce para
+  // sempre. Uma hora é conversa longa; e-mail acompanha a validade do código.
+  pendingPurchaseTtlMs: Number(process.env.PENDING_PURCHASE_TTL_MS) || 60 * 60_000,
+  pendingEmailTtlMs: Number(process.env.PENDING_EMAIL_TTL_MS) || 15 * 60_000,
+  linkTokenTtlMs: Number(process.env.LINK_TOKEN_TTL_MS) || 10 * 60_000,
+  // Quantas réplicas do bot rodam. O rate limit é o único estado que ficou em memória
+  // — ida ao banco por requisição custaria caro — então o teto é dividido por aqui,
+  // para que N instâncias somem o limite configurado em vez de multiplicá-lo.
+  replicas: Math.max(1, Number(process.env.REPLICAS) || 1),
+  // Confiar em `x-forwarded-for` só quando há proxy declarado. Sem isto, o cliente
+  // forja o próprio IP e o rate limit vira decoração.
+  trustProxy: (process.env.TRUST_PROXY ?? "false").toLowerCase() === "true",
+  // Rate limit do AuthServer, por IP. Separado do rate limit do chat: o chat é
+  // conversa humana, o HTTP é superfície aberta à internet (C6).
+  httpRateLimit: {
+    max: Number(process.env.HTTP_RATE_LIMIT_MAX) || 60,
+    windowMs: Number(process.env.HTTP_RATE_LIMIT_WINDOW_MS) || 60_000,
+  },
+  // Bem mais apertado: cada chamada a /auth/email/start dispara um e-mail real pelo
+  // WorkOS. Sem teto, dá para queimar a cota e usar o Alfred para spammar terceiros.
+  authEmailRateLimit: {
+    max: Number(process.env.AUTH_EMAIL_RATE_LIMIT_MAX) || 5,
+    windowMs: Number(process.env.AUTH_EMAIL_RATE_LIMIT_WINDOW_MS) || 15 * 60_000,
+  },
 };
 
 // Login web habilitado quando dá para autenticar (WorkOS Magic Auth) e assinar a sessão.
@@ -73,12 +112,40 @@ export function isAuthEnabled(): boolean {
 }
 
 // Valida as variáveis essenciais no startup. Chamada em index.ts antes de subir o bot.
-export function assertRequiredConfig(): void {
+export function assertRequiredConfig(env: NodeJS.ProcessEnv = process.env): void {
   const missing: string[] = [];
   if (!config.databaseUrl) missing.push("DATABASE_URL");
   if (!config.telegramToken) missing.push("TELEGRAM_TOKEN");
 
   if (missing.length > 0) {
     throw new Error(`Variáveis de ambiente obrigatórias ausentes: ${missing.join(", ")}`);
+  }
+
+  assertProductionOrigins(env);
+}
+
+// C7 — em produção, origem tem que ser explícita.
+//
+// `WEB_ALLOWED_ORIGIN` (WebSocket) e `WEB_APP_URL` (CORS da API) caem em "*" quando
+// não definidas. Isso é conveniente em desenvolvimento e é uma falha **aberta** em
+// produção: esquecer a variável libera o chat e a API para qualquer site. Aqui o
+// esquecimento vira erro no startup, com a lista do que falta — não uma brecha
+// silenciosa. Em desenvolvimento segue permissivo.
+export function assertProductionOrigins(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.NODE_ENV !== "production") return;
+
+  const open: string[] = [];
+  if (!env.WEB_ALLOWED_ORIGIN || env.WEB_ALLOWED_ORIGIN.trim() === "*") {
+    open.push("WEB_ALLOWED_ORIGIN");
+  }
+  if (!env.WEB_APP_URL || env.WEB_APP_URL.trim() === "*") {
+    open.push("WEB_APP_URL");
+  }
+
+  if (open.length > 0) {
+    throw new Error(
+      `Em produção, defina uma origem explícita (nunca "*") para: ${open.join(", ")}. ` +
+        `Sem isso o WebSocket e a API aceitam qualquer site.`,
+    );
   }
 }

@@ -21,6 +21,7 @@ import { RateLimiter } from "../services/RateLimiter";
 import { ReminderService } from "../services/ReminderService";
 import { ReminderScheduler } from "../services/ReminderScheduler";
 import { RetentionService } from "../services/RetentionService";
+import { JobLockService } from "../services/JobLockService";
 import { RetentionScheduler } from "../services/RetentionScheduler";
 import { AuthService } from "../services/AuthService";
 import { AccountService } from "../services/AccountService";
@@ -32,6 +33,10 @@ import { ExportService } from "../services/ExportService";
 import { AuthServer } from "./authServer";
 import { OutboundRegistry } from "../core/OutboundRegistry";
 import { BotCore } from "../core/BotCore";
+import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
+import { AccountLinking } from "../core/AccountLinking";
+import { PendingEmailStore } from "../core/PendingEmailStore";
+import { ConversationStateStore } from "../core/ConversationStateStore";
 import { TelegramAdapter } from "../platforms/telegram/TelegramAdapter";
 import { WhatsAppAdapter } from "../platforms/whatsapp/WhatsAppAdapter";
 import { WebAdapter } from "../platforms/web/WebAdapter";
@@ -74,11 +79,12 @@ container.bind<GptProcessor>(GptProcessor).toSelf();
 container.bind<RateLimiter>(RateLimiter).toSelf().inSingletonScope();
 container.bind<ReminderService>(ReminderService).toSelf();
 container.bind<RetentionService>(RetentionService).toSelf();
+// Singleton: o `owner` do lock identifica ESTA instância; um por processo.
+container.bind<JobLockService>(JobLockService).toSelf().inSingletonScope();
 container.bind<RetentionScheduler>(RetentionScheduler).toSelf().inSingletonScope();
 container.bind<AuthService>(AuthService).toSelf().inSingletonScope();
 container.bind<MergeService>(MergeService).toSelf();
-// Singleton: os tokens de vínculo vivem em memória entre o web e os adapters.
-container.bind<LinkTokenService>(LinkTokenService).toSelf().inSingletonScope();
+container.bind<LinkTokenService>(LinkTokenService).toSelf();
 container.bind<PlanService>(PlanService).toSelf();
 container.bind<ReportService>(ReportService).toSelf();
 container.bind<ExportService>(ExportService).toSelf();
@@ -89,6 +95,11 @@ container.bind<MessageProcessingService>(MessageProcessingService).toSelf();
 // e o ReminderScheduler (que resolve o sender pela plataforma).
 container.bind<OutboundRegistry>(OutboundRegistry).toSelf().inSingletonScope();
 container.bind<ReminderScheduler>(ReminderScheduler).toSelf().inSingletonScope();
+container.bind<PurchaseFlow>(PurchaseFlow).toSelf();
+container.bind<AccountLinking>(AccountLinking).toSelf();
+// O estado de conversa saiu da memória para o Mongo (C2) — o store é sem estado.
+container.bind<ConversationStateStore>(ConversationStateStore).toSelf();
+container.bind<PendingEmailStore>(PendingEmailStore).toSelf();
 container.bind<BotCore>(BotCore).toSelf().inSingletonScope();
 
 container.bind(TelegramAdapter).toSelf().inSingletonScope();

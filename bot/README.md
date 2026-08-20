@@ -211,10 +211,14 @@ Notas:
 
 ## 🔄 CI
 
-O workflow [`.github/workflows/test.yml`](./.github/workflows/test.yml) roda em push/PR para `main`:
+O workflow [`.github/workflows/bot.yml`](../.github/workflows/bot.yml) roda em push/PR para `main`
+(filtrado por `bot/**`):
 instala com lockfile congelado (`--frozen-lockfile`), executa **lint**, **type-check**, **testes com
 cobertura** e envia o relatório ao Codecov.
 
-## 📌 Roadmap
+## 📌 Roadmap e documentação
 
-Funcionalidades atuais, desejadas, bugs conhecidos e melhorias estão documentados em **[ROADMAP.md](./ROADMAP.md)**. A análise técnica geral do projeto está em **[ANALISE-PROJETO.md](./ANALISE-PROJETO.md)**.
+O roadmap e o estado do projeto ficam em **[`specs/project/`](../specs/project)**;
+a análise técnica (arquitetura, convenções, testes, integrações e **riscos
+conhecidos**) em **[`specs/codebase/`](../specs/codebase)**. A arquitetura estável
+e as decisões estruturais estão em **[`docs/`](../docs)**.

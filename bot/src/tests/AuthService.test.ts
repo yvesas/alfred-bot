@@ -1,13 +1,19 @@
 import "reflect-metadata";
 import { AuthService } from "../services/AuthService";
+import { UserRepository } from "../repositories/UserRepository";
 import { config } from "../infra/config";
+import sinon from "sinon";
+
+// O AuthService passou a consultar o repositório para saber se a sessão ainda é a
+// corrente (C8). Estes testes cobrem só a parte de JWT, então o repositório é um stub.
+const userRepo = sinon.createStubInstance(UserRepository);
 
 describe("AuthService (JWT)", () => {
   let auth: AuthService;
 
   beforeEach(() => {
     config.jwtSecret = "test-secret";
-    auth = new AuthService();
+    auth = new AuthService(userRepo);
   });
 
   it("emite e valida um JWT (roundtrip)", () => {
@@ -26,7 +32,7 @@ describe("AuthService (JWT)", () => {
   it("retorna null quando não há segredo configurado", () => {
     const token = auth.issueJwt({ id: "u" });
     config.jwtSecret = "";
-    expect(new AuthService().verifyJwt(token)).toBeNull();
+    expect(new AuthService(userRepo).verifyJwt(token)).toBeNull();
   });
 
   it("canVerifyEmail reflete a presença de API key + client id", () => {
@@ -35,10 +41,10 @@ describe("AuthService (JWT)", () => {
 
     config.workosApiKey = "sk_test";
     config.workosClientId = "client_x";
-    expect(new AuthService().canVerifyEmail()).toBe(true);
+    expect(new AuthService(userRepo).canVerifyEmail()).toBe(true);
 
     config.workosApiKey = "";
-    expect(new AuthService().canVerifyEmail()).toBe(false);
+    expect(new AuthService(userRepo).canVerifyEmail()).toBe(false);
 
     config.workosApiKey = apiKey;
     config.workosClientId = clientId;

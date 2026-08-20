@@ -11,6 +11,7 @@ import { ReportService } from "../services/ReportService";
 import { PlanService } from "../services/PlanService";
 import { ExportService } from "../services/ExportService";
 import { UserService } from "../services/UserService";
+import { RateLimiter } from "../services/RateLimiter";
 import { config } from "../infra/config";
 
 describe("AuthServer (integração HTTP)", () => {
@@ -21,6 +22,7 @@ describe("AuthServer (integração HTTP)", () => {
   let plans: sinon.SinonStubbedInstance<PlanService>;
   let exports: sinon.SinonStubbedInstance<ExportService>;
   let users: sinon.SinonStubbedInstance<UserService>;
+  let rateLimiter: RateLimiter;
   let server: http.Server;
   let base: string;
   let authServer: AuthServer;
@@ -33,7 +35,21 @@ describe("AuthServer (integração HTTP)", () => {
     plans = sinon.createStubInstance(PlanService);
     exports = sinon.createStubInstance(ExportService);
     users = sinon.createStubInstance(UserService);
-    authServer = new AuthServer(auth, accounts, linkTokens, reports, plans, exports, users);
+    // Limiter real: o rate limit é comportamento do servidor, não colaborador a mockar.
+    rateLimiter = new RateLimiter();
+    // Desde o C8, validar sessão inclui conferir se ela é a CORRENTE do usuário.
+    // Por padrão é — os casos de revogação sobrescrevem.
+    auth.isCurrent.returns(true);
+    authServer = new AuthServer(
+      auth,
+      accounts,
+      linkTokens,
+      reports,
+      plans,
+      exports,
+      users,
+      rateLimiter,
+    );
 
     server = authServer.start(0);
     if (!server.listening) await new Promise((res) => server.once("listening", res));
@@ -157,7 +173,7 @@ describe("AuthServer (integração HTTP)", () => {
 
   it("GET /auth/link/telegram redireciona ao t.me", async () => {
     auth.verifyJwt.returns({ sub: "wos1" });
-    linkTokens.issue.returns("LINKTOK");
+    linkTokens.issue.resolves("LINKTOK");
     config.telegramBotUsername = "AlfredBot";
 
     const res = await fetch(`${base}/auth/link/telegram?token=jwt`, { redirect: "manual" });
@@ -169,5 +185,42 @@ describe("AuthServer (integração HTTP)", () => {
     const res = await fetch(`${base}/api/me`, { method: "OPTIONS" });
     expect(res.status).toBe(204);
     expect(res.headers.get("access-control-allow-methods")).toContain("DELETE");
+  });
+
+  // C8 — revogação de sessão.
+  describe("revogação de sessão", () => {
+    it("POST /api/sessions/revoke incrementa a versão do usuário", async () => {
+      auth.verifyJwt.returns({ sub: "wos1" });
+      users.findByIdentity.resolves(authedUser());
+
+      const res = await fetch(`${base}/api/sessions/revoke`, {
+        method: "POST",
+        headers: { Authorization: "Bearer tok" },
+      });
+
+      expect(res.status).toBe(200);
+      expect(users.revokeSessions.calledOnce).toBe(true);
+    });
+
+    // O ponto do C8: assinatura válida não basta. O token continua assinado e dentro
+    // dos 30 dias, mas deixou de ser a sessão corrente.
+    it("recusa um token válido cuja sessão foi revogada", async () => {
+      auth.verifyJwt.returns({ sub: "wos1", v: 1 });
+      users.findByIdentity.resolves(authedUser());
+      auth.isCurrent.returns(false);
+
+      const res = await fetch(`${base}/api/me`, { headers: { Authorization: "Bearer tok" } });
+
+      expect(res.status).toBe(401);
+    });
+
+    it("revogar exige estar autenticado", async () => {
+      auth.verifyJwt.returns(null);
+
+      const res = await fetch(`${base}/api/sessions/revoke`, { method: "POST" });
+
+      expect(res.status).toBe(401);
+      expect(users.revokeSessions.called).toBe(false);
+    });
   });
 });

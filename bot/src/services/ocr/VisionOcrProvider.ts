@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { injectable } from "inversify";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { IOcrProvider } from "./IOcrProvider";
+import { OcrError } from "../../utils/errors";
 import { logger } from "../../infra/logger";
 import { config } from "../../infra/config";
 
@@ -34,8 +35,8 @@ export class VisionOcrProvider implements IOcrProvider {
         return "Nenhum texto encontrado na imagem.";
       }
     } catch (error) {
-      logger.error({ err: error }, "Erro ao processar a imagem (Vision OCR)");
-      return "Erro ao processar a imagem.";
+      logger.error({ err: error }, "Falha no OCR (Google Vision)");
+      throw new OcrError("Falha ao ler a imagem com o Google Vision.", "vision");
     }
   }
 }

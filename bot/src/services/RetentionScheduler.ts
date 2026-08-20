@@ -1,14 +1,21 @@
 import { inject, injectable } from "inversify";
 import { RetentionService } from "./RetentionService";
+import { JobLockService } from "./JobLockService";
 import { config } from "../infra/config";
 import { logger } from "../infra/logger";
 
 // Job de retenção (LGPD): roda periodicamente e purga sessões anônimas inativas.
+// O ciclo roda sob lock — ver JobLockService.
+const RETENTION_JOB = "retention";
+
 @injectable()
 export class RetentionScheduler {
   private timer?: NodeJS.Timeout;
 
-  constructor(@inject(RetentionService) private retention: RetentionService) {}
+  constructor(
+    @inject(RetentionService) private retention: RetentionService,
+    @inject(JobLockService) private locks: JobLockService,
+  ) {}
 
   start(): void {
     if (this.timer) return;
@@ -28,7 +35,11 @@ export class RetentionScheduler {
 
   async tick(now: Date = new Date()): Promise<void> {
     try {
-      await this.retention.purgeAnonymous(now);
+      // Sob lock: este job APAGA CONTAS. Duas instâncias purgando ao mesmo tempo é
+      // pior que ruído — é exclusão concorrente sobre o mesmo conjunto (C3).
+      await this.locks.runExclusively(RETENTION_JOB, config.retentionIntervalMs, async () => {
+        await this.retention.purgeAnonymous(now);
+      });
     } catch (err) {
       logger.error({ err }, "Erro no ciclo de retenção");
     }

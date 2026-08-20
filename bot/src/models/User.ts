@@ -34,6 +34,10 @@ export interface IUserBase {
   verifiedEmail?: string; // verificado via WorkOS (login/Magic Auth)
   verifiedPhone?: string; // verificado pela plataforma (WhatsApp; Telegram via "compartilhar contato")
   plan?: Plan; // plano de uso (default "free")
+  // Versão da sessão. Todo JWT emitido carrega o valor do momento; incrementar aqui
+  // invalida de uma vez todos os tokens já emitidos, sem precisar rastreá-los (C8).
+  // É o mínimo para atender a um pedido de revogação do titular (LGPD).
+  tokenVersion?: number;
   consentVersion?: string; // versão da Política de Privacidade aceita (LGPD)
   consentAt?: Date; // quando o consentimento foi registrado
 }
@@ -79,6 +83,7 @@ const UserSchema = new Schema<IUser>(
     verifiedEmail: { type: String },
     verifiedPhone: { type: String },
     plan: { type: String, enum: ["free", "pro"], default: "free" },
+    tokenVersion: { type: Number, default: 0 },
     consentVersion: { type: String },
     consentAt: { type: Date },
   },

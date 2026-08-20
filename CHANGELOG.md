@@ -39,6 +39,12 @@ O projeto ainda **não foi para produção** e não tem versão publicada.
 
 ### Corrigido
 
+- **A recusa de uma compra implausível saía em português para todo mundo.** Quem usa
+  o bot em inglês ou espanhol recebia a mensagem em pt-BR. A validação passou a
+  devolver a chave da mensagem, e quem responde traduz. Mesma correção para a recusa
+  do contato de terceiro no Telegram, que agora acontece no núcleo — o adapter não
+  sabe o idioma do usuário. (C15)
+
 - **A camada de IA estava quebrada há dois meses.** O `gemini-2.0-flash-lite-001`
   — default para texto **e** para leitura de cupom, hardcoded em dois arquivos —
   foi desligado no Vertex AI em 2026-06-01. O fallback cruzado caía num

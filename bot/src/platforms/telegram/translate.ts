@@ -80,7 +80,11 @@ export function toTelegramContact(externalId: string, contact: TelegramContact):
     platform: "telegram",
     externalId,
     kind: "contact",
-    contact: { phone: contact.phone_number, name: contact.first_name },
+    contact: {
+      phone: contact.phone_number,
+      name: contact.first_name,
+      belongsToSender: isOwnContact(contact, externalId),
+    },
   };
 }
 

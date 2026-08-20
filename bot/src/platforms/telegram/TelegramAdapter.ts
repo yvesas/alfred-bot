@@ -11,7 +11,6 @@ import {
   toTelegramCommand,
   toTelegramPhoto,
   toTelegramContact,
-  isOwnContact,
   bestResolution,
 } from "./translate";
 import { config } from "../../infra/config";
@@ -120,16 +119,10 @@ export class TelegramAdapter implements IMessagingAdapter, OutboundSender {
     return Buffer.from(arrayBuffer).toString("base64");
   }
 
+  // Só normaliza. A recusa do contato de terceiro é do BotCore, que sabe o idioma do
+  // usuário — o adapter não sabe, e por isso respondia em português fixo (C15).
   private async handleContact(ctx: Context): Promise<void> {
     const contact = (ctx.message as Message.ContactMessage).contact;
-    const userId = String(ctx.from?.id);
-
-    // Só aceitamos o contato do próprio usuário (checagem específica do Telegram).
-    if (!isOwnContact(contact, userId)) {
-      await ctx.reply("Por favor, compartilhe o seu próprio contato. 🙂");
-      return;
-    }
-
-    await this.dispatch(ctx, toTelegramContact(userId, contact));
+    await this.dispatch(ctx, toTelegramContact(String(ctx.from?.id), contact));
   }
 }

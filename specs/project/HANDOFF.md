@@ -1,7 +1,7 @@
 # Retomada — de onde paramos
 
 **Última sessão:** 2026-08-14 a 2026-08-20
-**Onde está:** fundação e endurecimento concluídos · **produto ainda não foi ao ar**
+**Onde está:** fundação e endurecimento **mergeados na `main`** · produto ainda não foi ao ar
 **Repositório:** [`yvesas/alfred-bot`](https://github.com/yvesas/alfred-bot) — privado
 
 Ponto de entrada de quem volta. Estado detalhado em [`STATE.md`](STATE.md); o plano
@@ -43,20 +43,23 @@ cd web && pnpm dev        # Vite em :5173
 
 ## 2. O que está aberto agora
 
-**Dois PRs esperando revisão**, e o segundo depende do primeiro:
+**Nada esperando revisão.** Os três PRs de fundação foram mergeados em 2026-08-20:
+[#8](https://github.com/yvesas/alfred-bot/pull/8) (fundação, produto, governança e as
+quatro fases de endurecimento), [#9](https://github.com/yvesas/alfred-bot/pull/9)
+(bloco A da Fase 5 técnica) e [#10](https://github.com/yvesas/alfred-bot/pull/10)
+(roadmap por fases, ADR-0007, este arquivo).
 
-| PR | O quê | CI |
-|---|---|---|
-| [#8](https://github.com/yvesas/alfred-bot/pull/8) | fundação, produto, governança e as 4 fases de endurecimento | ✅ |
-| [#9](https://github.com/yvesas/alfred-bot/pull/9) | bloco A da Fase 5 técnica (`C15`, `C19`) — empilhado no #8 | — |
+A `main` está com **327 testes**, cobertura 79,1 %, e `./scripts/check.sh` verde.
 
-**A próxima coisa a fazer é a [Fase 0](ROADMAP.md#fase-0--colocar-no-ar-)**, e a
-maior parte dela é sua:
+**A próxima coisa a fazer é a [Fase 0](ROADMAP.md#fase-0--colocar-no-ar-)** — e ela
+está parada em você:
 
 1. `gcloud ai models list --region=us-central1 | grep flash-lite` — confirma o `C0`
 2. **Rotacionar a chave do GCP** (`C1`) — aberta desde o começo do projeto
-3. Mergear os dois PRs
-4. Escolher o host (`BL-3`)
+3. Escolher o host (`BL-3`)
+
+Só depois disso o trabalho volta a ser de código: CD por tag, primeiro deploy, e
+rodar o `migrateCanonical` confirmando que não sobrou usuário sem `identities[]`.
 
 ---
 
@@ -78,6 +81,12 @@ existe. Descoberto por um teste que falhava uma vez a cada três. Ver `C3`.
 
 **Log sujo esconde falha real.** O ruído de import dinâmico no teste do QR quase fez
 a instabilidade acima passar batida. Ver `C19`.
+
+**PR empilhado não se reaponta sozinho se a base não for apagada.** Ao mergear o #8,
+o #9 continuou apontando para a branch base — que ainda existia — e acabou mergeando
+nela em vez de na `main`. O conteúdo chegou pelo #10, mas o caminho foi torto. Com
+`deleteBranchOnMerge=false` no repositório, **reaponte o PR de cima para a `main`
+antes de mergear o de baixo**.
 
 **Baileys é ESM puro e o Jest aqui é CommonJS.** Arquivo que importa o SDK não carrega
 em teste — por isso a tradução mora em `platforms/<canal>/translate.ts`.

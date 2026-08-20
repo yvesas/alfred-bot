@@ -4,7 +4,7 @@
 > ADR em [`docs/adr/`](../../docs/adr/).
 
 **Última sessão:** 2026-08-18
-**Branch:** `chore/foundation-and-hardening`
+**Branch:** `main` — os três PRs de fundação foram mergeados em 2026-08-20
 
 ---
 

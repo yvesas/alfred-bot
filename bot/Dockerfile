@@ -1,5 +1,5 @@
 # ---------- build ----------
-FROM node:20-slim AS builder
+FROM node:26-slim AS builder
 WORKDIR /app
 
 # Evita rodar o hook do husky durante o install em ambiente sem git.
@@ -15,7 +15,7 @@ COPY . .
 RUN pnpm build
 
 # ---------- runtime ----------
-FROM node:20-slim AS runner
+FROM node:26-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

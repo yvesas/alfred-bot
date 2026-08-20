@@ -2,5 +2,5 @@ fastapi==0.115.*
 uvicorn[standard]==0.32.*
 paddleocr==2.9.1
 paddlepaddle==2.6.2
-opencv-python-headless==4.10.*
+opencv-python-headless==5.0.*
 numpy<2

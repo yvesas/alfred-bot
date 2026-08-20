@@ -20,6 +20,7 @@ testes e Dockerfile. Não há workspace pnpm unificado.
 
 | Pergunta | Arquivo |
 |---|---|
+| **Estou voltando ao projeto** | **`specs/project/HANDOFF.md`** |
 | Em que pé está o projeto? | `specs/project/STATE.md` |
 | O que vem depois, no produto? | `specs/project/ROADMAP.md` |
 | O que vem depois, no código? | **`specs/project/PLANO-TECNICO.md`** |

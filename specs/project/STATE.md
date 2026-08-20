@@ -87,8 +87,8 @@ não pegava porque o checkout é limpo.
 |---|---|---|
 | BL-1 | **Rotacionar a chave GCP** (C1) — credencial real em disco desde o início | **Você.** O agente não tem acesso ao console |
 | BL-2 | **Confirmar o desligamento do Gemini 2.0** — `gcloud ai models list --region=us-central1 \| grep -i flash-lite` | **Você.** O código já não depende disso, mas confirma o diagnóstico |
-| BL-3 | Escolher o host (Railway / Fly.io / Render / Cloud Run / VPS) | Decisão sua |
-| BL-4 | Harness entra como **dependência npm** (já empacotado) ou por **fork**? E o Mongo continua ou vai para Postgres+pgvector? | Decisão sua — é a próxima ADR |
+| BL-3 | Escolher o host (Railway / Fly.io / Render / Cloud Run / VPS) | Decisão sua — está na **Fase 0** do roadmap |
+| ~~BL-4~~ | ~~Harness como dependência ou fork? Mongo ou Postgres?~~ | ✅ **fechado em 2026-08-20** — [ADR-0007](../../docs/adr/0007-relacao-com-o-yas-harness.md): copiar contratos, não depender; o Mongo fica |
 | — | ~~Redis ou Mongo para o estado de conversa?~~ | ✅ decidido em 2026-08-18: Mongo |
 
 ---
@@ -121,6 +121,9 @@ está no [`PLANO-TECNICO.md`](PLANO-TECNICO.md): **Fase 3**, quebrar o `BotCore`
 ---
 
 ## Para retomar
+
+**Comece pelo [`HANDOFF.md`](HANDOFF.md)** — religar o ambiente, o que está aberto e
+as armadilhas que já morderam.
 
 **O trabalho técnico tem plano próprio e vivo:**
 [`PLANO-TECNICO.md`](PLANO-TECNICO.md) — fases, estado de cada etapa e o ritual

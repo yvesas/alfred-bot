@@ -33,3 +33,4 @@ planos originais não foram commitados), por isso as datas são aproximadas.
 | 2026-06 | Cache do binário do `mongodb-memory-server` no CI | o download dominava o tempo de execução | `.github/workflows/bot.yml` |
 | 2026-08-14 | `specs/` guarda o plano, `docs/` guarda o sistema como é (D-DOC-001) | o `ROADMAP.md` na raiz misturava os dois e envelheceu junto | regra do workspace |
 | 2026-08-14 | Os `PLANO-*.md` perdidos não serão reconstruídos (D-DOC-002) | o que virou estrutura virou ADR; o resto era plano já consumido | `specs/project/ROADMAP.md` |
+| 2026-08-20 | Roadmap reordenado por **dependência**, não por valor percebido | Proatividade sobre um módulo só é o `ReminderScheduler` que já existe; second brain sobre um módulo só não tem o que cruzar. Mesma lição que o Niklas registrou ao reordenar o dele |

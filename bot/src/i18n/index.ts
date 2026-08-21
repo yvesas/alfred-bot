@@ -26,6 +26,34 @@ export type MessageKey =
   | "proactive_tasks_overdue"
   | "proactive_budget_warn"
   | "proactive_budget_over"
+  // ajuda — derivada do registro de módulos, não escrita à mão
+  | "help_intro"
+  | "help_chassis_title"
+  | "help_module_unavailable"
+  | "help_footer"
+  | "module_fin_title"
+  | "module_tasks_title"
+  | "module_projects_title"
+  | "cmd_start"
+  | "cmd_ajuda"
+  | "cmd_ia"
+  | "cmd_idioma"
+  | "cmd_nome"
+  | "cmd_vincular"
+  | "cmd_email"
+  | "cmd_codigo"
+  | "cmd_excluir_conta"
+  | "cmd_gastos"
+  | "cmd_compras"
+  | "cmd_editar"
+  | "cmd_excluir"
+  | "cmd_categorias"
+  | "cmd_orcamento"
+  | "cmd_exportar"
+  | "cmd_estoque"
+  | "cmd_lembretes"
+  | "cmd_tarefas"
+  | "cmd_projetos"
   // tarefas
   | "task_add_usage"
   | "task_added"
@@ -152,6 +180,34 @@ export type MessageKey =
 
 const MESSAGES: Record<Language, Record<MessageKey, string>> = {
   pt: {
+    help_intro:
+      "Sou o Alfred. Fale comigo normalmente — *não precisa decorar comando*. Os de baixo são atalhos.",
+    help_chassis_title: "⚙️ Sua conta",
+    help_module_unavailable: "ainda não disponível",
+    help_footer: "Mande uma compra por texto ou foto de cupom que eu registro.",
+    module_fin_title: "Finanças",
+    module_tasks_title: "Tarefas",
+    module_projects_title: "Projetos",
+    cmd_start: "começar, ou vincular esta conversa à sua conta",
+    cmd_ajuda: "esta lista",
+    cmd_ia: "trocar o modelo de IA que lê suas mensagens",
+    cmd_idioma: "trocar o idioma",
+    cmd_nome: "mudar como eu te chamo",
+    cmd_vincular: "usar a mesma conta em outro aplicativo",
+    cmd_email: "cadastrar ou trocar seu e-mail",
+    cmd_codigo: "confirmar o código que mandei por e-mail",
+    cmd_excluir_conta: "apagar sua conta e tudo que há nela",
+    cmd_gastos: "quanto você gastou no período",
+    cmd_compras: "histórico de compras, paginado",
+    cmd_editar: "corrige o valor ou a descrição de uma compra",
+    cmd_excluir: "apaga uma compra do histórico",
+    cmd_categorias: "suas categorias de gasto",
+    cmd_orcamento: "limite mensal por categoria, com alerta",
+    cmd_exportar: "baixa suas compras em CSV",
+    cmd_estoque: "o que tem na despensa",
+    cmd_lembretes: "lembretes recorrentes de contas a pagar",
+    cmd_tarefas: "o que você tem para fazer",
+    cmd_projetos: "seus projetos e o andamento de cada um",
     rate_limited: "⏳ Muitas mensagens em pouco tempo. Aguarde um instante e tente novamente.",
     greeting_new: "👋 Olá{name}! Eu registro suas compras e gastos. {question}",
     greeting_returning:
@@ -299,6 +355,34 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     phone_saved: "📱 Telefone salvo! {askEmail}",
   },
   en: {
+    help_intro:
+      "I'm Alfred. Just talk to me — *no need to memorise commands*. The ones below are shortcuts.",
+    help_chassis_title: "⚙️ Your account",
+    help_module_unavailable: "not available yet",
+    help_footer: "Send me a purchase as text or a photo of the receipt and I'll log it.",
+    module_fin_title: "Finances",
+    module_tasks_title: "Tasks",
+    module_projects_title: "Projects",
+    cmd_start: "get started, or link this chat to your account",
+    cmd_ajuda: "this list",
+    cmd_ia: "switch the AI model that reads your messages",
+    cmd_idioma: "switch language",
+    cmd_nome: "change what I call you",
+    cmd_vincular: "use the same account in another app",
+    cmd_email: "set or change your email",
+    cmd_codigo: "confirm the code I emailed you",
+    cmd_excluir_conta: "delete your account and everything in it",
+    cmd_gastos: "how much you spent in a period",
+    cmd_compras: "purchase history, paginated",
+    cmd_editar: "fix the amount or description of a purchase",
+    cmd_excluir: "remove a purchase from your history",
+    cmd_categorias: "your spending categories",
+    cmd_orcamento: "monthly limit per category, with alerts",
+    cmd_exportar: "download your purchases as CSV",
+    cmd_estoque: "what's in the pantry",
+    cmd_lembretes: "recurring bill reminders",
+    cmd_tarefas: "what you have to do",
+    cmd_projetos: "your projects and how each one is going",
     rate_limited: "⏳ Too many messages in a short time. Please wait a moment and try again.",
     greeting_new: "👋 Hi{name}! I keep track of your purchases and spending. {question}",
     greeting_returning:
@@ -446,6 +530,34 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     phone_saved: "📱 Phone saved! {askEmail}",
   },
   es: {
+    help_intro:
+      "Soy Alfred. Háblame con normalidad — *no hace falta memorizar comandos*. Los de abajo son atajos.",
+    help_chassis_title: "⚙️ Tu cuenta",
+    help_module_unavailable: "aún no disponible",
+    help_footer: "Mándame una compra por texto o una foto del recibo y la registro.",
+    module_fin_title: "Finanzas",
+    module_tasks_title: "Tareas",
+    module_projects_title: "Proyectos",
+    cmd_start: "empezar, o vincular esta conversación a tu cuenta",
+    cmd_ajuda: "esta lista",
+    cmd_ia: "cambiar el modelo de IA que lee tus mensajes",
+    cmd_idioma: "cambiar el idioma",
+    cmd_nome: "cambiar cómo te llamo",
+    cmd_vincular: "usar la misma cuenta en otra aplicación",
+    cmd_email: "registrar o cambiar tu correo",
+    cmd_codigo: "confirmar el código que te envié por correo",
+    cmd_excluir_conta: "borrar tu cuenta y todo lo que contiene",
+    cmd_gastos: "cuánto gastaste en el período",
+    cmd_compras: "historial de compras, paginado",
+    cmd_editar: "corrige el importe o la descripción de una compra",
+    cmd_excluir: "borra una compra del historial",
+    cmd_categorias: "tus categorías de gasto",
+    cmd_orcamento: "límite mensual por categoría, con aviso",
+    cmd_exportar: "descarga tus compras en CSV",
+    cmd_estoque: "qué hay en la despensa",
+    cmd_lembretes: "recordatorios recurrentes de facturas",
+    cmd_tarefas: "lo que tienes para hacer",
+    cmd_projetos: "tus proyectos y cómo va cada uno",
     rate_limited: "⏳ Demasiados mensajes en poco tiempo. Espera un momento e inténtalo de nuevo.",
     greeting_new: "👋 ¡Hola{name}! Registro tus compras y gastos. {question}",
     greeting_returning:

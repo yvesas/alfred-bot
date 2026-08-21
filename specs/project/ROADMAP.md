@@ -124,11 +124,18 @@ app de chat. Comando é bom **como atalho**, não como caminho principal.
 
 - ⬜ Botões inline e teclado contextual no Telegram
 - ⬜ Confirmar e editar por toque, em vez de sintaxe
-- ⬜ **Entrada por voz** — o Caddy aceita áudio; o Alfred não
-- ⬜ `/ajuda` gerado a partir do registro de módulos
+- ⬜ **Entrada por voz** — o Caddy aceita áudio; o Alfred não. *Depende da camada de
+  IA, que segue não confirmada (`C0`, `C24`) — é a última desta fase, não a primeira*
+- ✅ `/ajuda` gerado a partir do registro de módulos *(2026-08-21)* — e o menu nativo
+  do Telegram sai do mesmo catálogo, nos três idiomas
 
 O refactor do `C4` foi feito justamente para isto: um comando é um objeto, então o
 botão se pendura nele.
+
+O `/ajuda` já cobrou o preço de não ter feito isso antes: ao derivar o registro do
+Telegram do catálogo, apareceu que **`/tarefas` nunca tinha sido registrado no
+adapter** — estava declarado no módulo e com handler desde a Fase 1, mas no Telegram
+chegava como texto e ia para a IA como se fosse uma compra. Ver `C28`.
 
 ---
 

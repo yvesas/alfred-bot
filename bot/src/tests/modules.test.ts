@@ -52,7 +52,7 @@ describe("registro de módulos", () => {
   it("todo módulo descreve o que trata, para o roteador", () => {
     for (const m of MODULES) {
       expect(m.description.length).toBeGreaterThan(40);
-      expect(m.title).toBeTruthy();
+      expect(m.titleKey).toBeTruthy();
       expect(m.commands.length).toBeGreaterThan(0);
     }
   });

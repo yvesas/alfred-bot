@@ -493,6 +493,26 @@ Correção: `await Model.init()` uma vez, antes da primeira escrita. Fiscalizado
 `bot/src/tests/uniqueIndexGuard.test.ts`, que lê o fonte dos três e falha se alguém
 escrever o quarto sem a espera.
 
+### ~~C28~~ — `/tarefas` inalcançável no Telegram desde a Fase 1 · ✅ **resolvido em 2026-08-21**
+
+O `TelegramAdapter` registrava os comandos em **16 linhas `bot.command(...)` escritas à
+mão**. O módulo tarefas nasceu na Fase 1 declarado no registro e com handler, mas
+ninguém acrescentou a linha — e o `CLAUDE.md` avisava para acrescentar.
+
+O efeito não foi um erro visível: `/tarefas` caía no `bot.on("text")`, chegava ao
+`BotCore` como texto comum e ia para a IA **como se fosse a descrição de uma compra**.
+O usuário receberia uma tentativa de registrar "tarefas" como gasto.
+
+É a divergência de duas listas que o próprio código já descrevia em três lugares
+(`modules/registry.ts`, `core/commands.ts`, `core/commandRegistry.ts`) — todos os três
+derivam de uma lista só, e o adapter era o que faltava.
+
+**Correção:** o adapter percorre `KNOWN_COMMANDS`. `tests/help.test.ts` trava as listas
+juntas, e o menu nativo do Telegram sai do mesmo catálogo.
+
+**A lição, que vale além deste caso:** convenção escrita no `CLAUDE.md` não é garantia.
+Onde der para derivar em vez de pedir para lembrar, derive.
+
 ---
 
 ## Lacunas de produto (não são defeitos, são o que falta)

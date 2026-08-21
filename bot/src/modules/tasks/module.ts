@@ -8,10 +8,11 @@ import { ModuleDefinition } from "../ModuleDefinition";
 // pensando nisso; é a Fase 2.
 export const tasksModule: ModuleDefinition = {
   id: "tasks",
-  title: "Tarefas",
+  titleKey: "module_tasks_title",
+  icon: "✅",
   description:
     "Coisas para fazer: anotar uma tarefa, marcar prazo, listar o que está pendente, " +
     "concluir, e ser lembrado do que vence hoje sem precisar perguntar.",
   implemented: true,
-  commands: [{ name: "tarefas", summary: "o que você tem para fazer" }],
+  commands: [{ name: "tarefas", summaryKey: "cmd_tarefas" }],
 };

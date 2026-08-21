@@ -15,6 +15,8 @@ import {
 } from "./translate";
 import { config } from "../../infra/config";
 import { logger } from "../../infra/logger";
+import { KNOWN_COMMANDS } from "../../core/commands";
+import { helpCommands, MENU_LANGUAGES } from "../../core/help";
 
 // Adapter do Telegram (Telegraf): normaliza eventos para IncomingMessage, monta o Replier
 // e delega a lógica ao BotCore. Não contém regra de conversa.
@@ -38,24 +40,17 @@ export class TelegramAdapter implements IMessagingAdapter, OutboundSender {
   async start(): Promise<void> {
     this.outbound.register("telegram", this);
     this.bot.start((ctx) => this.dispatch(ctx, this.toCommand(ctx, "start")));
-    this.bot.command("compras", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "compras")));
-    this.bot.command("gastos", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "gastos")));
-    this.bot.command("ia", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "ia")));
-    this.bot.command("excluir", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "excluir")));
-    this.bot.command("editar", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "editar")));
-    this.bot.command("categorias", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "categorias")));
-    this.bot.command("idioma", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "idioma")));
-    this.bot.command("orcamento", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "orcamento")));
-    this.bot.command("lembretes", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "lembretes")));
-    this.bot.command("vincular", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "vincular")));
-    this.bot.command("email", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "email")));
-    this.bot.command("codigo", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "codigo")));
-    this.bot.command("exportar", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "exportar")));
-    this.bot.command("excluir_conta", (ctx) =>
-      this.dispatch(ctx, this.toCommand(ctx, "excluir_conta")),
-    );
-    this.bot.command("nome", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "nome")));
-    this.bot.command("estoque", (ctx) => this.dispatch(ctx, this.toCommand(ctx, "estoque")));
+
+    // Derivado do catálogo, não digitado. Antes eram 16 linhas escritas à mão, e a
+    // lista já tinha divergido: `/tarefas` nasceu na Fase 1 e nunca foi registrado
+    // aqui, então chegava como texto e ia parar na IA como se fosse uma compra.
+    // Comando que existe no registro passa a existir no Telegram, sem segunda lista.
+    for (const name of KNOWN_COMMANDS) {
+      if (name === "start") continue; // já tratado acima, com o token do deep-link
+      this.bot.command(name, (ctx) => this.dispatch(ctx, this.toCommand(ctx, name)));
+    }
+
+    await this.publishCommandMenu();
 
     this.bot.on("text", (ctx) => this.dispatch(ctx, this.toText(ctx)));
     this.bot.on("photo", (ctx) => this.dispatch(ctx, this.toPhoto(ctx)));
@@ -68,6 +63,27 @@ export class TelegramAdapter implements IMessagingAdapter, OutboundSender {
 
   async stop(): Promise<void> {
     this.bot.stop("shutdown");
+  }
+
+  // O menu que o Telegram mostra ao lado do campo de texto. Sai do mesmo catálogo, num
+  // idioma por vez — o Telegram guarda uma lista por `language_code` e escolhe pela
+  // configuração do aplicativo do usuário, não pela do Alfred.
+  //
+  // Falha aqui não derruba o bot: menu é conveniência, e ficar fora do ar por causa da
+  // decoração seria pior que ficar sem ela.
+  private async publishCommandMenu(): Promise<void> {
+    for (const lang of MENU_LANGUAGES) {
+      const commands = helpCommands(lang).map(({ name, summary }) => ({
+        command: name,
+        // O Telegram corta em 256 caracteres e rejeita a chamada inteira se passar.
+        description: summary.slice(0, 256),
+      }));
+      try {
+        await this.bot.telegram.setMyCommands(commands, { language_code: lang });
+      } catch (err) {
+        logger.warn({ err, lang }, "Não foi possível publicar o menu de comandos");
+      }
+    }
   }
 
   // ---------- helpers ----------

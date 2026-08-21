@@ -7,10 +7,11 @@ import { ModuleDefinition } from "../ModuleDefinition";
 // serem módulos do mesmo assistente, e não dois apps.
 export const projectsModule: ModuleDefinition = {
   id: "projects",
-  title: "Projetos",
+  titleKey: "module_projects_title",
+  icon: "📁",
   description:
     "Trabalhos maiores que agrupam tarefas: acompanhar andamento, prazo e o que já foi " +
     "gasto em cada projeto.",
   implemented: false,
-  commands: [{ name: "projetos", summary: "seus projetos e o andamento de cada um" }],
+  commands: [{ name: "projetos", summaryKey: "cmd_projetos" }],
 };

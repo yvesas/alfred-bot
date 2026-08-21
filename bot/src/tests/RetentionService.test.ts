@@ -10,7 +10,7 @@ describe("RetentionService", () => {
     const userRepo = sinon.createStubInstance(UserRepository);
     const accounts = sinon.createStubInstance(AccountService);
     userRepo.findAnonymousInactive.resolves([{ _id: "a" } as any, { _id: "b" } as any]);
-    accounts.deleteAccount.resolves({ purchases: 0, reminders: 0 });
+    accounts.deleteAccount.resolves({ purchases: 0, reminders: 0, tasks: 0 });
 
     const n = await new RetentionService(userRepo, accounts).purgeAnonymous();
 

@@ -161,7 +161,7 @@ describe("AuthServer (integração HTTP)", () => {
   it("DELETE /api/account exclui a conta", async () => {
     auth.verifyJwt.returns({ sub: "wos1" });
     users.findByIdentity.resolves(authedUser());
-    accounts.deleteAccount.resolves({ purchases: 2, reminders: 1 });
+    accounts.deleteAccount.resolves({ purchases: 2, reminders: 1, tasks: 0 });
 
     const res = await fetch(`${base}/api/account`, {
       method: "DELETE",

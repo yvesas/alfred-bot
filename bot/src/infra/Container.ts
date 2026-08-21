@@ -34,6 +34,8 @@ import { AuthServer } from "./authServer";
 import { OutboundRegistry } from "../core/OutboundRegistry";
 import { BotCore } from "../core/BotCore";
 import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
+import { TaskService } from "../modules/tasks/TaskService";
+import { TaskRepository } from "../repositories/TaskRepository";
 import { AccountLinking } from "../core/AccountLinking";
 import { PendingEmailStore } from "../core/PendingEmailStore";
 import { ConversationStateStore } from "../core/ConversationStateStore";
@@ -96,6 +98,8 @@ container.bind<MessageProcessingService>(MessageProcessingService).toSelf();
 container.bind<OutboundRegistry>(OutboundRegistry).toSelf().inSingletonScope();
 container.bind<ReminderScheduler>(ReminderScheduler).toSelf().inSingletonScope();
 container.bind<PurchaseFlow>(PurchaseFlow).toSelf();
+container.bind<TaskRepository>(TaskRepository).toSelf();
+container.bind<TaskService>(TaskService).toSelf();
 container.bind<AccountLinking>(AccountLinking).toSelf();
 // O estado de conversa saiu da memória para o Mongo (C2) — o store é sem estado.
 container.bind<ConversationStateStore>(ConversationStateStore).toSelf();

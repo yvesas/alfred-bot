@@ -21,7 +21,7 @@ _Legenda: ✅ feito · 🔨 em andamento · ⬜ a fazer · 🔴 bloqueia tudo ab
 | # | Fase | Por que aqui | Estado |
 |---|---|---|---|
 | **0** | [Colocar no ar](#fase-0--colocar-no-ar-) | Nada abaixo alcança um usuário sem isto | 🔴 |
-| **1** | [Módulo tarefas](#fase-1--módulo-tarefas) | Segundo módulo; dá à proatividade o que vigiar | ⬜ |
+| **1** | [Módulo tarefas](#fase-1--módulo-tarefas) | Segundo módulo; dá à proatividade o que vigiar | ✅ **2026-08-21** |
 | **2** | [Proatividade](#fase-2--proatividade-) | O diferencial. Precisa de mais de um módulo para valer | ⬜ |
 | **3** | [UX de conversa e voz](#fase-3--ux-de-conversa-e-voz) | O que a pessoa sente primeiro | ⬜ |
 | **4** | [Módulo projetos](#fase-4--módulo-projetos) | O cruzamento fin × tarefas que justifica ser um assistente só | ⬜ |
@@ -74,18 +74,21 @@ aparece no painel.
 
 ---
 
-### Fase 1 — Módulo tarefas
+### Fase 1 — Módulo tarefas ✅ *(concluída em 2026-08-21)*
 
 Está declarado desde o ADR-0004 e responde *"ainda não disponível"*. É o segundo
 módulo, e o mais barato: `/lembretes` já é uma tarefa com data e entrega por push.
 
-- ⬜ Modelo `Task` (descrição, prazo, estado, `userId` canônico)
-- ⬜ Comandos no módulo, no formato que o registro já espera
-- ⬜ Criar tarefa por conversa, não só por comando — a IA já roteia intenção
-- ⬜ Decidir o destino de `/lembretes`: vira tarefa recorrente ou continua ao lado?
+- ✅ Modelo `Task` chaveado pelo `User._id` canônico, com prazo opcional
+- ✅ `/tarefas` com `add [DD/MM]`, `ok`, `remover` — no registro de comandos
+- ✅ Exclusão de conta apaga as tarefas (LGPD), no mesmo commit em que o módulo nasce
+- ✅ `findDue` pronto para a Fase 2
+- ⬜ **Criar tarefa por conversa** — depende do roteador de intenção (Fase 3)
+- ⬜ Destino de `/lembretes`: convive com tarefas de propósito; se convergirem, vira ADR
 
-**Pronto quando:** `implemented: true` no `tasksModule` e a pessoa anota, lista e
-conclui uma tarefa conversando.
+**O que apareceu:** o Mongo ordena documento **sem** o campo antes dos que têm, então
+um `sort({ dueDate: 1 })` ingênuo poria as tarefas sem prazo no topo — o oposto do
+pretendido. Um teste pegou. A listagem passou a ser duas consultas.
 
 ---
 
@@ -256,7 +259,8 @@ O que não destrava fase nenhuma. Fica aqui para não sumir — não para virar 
 | **Dashboards do Grafana** | `/metrics` já expõe; falta o painel. Depois do deploy |
 | **E2E foto → IA → persistência** | quando houver ambiente para rodar |
 | **Cobertura do front** (Painel, Conta, Landing) | avulso |
-| **`C22` — 6 vulnerabilidades altas em produção** | Dependabot propõe; 4 saem com a Fase 8 |
+| **`C22` — vulnerabilidades altas em produção** | 4 fechadas em 2026-08-20 pelo Dependabot; as 2 restantes saem com a Fase 8 |
+| **`C24` — SDK do Vertex passou da data de remoção** | preventivo enquanto o Vertex responder; urgente se parar. Mesmo modo de falha do `C0` |
 | Blocos B, C e D do [`PLANO-TECNICO.md`](PLANO-TECNICO.md) | cada um com o gatilho escrito lá |
 
 ### Bugs históricos

@@ -19,6 +19,19 @@ export type MessageKey =
   | "purchase_invalid_items"
   // contato compartilhado (Telegram)
   | "contact_not_yours"
+  // tarefas
+  | "task_add_usage"
+  | "task_added"
+  | "task_added_with_due"
+  | "task_empty"
+  | "task_header"
+  | "task_footer"
+  | "task_item"
+  | "task_item_with_due"
+  | "task_item_overdue"
+  | "task_invalid_number"
+  | "task_completed"
+  | "task_removed"
   // confirmação / compra
   | "purchase_confirm"
   | "purchase_cancelled"
@@ -186,6 +199,20 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     purchase_missing_description: "❌ Não entendi o que foi comprado. Pode descrever?",
     purchase_invalid_items: "❌ Alguns itens vieram com valores inválidos. Pode repetir?",
     contact_not_yours: "Por favor, compartilhe o seu próprio contato. 🙂",
+    task_add_usage:
+      'Uso: /tarefas add [DD/MM] <descrição>. Ex.: "/tarefas add 10/09 Renovar o seguro".',
+    task_added: "✅ Anotado: {description}",
+    task_added_with_due: "✅ Anotado: {description} — para {due}",
+    task_empty: 'Nada pendente. 🎉 Anote com "/tarefas add Comprar café".',
+    task_header: "📋 Suas tarefas:",
+    task_footer:
+      '"/tarefas add [DD/MM] <descrição>" · "/tarefas ok <nº>" · "/tarefas remover <nº>".',
+    task_item: "{index}. {description}",
+    task_item_with_due: "{index}. {description} — {due}",
+    task_item_overdue: "{index}. {description} — venceu {due} ⚠️",
+    task_invalid_number: "Número inválido. Use /tarefas para ver a lista.",
+    task_completed: "✅ Concluída: {description}",
+    task_removed: "🗑️ Removida: {description}",
     stock_header: "📦 Seu estoque:",
     stock_footer: '"/estoque add <qtd> <nome>" ou "/estoque remover <nome>".',
     stock_item: "• {name}: {quantity}",
@@ -311,6 +338,20 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     purchase_missing_description: "❌ I did not catch what was bought. Could you describe it?",
     purchase_invalid_items: "❌ Some items came with invalid values. Could you send it again?",
     contact_not_yours: "Please share your own contact. 🙂",
+    task_add_usage:
+      'Usage: /tarefas add [DD/MM] <description>. E.g. "/tarefas add 10/09 Renew insurance".',
+    task_added: "✅ Noted: {description}",
+    task_added_with_due: "✅ Noted: {description} — due {due}",
+    task_empty: 'Nothing pending. 🎉 Add one with "/tarefas add Buy coffee".',
+    task_header: "📋 Your tasks:",
+    task_footer:
+      '"/tarefas add [DD/MM] <description>" · "/tarefas ok <no.>" · "/tarefas remover <no.>".',
+    task_item: "{index}. {description}",
+    task_item_with_due: "{index}. {description} — {due}",
+    task_item_overdue: "{index}. {description} — was due {due} ⚠️",
+    task_invalid_number: "Invalid number. Use /tarefas to see the list.",
+    task_completed: "✅ Done: {description}",
+    task_removed: "🗑️ Removed: {description}",
     stock_header: "📦 Your stock:",
     stock_footer: '"/estoque add <qty> <name>" or "/estoque remover <name>".',
     stock_item: "• {name}: {quantity}",
@@ -436,6 +477,20 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     purchase_missing_description: "❌ No entendí qué se compró. ¿Puedes describirlo?",
     purchase_invalid_items: "❌ Algunos ítems vinieron con valores inválidos. ¿Puedes repetirlo?",
     contact_not_yours: "Por favor, comparte tu propio contacto. 🙂",
+    task_add_usage:
+      'Uso: /tarefas add [DD/MM] <descripción>. Ej.: "/tarefas add 10/09 Renovar el seguro".',
+    task_added: "✅ Anotado: {description}",
+    task_added_with_due: "✅ Anotado: {description} — para {due}",
+    task_empty: 'Nada pendiente. 🎉 Anota con "/tarefas add Comprar café".',
+    task_header: "📋 Tus tareas:",
+    task_footer:
+      '"/tarefas add [DD/MM] <descripción>" · "/tarefas ok <nº>" · "/tarefas remover <nº>".',
+    task_item: "{index}. {description}",
+    task_item_with_due: "{index}. {description} — {due}",
+    task_item_overdue: "{index}. {description} — venció {due} ⚠️",
+    task_invalid_number: "Número inválido. Usa /tarefas para ver la lista.",
+    task_completed: "✅ Completada: {description}",
+    task_removed: "🗑️ Eliminada: {description}",
     stock_header: "📦 Tu stock:",
     stock_footer: '"/estoque add <cant> <nombre>" o "/estoque remover <nombre>".',
     stock_item: "• {name}: {quantity}",

@@ -7,9 +7,9 @@ describe("registro de módulos", () => {
     expect(MODULES.map((m) => m.id).sort()).toEqual(["fin", "projects", "tasks"]);
   });
 
-  it("só o fin está implementado hoje", () => {
+  it("fin e tarefas estão implementados; projetos não", () => {
     expect(findModule("fin")?.implemented).toBe(true);
-    expect(findModule("tasks")?.implemented).toBe(false);
+    expect(findModule("tasks")?.implemented).toBe(true);
     expect(findModule("projects")?.implemented).toBe(false);
   });
 

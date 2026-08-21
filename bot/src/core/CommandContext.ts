@@ -13,6 +13,7 @@ import { MessageProcessingService } from "../services/MessageProcessingService";
 import { AccountLinking } from "./AccountLinking";
 import { PendingEmailStore } from "./PendingEmailStore";
 import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
+import { TaskService } from "../modules/tasks/TaskService";
 
 // Contrato de um comando.
 //
@@ -37,6 +38,7 @@ export interface CommandDeps {
   accountLinking: AccountLinking;
   pendingEmails: PendingEmailStore;
   purchaseFlow: PurchaseFlow;
+  taskService: TaskService;
 }
 
 /** O que todo comando recebe. */

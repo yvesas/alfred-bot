@@ -10,6 +10,7 @@ import { isValidEmail } from "../utils/validation";
 import { Language } from "../models/User";
 import { t } from "../i18n";
 import { logger } from "../infra/logger";
+import { buildHelp } from "./help";
 
 // Os comandos do chassi: conta, identidade e preferências.
 //
@@ -163,8 +164,17 @@ const excluirConta = registered("excluir_conta", async ({ reply, lang, user, arg
   await reply.text(t(lang, "account_deleted"));
 });
 
+// ---------- Ajuda ----------
+
+// Anônimo de propósito: quem ainda não terminou o cadastro é justamente quem mais
+// precisa saber o que dá para fazer aqui.
+const ajuda = anonymous("ajuda", async ({ reply, lang }) => {
+  await reply.text(buildHelp(lang));
+});
+
 export const CHASSIS_COMMAND_HANDLERS: CommandDefinition[] = [
   start,
+  ajuda,
   vincular,
   email,
   codigo,

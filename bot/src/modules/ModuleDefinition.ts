@@ -10,20 +10,42 @@
 // de lá sem redesenho. `description` existe para o roteador — é o texto que um modelo
 // barato lê para decidir qual módulo trata a mensagem.
 
+import { MessageKey } from "../i18n";
+
 export type ModuleId = "fin" | "tasks" | "projects";
 
 export interface ModuleCommand {
   /** Nome sem a barra: "gastos" para `/gastos`. */
   name: string;
-  /** Uma linha, em português, do que o comando faz — vai para o `/ajuda` e para o roteador. */
-  summary: string;
+  /**
+   * Chave de i18n com uma linha do que o comando faz. É o que o `/ajuda` mostra.
+   *
+   * **Chave, não texto.** O resumo é lido pelo usuário, e usuário tem idioma: um
+   * literal em português apareceria cru dentro de uma ajuda em espanhol. O catálogo
+   * é tipado, então chave nova exige pt, en e es — senão não compila.
+   */
+  summaryKey: MessageKey;
 }
 
 export interface ModuleDefinition {
   id: ModuleId;
-  /** Nome que o usuário vê. */
-  title: string;
-  /** O que este módulo trata, em linguagem natural. É o que o roteador lê. */
+  /**
+   * Chave de i18n do nome que o usuário vê. Mesmo motivo do `summaryKey`.
+   *
+   * Sem emoji: o título também entra no meio de frases ("Projetos ainda não
+   * disponível"), onde um emoji lido por leitor de tela vira ruído. A decoração é do
+   * `icon`, que a ajuda usa e a frase ignora.
+   */
+  titleKey: MessageKey;
+  /** Emoji do módulo na ajuda. Presentation-only — não é traduzido nem entra em frase. */
+  icon: string;
+  /**
+   * O que este módulo trata, em linguagem natural.
+   *
+   * **Não é texto de usuário** — quem lê é o roteador, um modelo escolhendo qual
+   * módulo trata a mensagem. Por isso fica em português direto no código, sem i18n:
+   * traduzi-lo não ajudaria o modelo e criaria três textos para manter em sincronia.
+   */
   description: string;
   /** Comandos que este módulo atende. Atalhos — a conversa é o caminho principal. */
   commands: ModuleCommand[];

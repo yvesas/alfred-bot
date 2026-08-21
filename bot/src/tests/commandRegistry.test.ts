@@ -30,18 +30,20 @@ describe("registro de comandos", () => {
   });
 
   // Quem chega por deep-link ainda não tem conta; exigir cadastro antes tornaria o
-  // vínculo impossível. São só estes dois — qualquer outro anônimo é engano.
-  it("só /start e /vincular rodam antes do cadastro", () => {
+  // vínculo impossível. `/ajuda` entrou na lista pelo motivo oposto: quem ainda não
+  // terminou o cadastro é justamente quem mais precisa saber o que dá para fazer aqui,
+  // e a ajuda não lê nem escreve nada da conta. Fora estes três, anônimo é engano.
+  it("só /start, /vincular e /ajuda rodam antes do cadastro", () => {
     const anonymous = registeredCommandNames().filter(
       (n) => findCommand(n)?.requiresRegistration === false,
     );
-    expect(anonymous.sort()).toEqual(["start", "vincular"]);
+    expect(anonymous.sort()).toEqual(["ajuda", "start", "vincular"]);
   });
 
   // O invariante que importa: nenhum comando cai no vazio. Ou ele tem handler, ou o
   // módulo dono está declarado como não construído — e aí o BotCore responde
-  // "ainda não disponível" antes de procurar handler. `/tarefas` e `/projetos` são
-  // exatamente esse caso.
+  // "ainda não disponível" antes de procurar handler. Hoje `/projetos` é o único
+  // nesse caso — `/tarefas` deixou de ser quando a Fase 1 construiu o módulo.
   it("todo comando conhecido tem handler ou dono não construído", () => {
     for (const name of KNOWN_COMMANDS) {
       const hasHandler = findCommand(name) !== undefined;

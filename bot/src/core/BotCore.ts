@@ -305,11 +305,8 @@ export class BotCore {
     // Sem isto ele cairia no vazio — a pior resposta possível.
     const owner = moduleForCommand(name);
     if (owner && !owner.implemented) {
-      await reply.text(
-        t(await this.resolveLang(platform, externalId), "module_coming_soon", {
-          title: owner.title,
-        }),
-      );
+      const lang = await this.resolveLang(platform, externalId);
+      await reply.text(t(lang, "module_coming_soon", { title: t(lang, owner.titleKey) }));
       return;
     }
 

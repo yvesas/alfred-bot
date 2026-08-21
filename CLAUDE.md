@@ -1,8 +1,8 @@
 # Alfred — índice para o agente
 
 **Assistente pessoal no chat** (Telegram · WhatsApp · web) com capacidades em
-**módulos**: `fin` (implementado), `tarefas` e `projetos` (declarados, não
-construídos). Mesma conta nas três plataformas.
+**módulos**: `fin` e `tarefas` (implementados), `projetos` (declarado, não
+construído). Mesma conta nas três plataformas.
 
 "Alfred" é codinome — o nome comercial ainda não existe. Ver
 `docs/adr/0004-alfred-modular.md`.
@@ -37,7 +37,7 @@ testes e Dockerfile. Não há workspace pnpm unificado.
 
 ```bash
 cd bot && pnpm dev              # nodemon + ts-node
-cd bot && pnpm lint && pnpm typecheck && pnpm test    # 35 suítes · 189 testes
+cd bot && pnpm lint && pnpm typecheck && pnpm test    # 51 suítes · 410 testes
 cd web && pnpm dev              # Vite em :5173
 cd web && pnpm lint && pnpm typecheck && pnpm test    # vitest · 21 testes
 ```
@@ -82,12 +82,14 @@ testes de repositório sobem um MongoDB em memória, um por arquivo.
 
 Catálogo completo em `specs/codebase/CONCERNS.md`. As quatro que mais mordem:
 
-- `BotCore.ts` tem 1042 linhas e 58 % de cobertura — leia **C4** antes de mexer
-  em UX de conversa.
-- Adapters de **Telegram e WhatsApp sem nenhum teste** (**C5**).
+- **Garantia que depende de índice único não vale antes do índice existir** — o
+  Mongoose o constrói de forma assíncrona e `autoIndex` costuma vir desligado em
+  produção. Já mordeu três vezes; `await Model.init()` antes da primeira escrita, e
+  `uniqueIndexGuard.test.ts` fiscaliza (**C27**).
+- **O SDK do Vertex passou da data de remoção** (junho/2026) e ainda é o que o bot
+  usa — mesmo modo de falha que deixou o bot dois meses quebrado (**C24**, **C0**).
 - `GptProcessor` **não** lê imagem; `/ia gpt` cai no caminho OCR (**C11**).
-- Compras pendentes, tokens de vínculo e rate limit vivem **em memória** —
-  reiniciar perde, e o projeto **não** roda com réplica (**C2**, **C3**).
+- `/editar` e `/excluir` carregam o histórico inteiro do usuário na memória (**C9**).
 
 ## Convenções do workspace
 

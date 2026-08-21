@@ -125,7 +125,8 @@ só é exata com distribuição uniforme — preferimos barrar cedo a deixar pas
    assíncrona, e `autoIndex` costuma vir desligado em produção. Sem o índice único, o
    lock do C3 não tranca e o `put` duplica. Descoberto por um teste que falhava uma
    vez a cada três; hoje `JobLockService` e `ConversationStateStore` esperam
-   `Model.init()` uma vez antes da primeira escrita.
+   `Model.init()` uma vez antes da primeira escrita. **A armadilha voltou uma terceira
+   vez** no `ProactiveLogRepository` — ver `C27`, que hoje tem uma guarda automática.
 
 **TTL escolhido:** compra pendente 1 h, e-mail 15 min (acompanha o código do WorkOS),
 token de vínculo 10 min. Antes não havia TTL nenhum — o Map durava o processo. Todos
@@ -465,19 +466,19 @@ ARM exige `--platform linux/amd64`). Está funcional só no papel.
 O hook `commit-msg` manda "Ver CONTRIBUTING.md" quando rejeita. **✅ Criado em
 2026-08-17**, junto com `AGENTS.md`, `SECURITY.md` e `CHANGELOG.md`.
 
-### C22 — Guard de commit em dois lugares
+### C25 — Guard de commit em dois lugares
 
 `core.hooksPath` = `bot/.husky/_`; o guard ativo é `bot/.husky/commit-msg`
 (verificado funcionando). O `.githooks/commit-msg` do baseline fica **inerte**.
 Quem editar só o do baseline não muda nada.
 
-### C23 — Contato de privacidade é placeholder
+### C26 — Contato de privacidade é placeholder
 
 `infra/config.ts:56` — `PRIVACY_CONTACT_EMAIL` tem default
 `privacidade@exemplo.com`. Publicado assim, a política de privacidade lista um
 endereço que não existe.
 
-### ~~C24~~ — Garantia que depende de índice, sem esperar o índice · ✅ **resolvido em 2026-08-21**
+### ~~C27~~ — Garantia que depende de índice, sem esperar o índice · ✅ **resolvido em 2026-08-21**
 
 Mordeu **três vezes**, sempre igual: `JobLockService`, `ConversationStateStore` e
 `ProactiveLogRepository`. Quando a garantia de um código **é** um índice único, o

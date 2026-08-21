@@ -22,7 +22,7 @@ _Legenda: ✅ feito · 🔨 em andamento · ⬜ a fazer · 🔴 bloqueia tudo ab
 |---|---|---|---|
 | **0** | [Colocar no ar](#fase-0--colocar-no-ar-) | Nada abaixo alcança um usuário sem isto | 🔴 |
 | **1** | [Módulo tarefas](#fase-1--módulo-tarefas) | Segundo módulo; dá à proatividade o que vigiar | ✅ **2026-08-21** |
-| **2** | [Proatividade](#fase-2--proatividade-) | O diferencial. Precisa de mais de um módulo para valer | ⬜ |
+| **2** | [Proatividade](#fase-2--proatividade-) | O diferencial. Precisa de mais de um módulo para valer | ✅ **2026-08-21** |
 | **3** | [UX de conversa e voz](#fase-3--ux-de-conversa-e-voz) | O que a pessoa sente primeiro | ⬜ |
 | **4** | [Módulo projetos](#fase-4--módulo-projetos) | O cruzamento fin × tarefas que justifica ser um assistente só | ⬜ |
 | **5** | [Web de gestão](#fase-5--web-de-gestão) | Só tem o que mostrar depois dos três módulos | ⬜ |
@@ -92,7 +92,7 @@ pretendido. Um teste pegou. A listagem passou a ser duas consultas.
 
 ---
 
-### Fase 2 — Proatividade ⭐
+### Fase 2 — Proatividade ⭐ ✅ *(concluída em 2026-08-21)*
 
 **O diferencial.** É o que o Caddy vende — *"tells you what needs your attention
 right now"* — e o que separa um assistente de um formulário com IA.
@@ -103,14 +103,17 @@ A infraestrutura existe: o `OutboundRegistry` entrega push nas três plataformas
 **O que falta é o que decide o que merece ser dito.** E, mais difícil, **o limite de
 quando calar** — assistente que fala demais é desinstalado.
 
-- ⬜ Regras iniciais explícitas, não IA: orçamento perto do teto, tarefa vencendo
-      hoje, conta a pagar amanhã, silêncio quando não há nada
-- ⬜ Teto de frequência por usuário, e respeito a horário
-- ⬜ Preferência do usuário: o que ele quer ouvir e quando
-- ⬜ Métrica de quantas mensagens proativas foram úteis (alguém respondeu?)
+- ✅ Regras explícitas, não IA: tarefa vencida ou vencendo hoje, orçamento no teto
+- ✅ Um aviso por ciclo, teto diário de 2, janela de horário, nunca repetir
+- ✅ Métrica de resposta: escrever até 30 min depois conta como o aviso ter servido
+- ✅ Sob lock, como os outros jobs — com réplica, N ciclos avisariam N vezes
+- ⬜ **Preferência por usuário** — hoje o horário é global e do fuso do servidor. O
+      que resolve de verdade é fuso por usuário, e o Alfred nem pergunta
+- ⬜ Desligar pelo chat — só por variável de ambiente, o que serve ao operador, não
+      ao usuário
 
-**Começar com regra, não com modelo.** Regra é auditável e barata; quando houver
-sinal de que ela erra, aí entra julgamento de IA.
+**Vem desligado** (`PROACTIVE_ENABLED=false`): ligar mexe com a paciência de quem
+recebe. Detalhe em [`bot/src/core/proactive/README.md`](../../bot/src/core/proactive/README.md).
 
 ---
 

@@ -23,6 +23,7 @@ import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
 import { AccountLinking } from "../core/AccountLinking";
 import { PendingEmailStore } from "../core/PendingEmailStore";
 import { TaskService } from "../modules/tasks/TaskService";
+import { ProactiveService } from "../core/proactive/ProactiveService";
 import { FakeConversationStore } from "./helpers/fakeConversationStore";
 import { accessKeyCheckDigit } from "../utils/fiscalKey";
 
@@ -50,6 +51,7 @@ describe("BotCore", () => {
   let accountLinking: AccountLinking;
   let pendingEmails: PendingEmailStore;
   let taskService: sinon.SinonStubbedInstance<TaskService>;
+  let proactive: sinon.SinonStubbedInstance<ProactiveService>;
   let core: BotCore;
   let replies: string[];
   let reply: Replier;
@@ -81,6 +83,8 @@ describe("BotCore", () => {
     accountLinking = new AccountLinking(mergeService, linkTokens);
     pendingEmails = new PendingEmailStore(conversationStore);
     taskService = sinon.createStubInstance(TaskService);
+    proactive = sinon.createStubInstance(ProactiveService);
+    proactive.noteUserReplied.resolves();
     core = new BotCore(
       userService,
       ocrService,
@@ -101,6 +105,7 @@ describe("BotCore", () => {
       accountLinking,
       pendingEmails,
       taskService,
+      proactive,
     );
 
     replies = [];

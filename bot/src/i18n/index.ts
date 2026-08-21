@@ -19,6 +19,13 @@ export type MessageKey =
   | "purchase_invalid_items"
   // contato compartilhado (Telegram)
   | "contact_not_yours"
+  // proatividade — o Alfred falando sem ser perguntado
+  | "proactive_task_due_today"
+  | "proactive_tasks_due_today"
+  | "proactive_task_overdue"
+  | "proactive_tasks_overdue"
+  | "proactive_budget_warn"
+  | "proactive_budget_over"
   // tarefas
   | "task_add_usage"
   | "task_added"
@@ -199,6 +206,13 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     purchase_missing_description: "❌ Não entendi o que foi comprado. Pode descrever?",
     purchase_invalid_items: "❌ Alguns itens vieram com valores inválidos. Pode repetir?",
     contact_not_yours: "Por favor, compartilhe o seu próprio contato. 🙂",
+    proactive_task_due_today: "⏰ Hoje vence: {description}",
+    proactive_tasks_due_today:
+      "⏰ Você tem {count} tarefas vencendo hoje. A primeira: {description}",
+    proactive_task_overdue: "⚠️ Passou do prazo: {description}",
+    proactive_tasks_overdue: "⚠️ {count} tarefas passaram do prazo. A mais antiga: {description}",
+    proactive_budget_warn: "🔔 Você já usou {pct}% do orçamento de {category}: {spent} de {limit}.",
+    proactive_budget_over: "🚨 O orçamento de {category} estourou: {spent} de {limit} ({pct}%).",
     task_add_usage:
       'Uso: /tarefas add [DD/MM] <descrição>. Ex.: "/tarefas add 10/09 Renovar o seguro".',
     task_added: "✅ Anotado: {description}",
@@ -338,6 +352,12 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     purchase_missing_description: "❌ I did not catch what was bought. Could you describe it?",
     purchase_invalid_items: "❌ Some items came with invalid values. Could you send it again?",
     contact_not_yours: "Please share your own contact. 🙂",
+    proactive_task_due_today: "⏰ Due today: {description}",
+    proactive_tasks_due_today: "⏰ You have {count} tasks due today. First one: {description}",
+    proactive_task_overdue: "⚠️ Past due: {description}",
+    proactive_tasks_overdue: "⚠️ {count} tasks are past due. Oldest: {description}",
+    proactive_budget_warn: "🔔 You have used {pct}% of the {category} budget: {spent} of {limit}.",
+    proactive_budget_over: "🚨 The {category} budget is over: {spent} of {limit} ({pct}%).",
     task_add_usage:
       'Usage: /tarefas add [DD/MM] <description>. E.g. "/tarefas add 10/09 Renew insurance".',
     task_added: "✅ Noted: {description}",
@@ -477,6 +497,13 @@ const MESSAGES: Record<Language, Record<MessageKey, string>> = {
     purchase_missing_description: "❌ No entendí qué se compró. ¿Puedes describirlo?",
     purchase_invalid_items: "❌ Algunos ítems vinieron con valores inválidos. ¿Puedes repetirlo?",
     contact_not_yours: "Por favor, comparte tu propio contacto. 🙂",
+    proactive_task_due_today: "⏰ Vence hoy: {description}",
+    proactive_tasks_due_today: "⏰ Tienes {count} tareas que vencen hoy. La primera: {description}",
+    proactive_task_overdue: "⚠️ Venció el plazo: {description}",
+    proactive_tasks_overdue: "⚠️ {count} tareas vencieron. La más antigua: {description}",
+    proactive_budget_warn: "🔔 Ya usaste {pct}% del presupuesto de {category}: {spent} de {limit}.",
+    proactive_budget_over:
+      "🚨 El presupuesto de {category} se excedió: {spent} de {limit} ({pct}%).",
     task_add_usage:
       'Uso: /tarefas add [DD/MM] <descripción>. Ej.: "/tarefas add 10/09 Renovar el seguro".',
     task_added: "✅ Anotado: {description}",

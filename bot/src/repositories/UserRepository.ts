@@ -75,6 +75,20 @@ export class UserRepository {
     await UserModel.deleteOne({ _id: id }).exec();
   }
 
+  /**
+   * Quem pode receber aviso proativo: cadastro completo e ao menos uma identidade
+   * por onde alcançá-lo. Sessão anônima do web fica de fora — a pessoa nem terminou
+   * de se cadastrar; falar com ela sem ser chamada seria atrevimento.
+   */
+  async findProactiveCandidates(limit: number): Promise<IUser[]> {
+    return await UserModel.find({
+      status: "complete",
+      "identities.0": { $exists: true },
+    })
+      .limit(limit)
+      .exec();
+  }
+
   // Sessões web ANÔNIMAS inativas (LGPD/retenção): só web, nunca logaram (sem verifiedEmail),
   // sem identidade Telegram/WhatsApp nem telegramId legado, e sem atividade desde `cutoff`.
   async findAnonymousInactive(cutoff: Date): Promise<IUser[]> {

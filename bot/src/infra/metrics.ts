@@ -34,3 +34,25 @@ export const remindersSentTotal = new Counter({
   labelNames: ["platform"] as const,
   registers: [registry],
 });
+
+export const proactiveSentTotal = new Counter({
+  name: "alfred_bot_proactive_sent_total",
+  help: "Avisos proativos entregues, por regra",
+  labelNames: ["rule"] as const,
+  registers: [registry],
+});
+
+// Contar o que NÃO foi dito importa tanto quanto o que foi: é como se descobre que o
+// teto está apertado demais, ou que o horário está errado.
+export const proactiveSuppressedTotal = new Counter({
+  name: "alfred_bot_proactive_suppressed_total",
+  help: "Avisos proativos retidos, por motivo",
+  labelNames: ["reason"] as const,
+  registers: [registry],
+});
+
+export const proactiveRepliedTotal = new Counter({
+  name: "alfred_bot_proactive_replied_total",
+  help: "Avisos proativos que tiveram resposta do usuário",
+  registers: [registry],
+});

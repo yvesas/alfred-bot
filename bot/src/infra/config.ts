@@ -87,6 +87,21 @@ export const config = {
   // — ida ao banco por requisição custaria caro — então o teto é dividido por aqui,
   // para que N instâncias somem o limite configurado em vez de multiplicá-lo.
   replicas: Math.max(1, Number(process.env.REPLICAS) || 1),
+  // ---- Proatividade ----
+  // Quanto o Alfred pode falar sem ser perguntado. Os defaults são deliberadamente
+  // tímidos: assistente que fala demais é desinstalado, e é mais fácil afrouxar
+  // depois do que recuperar alguém que já silenciou.
+  proactiveEnabled: (process.env.PROACTIVE_ENABLED ?? "false").toLowerCase() === "true",
+  proactiveIntervalMs: Number(process.env.PROACTIVE_INTERVAL_MS) || 60 * 60_000,
+  /** Teto por usuário por dia. Dois é pouco de propósito. */
+  proactiveDailyCap: Number(process.env.PROACTIVE_DAILY_CAP) || 2,
+  /** Janela em que dá para falar, hora local do servidor. */
+  proactiveStartHour: Number(process.env.PROACTIVE_START_HOUR) || 9,
+  proactiveEndHour: Number(process.env.PROACTIVE_END_HOUR) || 21,
+  /** Quantos usuários por ciclo — evita varrer a base inteira de uma vez. */
+  proactiveBatchSize: Number(process.env.PROACTIVE_BATCH_SIZE) || 200,
+  /** Escrever até aqui depois de um aviso conta como resposta a ele. */
+  proactiveResponseWindowMs: Number(process.env.PROACTIVE_RESPONSE_WINDOW_MS) || 30 * 60_000,
   // Confiar em `x-forwarded-for` só quando há proxy declarado. Sem isto, o cliente
   // forja o próprio IP e o rate limit vira decoração.
   trustProxy: (process.env.TRUST_PROXY ?? "false").toLowerCase() === "true",

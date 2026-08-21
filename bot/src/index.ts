@@ -7,6 +7,7 @@ import { WebAdapter } from "./platforms/web/WebAdapter";
 import { IMessagingAdapter } from "./core/IMessagingAdapter";
 import { ReminderScheduler } from "./services/ReminderScheduler";
 import { RetentionScheduler } from "./services/RetentionScheduler";
+import { ProactiveScheduler } from "./services/ProactiveScheduler";
 import { AuthServer } from "./infra/authServer";
 import { assertRequiredConfig, config, isAuthEnabled } from "./infra/config";
 import { startHealthServer, setAppReady } from "./infra/health";
@@ -56,6 +57,13 @@ async function main() {
     retentionScheduler.start();
   }
 
+  // Proatividade: o Alfred falando sem ser perguntado. Desligado por padrão — ligar
+  // é decisão consciente, porque mexe com a paciência de quem recebe.
+  const proactiveScheduler = container.get(ProactiveScheduler);
+  if (config.proactiveEnabled) {
+    proactiveScheduler.start();
+  }
+
   // Login web (WorkOS): só sobe quando totalmente configurado.
   const authServer = container.get(AuthServer);
   if (isAuthEnabled()) {
@@ -73,6 +81,7 @@ async function main() {
     setAppReady(false);
     scheduler.stop();
     retentionScheduler.stop();
+    proactiveScheduler.stop();
     authServer.stop();
     await Promise.allSettled(adapters.map((a) => a.stop()));
     healthServer.close();

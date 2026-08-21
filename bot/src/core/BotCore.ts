@@ -21,6 +21,7 @@ import { extractAccessKey, isValidAccessKey } from "../utils/fiscalKey";
 import { moduleForCommand } from "../modules/registry";
 import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
 import { TaskService } from "../modules/tasks/TaskService";
+import { ProactiveService } from "./proactive/ProactiveService";
 import { langOf } from "./format";
 import { CommandDeps } from "./CommandContext";
 import { findCommand } from "./commandRegistry";
@@ -59,6 +60,7 @@ export class BotCore {
     @inject(AccountLinking) private accountLinking: AccountLinking,
     @inject(PendingEmailStore) private pendingEmails: PendingEmailStore,
     @inject(TaskService) private taskService: TaskService,
+    @inject(ProactiveService) private proactive: ProactiveService,
   ) {}
 
   async handle(msg: IncomingMessage, reply: Replier): Promise<void> {
@@ -141,6 +143,12 @@ export class BotCore {
 
     const userId = String(user._id); // identidade canônica (Fase 6)
     const plan = user.plan ?? "free";
+
+    // Escrever logo depois de um aviso proativo conta como resposta a ele. É a única
+    // medida honesta de "isto ajudou ou incomodou" — sem ela, ajustaríamos as regras
+    // no escuro. Não bloqueia a mensagem: falhar aqui não pode custar a resposta.
+    void this.proactive.noteUserReplied(userId).catch(() => undefined);
+
     const processed = await this.messageProcessingService.processMessage(
       platform,
       externalId,

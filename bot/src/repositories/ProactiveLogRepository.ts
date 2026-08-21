@@ -4,6 +4,21 @@ import { ProactiveLogModel } from "../models/ProactiveLog";
 
 @injectable()
 export class ProactiveLogRepository {
+  // A deduplicação É o índice único em `(userId, key)`: sem ele, dois `create`
+  // concorrentes passam os dois e a pessoa recebe o mesmo aviso a cada ciclo. O
+  // Mongoose constrói índice de forma assíncrona, e `autoIndex` costuma vir desligado
+  // em produção — então esperamos uma vez, na primeira escrita.
+  //
+  // Mesma armadilha do `JobLockService` e do `ConversationStateStore`. Ela reaparece
+  // toda vez que uma garantia depende de índice, e um teste instável foi de novo o
+  // que a expôs.
+  private indexesReady?: Promise<unknown>;
+
+  private ensureIndexes(): Promise<unknown> {
+    this.indexesReady ??= ProactiveLogModel.init();
+    return this.indexesReady;
+  }
+
   /**
    * Registra o aviso. Devolve `false` se já existia — quer dizer que outra réplica
    * ganhou a corrida, ou que já falamos disto antes.
@@ -12,6 +27,7 @@ export class ProactiveLogRepository {
    * ler e escrever cabe outro ciclo. Mesma lição do `JobLockService`.
    */
   async claim(userId: string, key: string, ruleId: string, now: Date): Promise<boolean> {
+    await this.ensureIndexes();
     try {
       await ProactiveLogModel.create({ userId, key, ruleId, sentAt: now, delivered: false });
       return true;

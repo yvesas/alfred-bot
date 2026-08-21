@@ -14,7 +14,7 @@ O Alfred deixou de ser um bot de finanças e passou a ser um **assistente pessoa
 com capacidades em módulos** — `fin` (implementado), `tarefas` e `projetos`
 (declarados, não construídos). Ver [ADR-0004](../../docs/adr/0004-alfred-modular.md).
 
-Suíte verde: bot **48 suítes / 373 testes** (cobertura 80,0 %), web 8 arquivos /
+Suíte verde: bot **50 suítes / 404 testes** (cobertura 81,1 %), web 8 arquivos /
 21 testes. Lint e typecheck limpos. `./scripts/check.sh` é o gate único.
 
 **Fases 1, 2 e 3 concluídas** — ver [`PLANO-TECNICO.md`](PLANO-TECNICO.md).

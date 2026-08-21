@@ -7,6 +7,7 @@ import { UserRepository } from "../repositories/UserRepository";
 import { PurchaseRepository } from "../repositories/PurchaseRepository";
 import { ReminderRepository } from "../repositories/ReminderRepository";
 import { TaskRepository } from "../repositories/TaskRepository";
+import { ProactiveLogRepository } from "../repositories/ProactiveLogRepository";
 import { encodeState, decodeState } from "../infra/authServer";
 
 describe("AccountService", () => {
@@ -14,6 +15,7 @@ describe("AccountService", () => {
   let purchaseRepo: sinon.SinonStubbedInstance<PurchaseRepository>;
   let reminderRepo: sinon.SinonStubbedInstance<ReminderRepository>;
   let taskRepo: sinon.SinonStubbedInstance<TaskRepository>;
+  let proactiveLogRepo: sinon.SinonStubbedInstance<ProactiveLogRepository>;
   let merge: sinon.SinonStubbedInstance<MergeService>;
   let service: AccountService;
 
@@ -23,8 +25,17 @@ describe("AccountService", () => {
     reminderRepo = sinon.createStubInstance(ReminderRepository);
     taskRepo = sinon.createStubInstance(TaskRepository);
     taskRepo.deleteByUser.resolves(0);
+    proactiveLogRepo = sinon.createStubInstance(ProactiveLogRepository);
+    proactiveLogRepo.deleteByUser.resolves(0);
     merge = sinon.createStubInstance(MergeService);
-    service = new AccountService(userRepo, purchaseRepo, reminderRepo, taskRepo, merge);
+    service = new AccountService(
+      userRepo,
+      purchaseRepo,
+      reminderRepo,
+      taskRepo,
+      proactiveLogRepo,
+      merge,
+    );
   });
 
   it("cria o usuário do WorkOS já completo, com o perfil + e-mail verificado e auto-vínculo", async () => {

@@ -63,6 +63,11 @@ O projeto ainda **não foi para produção** e não tem versão publicada.
 
 ### Adicionado
 
+- **O Alfred passou a falar sem ser perguntado.** Avisa de tarefa vencida ou vencendo
+  hoje e de orçamento no teto — um aviso por ciclo, no máximo dois por dia, dentro de
+  uma janela de horário, e nunca o mesmo duas vezes. Vem **desligado**
+  (`PROACTIVE_ENABLED`). A parte difícil não foi achar o que dizer: foi calar.
+
 - **Módulo de tarefas.** `/tarefas` anota, lista, conclui e remove — com prazo
   opcional em `DD/MM`. A tarefa é da pessoa, não do canal: anota no Telegram e conclui
   no web. O que ainda não existe é ser avisado sem perguntar; isso é a próxima fase.

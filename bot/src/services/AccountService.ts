@@ -3,6 +3,7 @@ import { UserRepository } from "../repositories/UserRepository";
 import { PurchaseRepository } from "../repositories/PurchaseRepository";
 import { ReminderRepository } from "../repositories/ReminderRepository";
 import { TaskRepository } from "../repositories/TaskRepository";
+import { ProactiveLogRepository } from "../repositories/ProactiveLogRepository";
 import { MergeService, mergeCategories, mergeBudgets } from "./MergeService";
 import { IUser, IUserCreate } from "../models/User";
 import { config } from "../infra/config";
@@ -19,6 +20,7 @@ export class AccountService {
     @inject(PurchaseRepository) private purchaseRepo: PurchaseRepository,
     @inject(ReminderRepository) private reminderRepo: ReminderRepository,
     @inject(TaskRepository) private taskRepo: TaskRepository,
+    @inject(ProactiveLogRepository) private proactiveLogRepo: ProactiveLogRepository,
     @inject(MergeService) private merge: MergeService,
   ) {}
 
@@ -96,6 +98,7 @@ export class AccountService {
     // Módulo novo entra aqui no mesmo commit em que nasce: exclusão de conta que
     // esquece uma coleção é violação de LGPD silenciosa.
     const tasks = await this.taskRepo.deleteByUser(String(user._id));
+    await this.proactiveLogRepo.deleteByUser(String(user._id));
     await this.userRepo.deleteById(String(user._id));
     logger.info({ user: String(user._id), purchases, reminders, tasks }, "Conta excluída");
     return { purchases, reminders, tasks };

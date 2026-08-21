@@ -15,6 +15,6 @@ module.exports = {
   // impedir queda silenciosa — foi assim que o BotCore chegou a 58 %. Ao subir a
   // cobertura de verdade, suba o limiar junto.
   coverageThreshold: {
-    global: { statements: 79, branches: 65, functions: 79, lines: 80 },
+    global: { statements: 81, branches: 66, functions: 79, lines: 81 },
   },
 };

@@ -22,6 +22,7 @@ import { MessageProcessingService } from "../services/MessageProcessingService";
 import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
 import { AccountLinking } from "../core/AccountLinking";
 import { PendingEmailStore } from "../core/PendingEmailStore";
+import { TaskService } from "../modules/tasks/TaskService";
 import { FakeConversationStore } from "./helpers/fakeConversationStore";
 import { accessKeyCheckDigit } from "../utils/fiscalKey";
 
@@ -48,6 +49,7 @@ describe("BotCore", () => {
   let purchaseFlow: PurchaseFlow;
   let accountLinking: AccountLinking;
   let pendingEmails: PendingEmailStore;
+  let taskService: sinon.SinonStubbedInstance<TaskService>;
   let core: BotCore;
   let replies: string[];
   let reply: Replier;
@@ -78,6 +80,7 @@ describe("BotCore", () => {
     // fronteira externa. Stubá-los esconderia o que os testes de vínculo provam.
     accountLinking = new AccountLinking(mergeService, linkTokens);
     pendingEmails = new PendingEmailStore(conversationStore);
+    taskService = sinon.createStubInstance(TaskService);
     core = new BotCore(
       userService,
       ocrService,
@@ -97,6 +100,7 @@ describe("BotCore", () => {
       purchaseFlow,
       accountLinking,
       pendingEmails,
+      taskService,
     );
 
     replies = [];
@@ -135,12 +139,26 @@ describe("BotCore", () => {
       userService.findByIdentity.resolves(completeUser);
 
       await core.handle(
+        baseMsg({ kind: "command", command: { name: "projetos", args: [] } }),
+        reply,
+      );
+
+      expect(replies[0]).toContain("Projetos");
+      expect(replies[0]).toContain("ainda não está disponível");
+    });
+
+    // `tarefas` deixou de responder isso na Fase 1 — o módulo foi construído.
+    it("despacha o comando de um módulo construído", async () => {
+      userService.findByIdentity.resolves(completeUser);
+      taskService.listPending.resolves([]);
+
+      await core.handle(
         baseMsg({ kind: "command", command: { name: "tarefas", args: [] } }),
         reply,
       );
 
-      expect(replies[0]).toContain("Tarefas");
-      expect(replies[0]).toContain("ainda não está disponível");
+      expect(taskService.listPending.calledOnce).toBe(true);
+      expect(replies[0]).not.toContain("ainda não está disponível");
     });
 
     // O aviso vem ANTES de exigir cadastro: quem nem se cadastrou ainda merece saber
@@ -600,7 +618,7 @@ describe("BotCore", () => {
 
   it("exclui a conta com /excluir_conta CONFIRMAR", async () => {
     userService.findByIdentity.resolves({ status: "complete", _id: "u1" } as any);
-    accountService.deleteAccount.resolves({ purchases: 3, reminders: 1 });
+    accountService.deleteAccount.resolves({ purchases: 3, reminders: 1, tasks: 0 });
 
     await core.handle(
       baseMsg({ kind: "command", command: { name: "excluir_conta", args: ["CONFIRMAR"] } }),

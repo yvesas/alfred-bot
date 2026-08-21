@@ -48,6 +48,42 @@ variável de ambiente, não deploy.
 `gemini-2.5-flash-lite` ainda servir e for preferível por custo, é só definir
 `GEMINI_MODEL` — mas ele morre em 2026-10-20.
 
+### C24 — O SDK do Vertex está depreciado e passou da data de remoção
+
+**Descoberto em 2026-08-21**, num aviso que a própria biblioteca imprime a cada
+execução da suíte:
+
+> *"The VertexAI class and all its dependencies are deprecated as of June 24, 2025
+> and will be removed on **June 24, 2026**. Please use the Google Gen AI SDK
+> (`@google/genai`)."*
+
+**A data já passou há dois meses.** O pacote instalado é o `@google-cloud/vertexai`
+1.12.0; o substituto indicado, `@google/genai`, está em 2.18.0.
+
+**Por que isto importa mais do que um aviso comum.** É exatamente o modo de falha do
+`C0`, uma camada acima: lá era o *modelo* que o fornecedor desligou sem o projeto
+perceber; aqui é o *SDK inteiro*. O bot ficou dois meses quebrado da primeira vez, e
+descobrimos por acaso.
+
+Hoje ainda funciona — a suíte passa e o pacote continua no npm. Mas "funciona hoje"
+foi exatamente o que valia para o `gemini-2.0-flash-lite` até 1º de junho.
+
+**Correção:** migrar `GeminiProcessor` e `GeminiOcrProvider` para `@google/genai`.
+O trabalho é contido: os dois já criam o cliente **preguiçosamente** e atrás do
+contrato `IMessageProcessor`/`IOcrProvider` (ADR-0003), então a troca é de
+implementação, não de arquitetura. O modelo e a região já vêm de configuração desde o
+`C0`.
+
+**Antes de migrar, confirme que o problema é real** — o mesmo comando que confirma o
+`C0` serve, porque os dois vivem no mesmo lugar:
+
+```bash
+gcloud ai models list --region=us-central1 | grep -i flash-lite
+```
+
+Se o Vertex responder, o SDK ainda fala com ele e a migração é preventiva, não
+urgente. Se não responder, é o `C0` de novo.
+
 ### C1 — Credencial GCP real em disco, nunca rotacionada
 
 **Onde:** `bot/src/config/google-credentials.json`

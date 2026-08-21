@@ -2,6 +2,7 @@ import { inject, injectable } from "inversify";
 import { UserRepository } from "../repositories/UserRepository";
 import { PurchaseRepository } from "../repositories/PurchaseRepository";
 import { ReminderRepository } from "../repositories/ReminderRepository";
+import { TaskRepository } from "../repositories/TaskRepository";
 import { MergeService, mergeCategories, mergeBudgets } from "./MergeService";
 import { IUser, IUserCreate } from "../models/User";
 import { config } from "../infra/config";
@@ -17,6 +18,7 @@ export class AccountService {
     @inject(UserRepository) private userRepo: UserRepository,
     @inject(PurchaseRepository) private purchaseRepo: PurchaseRepository,
     @inject(ReminderRepository) private reminderRepo: ReminderRepository,
+    @inject(TaskRepository) private taskRepo: TaskRepository,
     @inject(MergeService) private merge: MergeService,
   ) {}
 
@@ -84,11 +86,18 @@ export class AccountService {
   }
 
   // Exclui a conta e todos os dados do usuário (compras, lembretes e o documento).
-  async deleteAccount(user: IUser): Promise<{ purchases: number; reminders: number }> {
+  async deleteAccount(user: IUser): Promise<{
+    purchases: number;
+    reminders: number;
+    tasks: number;
+  }> {
     const purchases = await this.purchaseRepo.deleteByUser(String(user._id));
     const reminders = await this.reminderRepo.deleteByIdentities(user.identities ?? []);
+    // Módulo novo entra aqui no mesmo commit em que nasce: exclusão de conta que
+    // esquece uma coleção é violação de LGPD silenciosa.
+    const tasks = await this.taskRepo.deleteByUser(String(user._id));
     await this.userRepo.deleteById(String(user._id));
-    logger.info({ user: String(user._id), purchases, reminders }, "Conta excluída");
-    return { purchases, reminders };
+    logger.info({ user: String(user._id), purchases, reminders, tasks }, "Conta excluída");
+    return { purchases, reminders, tasks };
   }
 }

@@ -63,6 +63,10 @@ O projeto ainda **não foi para produção** e não tem versão publicada.
 
 ### Adicionado
 
+- **Módulo de tarefas.** `/tarefas` anota, lista, conclui e remove — com prazo
+  opcional em `DD/MM`. A tarefa é da pessoa, não do canal: anota no Telegram e conclui
+  no web. O que ainda não existe é ser avisado sem perguntar; isso é a próxima fase.
+
 - **Tradução dos adapters coberta a 100 %.** Telegram e WhatsApp estavam em 0 %, e é
   ali que mora o footgun de cada plataforma. A tradução saiu para
   `platforms/<canal>/translate.ts` — sem dependência de SDK, porque o Baileys é ESM

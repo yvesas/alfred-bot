@@ -51,8 +51,12 @@ describe("registro de comandos", () => {
   });
 
   it("comando de módulo não construído não tem handler", () => {
-    expect(findCommand("tarefas")).toBeUndefined();
+    // `tarefas` saiu desta lista na Fase 1, quando o módulo foi construído.
     expect(findCommand("projetos")).toBeUndefined();
+  });
+
+  it("resolve o comando do módulo de tarefas", () => {
+    expect(findCommand("tarefas")?.name).toBe("tarefas");
   });
 
   // A razão de o registro existir: uma lista só. Se um comando é declarado no módulo

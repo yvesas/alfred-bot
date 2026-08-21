@@ -1,5 +1,6 @@
 import { CommandDefinition } from "./CommandContext";
 import { FIN_COMMANDS } from "../modules/fin/commands";
+import { TASK_COMMANDS } from "../modules/tasks/commands";
 import { CHASSIS_COMMAND_HANDLERS } from "./chassisCommands";
 
 // Onde os comandos se registram. Uma lista só, montada a partir dos módulos e do
@@ -8,7 +9,11 @@ import { CHASSIS_COMMAND_HANDLERS } from "./chassisCommands";
 //
 // Não há mais `switch` de comando em lugar nenhum: o BotCore resolve pelo registro e
 // não sabe o que cada comando faz.
-const COMMANDS: CommandDefinition[] = [...CHASSIS_COMMAND_HANDLERS, ...FIN_COMMANDS];
+const COMMANDS: CommandDefinition[] = [
+  ...CHASSIS_COMMAND_HANDLERS,
+  ...FIN_COMMANDS,
+  ...TASK_COMMANDS,
+];
 
 const BY_NAME = new Map(COMMANDS.map((c) => [c.name, c]));
 

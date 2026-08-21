@@ -20,6 +20,7 @@ import { IUser, Language } from "../models/User";
 import { extractAccessKey, isValidAccessKey } from "../utils/fiscalKey";
 import { moduleForCommand } from "../modules/registry";
 import { PurchaseFlow } from "../modules/fin/PurchaseFlow";
+import { TaskService } from "../modules/tasks/TaskService";
 import { langOf } from "./format";
 import { CommandDeps } from "./CommandContext";
 import { findCommand } from "./commandRegistry";
@@ -57,6 +58,7 @@ export class BotCore {
     @inject(PurchaseFlow) private purchaseFlow: PurchaseFlow,
     @inject(AccountLinking) private accountLinking: AccountLinking,
     @inject(PendingEmailStore) private pendingEmails: PendingEmailStore,
+    @inject(TaskService) private taskService: TaskService,
   ) {}
 
   async handle(msg: IncomingMessage, reply: Replier): Promise<void> {
@@ -341,6 +343,7 @@ export class BotCore {
       accountLinking: this.accountLinking,
       pendingEmails: this.pendingEmails,
       purchaseFlow: this.purchaseFlow,
+      taskService: this.taskService,
     };
   }
 }

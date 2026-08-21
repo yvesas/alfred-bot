@@ -1,7 +1,8 @@
 # Retomada — de onde paramos
 
-**Última sessão:** 2026-08-14 a 2026-08-20
-**Onde está:** fundação e endurecimento **mergeados na `main`** · produto ainda não foi ao ar
+**Última sessão:** 2026-08-14 a 2026-08-21
+**Onde está:** fundação, endurecimento, **módulo tarefas** e **proatividade** na `main` ·
+produto ainda não foi ao ar
 **Repositório:** [`yvesas/alfred-bot`](https://github.com/yvesas/alfred-bot) — privado
 
 Ponto de entrada de quem volta. Estado detalhado em [`STATE.md`](STATE.md); o plano
@@ -43,23 +44,37 @@ cd web && pnpm dev        # Vite em :5173
 
 ## 2. O que está aberto agora
 
-**Nada esperando revisão.** Os três PRs de fundação foram mergeados em 2026-08-20:
-[#8](https://github.com/yvesas/alfred-bot/pull/8) (fundação, produto, governança e as
-quatro fases de endurecimento), [#9](https://github.com/yvesas/alfred-bot/pull/9)
-(bloco A da Fase 5 técnica) e [#10](https://github.com/yvesas/alfred-bot/pull/10)
-(roadmap por fases, ADR-0007, este arquivo).
+A `main` está com **410 testes** em 51 suítes, cobertura 81,1 %, e
+`./scripts/check.sh` verde. As Fases 1 e 2 do roadmap saíram em 2026-08-21:
 
-A `main` está com **327 testes**, cobertura 79,1 %, e `./scripts/check.sh` verde.
+| PR | O que entrou |
+|---|---|
+| [#25](https://github.com/yvesas/alfred-bot/pull/25) | **Fase 1 — módulo tarefas**: `Task`, `TaskService`, comandos, i18n nas três línguas |
+| [#26](https://github.com/yvesas/alfred-bot/pull/26) | **Fase 2 — proatividade**: motor de regras, teto diário, horário de silêncio, deduplicação, métrica de resposta |
+| [#27](https://github.com/yvesas/alfred-bot/pull/27) | correção da corrida de índice que o #26 introduziu (`C27`) |
 
-**A próxima coisa a fazer é a [Fase 0](ROADMAP.md#fase-0--colocar-no-ar-)** — e ela
-está parada em você:
+**Segurando decisão sua**, sem bloquear código:
 
-1. `gcloud ai models list --region=us-central1 | grep flash-lite` — confirma o `C0`
+- Dependabot [#11](https://github.com/yvesas/alfred-bot/pull/11)/[#17](https://github.com/yvesas/alfred-bot/pull/17)
+  — Node 20 → 26. Exige mudança coordenada em `.nvmrc`, `engines`, workflows e
+  Dockerfiles; não é bump de rotina.
+- Dependabot [#12](https://github.com/yvesas/alfred-bot/pull/12)/[#14](https://github.com/yvesas/alfred-bot/pull/14)/[#15](https://github.com/yvesas/alfred-bot/pull/15)
+  — `ocr-service`, que não tem teste nem imagem construída (`C20`). Sem como verificar.
+
+**A [Fase 0](ROADMAP.md#fase-0--colocar-no-ar-) continua parada em você** — e por
+decisão sua o desenvolvimento seguiu sem ela:
+
+1. `gcloud ai models list --region=us-central1 | grep -i flash-lite` — confirma `C0` **e** `C24`
 2. **Rotacionar a chave do GCP** (`C1`) — aberta desde o começo do projeto
 3. Escolher o host (`BL-3`)
 
-Só depois disso o trabalho volta a ser de código: CD por tag, primeiro deploy, e
-rodar o `migrateCanonical` confirmando que não sobrou usuário sem `identities[]`.
+O preço de adiar está escrito: **a camada de IA nunca foi confirmada contra o Vertex
+de verdade.** Tudo que depende dela — voz na Fase 3, second brain na Fase 6 — é
+construído sobre uma peça não verificada.
+
+**A próxima de código é a [Fase 3](ROADMAP.md#fase-3--ux-de-conversa-e-voz)** — botões
+inline e teclado contextual, que não dependem de IA. A parte de voz depende, e por
+isso vem depois do `gcloud` acima.
 
 ---
 
@@ -71,13 +86,21 @@ Cada uma custou tempo de verdade. Estão aqui para não custarem de novo.
 `GeminiProcessor` estourava sem `GCP_PROJECT_ID`, que existe no ambiente do dev e não
 no runner. Não havia PR, então ninguém olhava o CI. Ver `C23`.
 
+**IDs do CONCERNS.md colidiram três vezes** — `C22`, `C23` e `C24` chegaram a existir
+em duplicata, porque entradas novas foram numeradas olhando só o fim do arquivo.
+Corrigido em 2026-08-21 renumerando as não citadas (hoje `C25`, `C26`). **Ao criar uma
+entrada, confira o maior ID do arquivo inteiro, não o da última seção.**
+
 **O bot ficou quebrado dois meses sem ninguém saber.** O modelo de IA estava
 hardcoded e o fornecedor o desligou. Hoje id de modelo é configuração, e um teste
 guarda a lista de aposentados. Ver `C0`.
 
-**Índice do Mongo é assíncrono, e `autoIndex` costuma vir desligado em produção.** Um
-lock cuja exclusão mútua depende de índice único **não tranca** enquanto ele não
-existe. Descoberto por um teste que falhava uma vez a cada três. Ver `C3`.
+**Índice do Mongo é assíncrono, e `autoIndex` costuma vir desligado em produção.**
+Quando a garantia de um código **é** o índice único, ela não vale enquanto o índice não
+existe: o lock não tranca, o estado duplica, o aviso repete. Mordeu **três vezes** —
+`JobLockService`, `ConversationStateStore`, `ProactiveLogRepository` — e as três com o
+mesmo sintoma, um teste que falha uma vez a cada três. Nas três o teste estava certo.
+Hoje `uniqueIndexGuard.test.ts` falha se alguém escrever o quarto. Ver `C27`.
 
 **Log sujo esconde falha real.** O ruído de import dinâmico no teste do QR quase fez
 a instabilidade acima passar batida. Ver `C19`.

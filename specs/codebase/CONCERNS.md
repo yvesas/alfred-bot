@@ -477,6 +477,21 @@ Quem editar só o do baseline não muda nada.
 `privacidade@exemplo.com`. Publicado assim, a política de privacidade lista um
 endereço que não existe.
 
+### ~~C24~~ — Garantia que depende de índice, sem esperar o índice · ✅ **resolvido em 2026-08-21**
+
+Mordeu **três vezes**, sempre igual: `JobLockService`, `ConversationStateStore` e
+`ProactiveLogRepository`. Quando a garantia de um código **é** um índice único, o
+Mongoose constrói esse índice de forma assíncrona — e `autoIndex` costuma vir
+desligado em produção. Antes de ele existir, as duas escritas concorrentes passam:
+o lock não tranca, o estado duplica, o aviso repete a cada ciclo.
+
+O sintoma é sempre um teste que falha uma vez a cada três, o que convida a culpar o
+`mongodb-memory-server` e seguir. Nas três vezes o teste estava certo.
+
+Correção: `await Model.init()` uma vez, antes da primeira escrita. Fiscalizado por
+`bot/src/tests/uniqueIndexGuard.test.ts`, que lê o fonte dos três e falha se alguém
+escrever o quarto sem a espera.
+
 ---
 
 ## Lacunas de produto (não são defeitos, são o que falta)
